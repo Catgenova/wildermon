@@ -22,6 +22,9 @@ begin
   -- A lair is the island's, and nobody's to do anything with (`lair_refusal`).
   why := lair_refusal(p_world, p_uid, p_action, p_target);
   if why is not null then return why; end if;
+  -- An outcropping is mined and nothing else (`outcrop_refusal`).
+  why := outcrop_refusal(p_world, p_uid, p_action, p_target);
+  if why is not null then return why; end if;
   -- A settlement store is moved, turned and picked up by whoever set it down and its founder (`store_move_refusal`).
   why := store_move_refusal(p_world, p_uid, p_action, p_target);
   if why is not null then return why; end if;

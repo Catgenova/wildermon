@@ -145,6 +145,9 @@ const STATUETTE_DEF: ItemDef = {
   description: `Enchant (pack): ${STATUE_MOTES} mote${STATUE_MOTES === 1 ? '' : 's'} of each of the ${MOTE_ELEMENTS.length} elements, used up → ${listedOr(PATRONS.map(statueName))}, QL kept.`,
 };
 
+/** An obsidian piece's line, its numbers filled in by the fight rules (`fight.ts`, off `ARMOUR_CLASSES.obsidian` and `ARMOUR_VS.obsidian`). */
+const OBSIDIAN_SAYS = 'Soak {soak:pct}; {says}. Full set: burden {burden:pct}.';
+
 export const ITEM_DEFS: Record<string, ItemDef> = {
   shovel: { name: 'Shovel', category: 'tool', weight: 3, description: 'Digs, flattens and packs dirt.' },
   pickaxe: { name: 'Pickaxe', category: 'tool', weight: 4, description: 'Mines rock.' },
@@ -528,6 +531,12 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   scale_shawl: { name: 'Scale shawl', category: 'tool', weight: 3 },
   scale_leggings: { name: 'Scale leggings', category: 'tool', weight: 4 },
   scale_boots: { name: 'Scale boots', category: 'tool', weight: 2.4 },
+  // Obsidian armour (`gear.ts` OBSIDIAN): knapped plates on a leather backing, riveted at an anvil.
+  obsidian_helm: { name: 'Obsidian helm', category: 'tool', weight: 2.2, description: OBSIDIAN_SAYS },
+  obsidian_cuirass: { name: 'Obsidian cuirass', category: 'tool', weight: 8, description: OBSIDIAN_SAYS },
+  obsidian_shawl: { name: 'Obsidian shawl', category: 'tool', weight: 3.8, description: OBSIDIAN_SAYS },
+  obsidian_leggings: { name: 'Obsidian leggings', category: 'tool', weight: 5.6, description: OBSIDIAN_SAYS },
+  obsidian_boots: { name: 'Obsidian boots', category: 'tool', weight: 3.4, description: OBSIDIAN_SAYS },
   tusk: { name: 'Tusk', category: 'material', weight: 1.6, stackable: true, raw: true, decay: 1, description: 'The belly of a composite bow.' },
   sinew: { name: 'Sinew', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 4, description: 'The back of a composite bow.' },
   dragon_scale: { name: 'Dragon scale', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 0.2, description: 'Scale armour. From a dragon only. Hoard scales (a dragon roost\'s hoard): scale armour made of them alone has a QL cap of {hoardCap}× your skill.' },
@@ -539,6 +548,8 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   herb_tea: { name: 'Herb tea', category: 'misc', weight: 0.3, stackable: true, decay: 30, stamina: 0.2, description: 'Drink: +{stamina:pct} stamina.' },
   salve: { name: 'Salve', category: 'misc', weight: 0.1, stackable: true, decay: 6, description: 'Rub in over a dressing: the wound cannot go bad until it closes.' },
   tincture: { name: 'Tincture', category: 'misc', weight: 0.1, stackable: true, decay: 3, description: 'Effect: none.' },
+  // Drunk against Volcano Isle's heat (`lava.ts`, where its numbers are filled in).
+  cooling_draught: { name: 'Cooling draught', category: 'misc', weight: 0.3, stackable: true, decay: 30, description: 'Drink: heat −{drop:pct}; heat fill ×{fill} for {mins} min.' },
   cover: { name: 'Healing cover', category: 'tool', weight: 0.2, stackable: true, decay: 12, description: 'On the wound it suits: stops bleeding, keeps dirt out, closes it {cover.overCloth} times as fast as cloth.' },
   dye_bucket: { name: 'Bucket of dye', category: 'tool', weight: 6, decay: 10,
     description: 'Up to {bucketLitres} litres of one mix of red, yellow and blue at one QL, in the lye bucket it was boiled in. A boil: {dyeBoil} litres of one primary, {perKg} litre per kg of dyestuff. '

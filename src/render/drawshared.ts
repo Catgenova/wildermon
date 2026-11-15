@@ -21,6 +21,7 @@ import type { Mote } from './life';
 import type { WorldRec as SpellRec } from './spells/kit';
 import type { SpiralPieceAt } from './spiralkit';
 import type { Sprite, DeckShape } from './sprites';
+import type { StationKind } from '../game/stations';
 
 /**
  * What the renderer and its painters (`stairdraw.ts` and the rest) both draw with: the entity a line of the ground
@@ -133,7 +134,9 @@ export const rgb = (c: readonly [number, number, number], k: number, a = 1): str
  */
 export type Ghost =
   | { kind: 'furniture'; piece: string; material?: string; x: number; y: number; sx: number; sy: number; facing: Side; ok: boolean; level?: number }
-  | { kind: 'stairs'; x: number; y: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; hand?: StairHand; ok: boolean; buildingId?: number };
+  | { kind: 'stairs'; x: number; y: number; level: number; material: string; floorKind: 'stairs' | 'ladder'; side: Side; hand?: StairHand; ok: boolean; buildingId?: number }
+  /** A campfire, a smelter, a kiln or an anvil (`stations.ts`), and for an anvil the metal it was cast from. */
+  | { kind: 'station'; station: StationKind; metal?: string; x: number; y: number; sx: number; sy: number; facing: Side; ok: boolean };
 
 /**
  * What a picture made by `baked` reads besides what is in its key: whether it

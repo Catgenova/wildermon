@@ -22,6 +22,6 @@ begin
      where exists (select 1 from species_def d where d.id = k)
     on conflict do nothing;
   end if;
-  perform tell(p_world, me, case when p_on then 'Path: on. Journal, Path tab.' else 'Path: off.' end, 'system');
+  perform tell(p_world, me, case when p_on then 'Guiding Light: on. Journal, Guiding Light tab.' else 'Guiding Light: off.' end, 'system');
   return thepath_said(p_world, me);
 end $function$

@@ -8000,7 +8000,7 @@ select '878. building on a settlement you are a citizen of: "'
      || '" against "'
      || coalesce(act_refusal(:'world2', :'alice', 'place_smelter',
           ('{"kind":"tile","x":5,"y":8,"sx":1,"sy":1,"itemUid":' || :'out_smelter' || '}')::jsonb), 'ALLOWED')
-     || '", which this island has never asked a deed about at all: the rule that refused a citizen was the browser''s own';
+     || '", the citizen let down and the outsider refused, as the browser does (20261120000065)';
 
 /*
  * And the door that hands over the land rather than the story of it.

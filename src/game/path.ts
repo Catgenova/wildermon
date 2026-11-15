@@ -12,6 +12,7 @@ import { KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT, type Game } from './game';
 import { ACTION_BY_ID, foundingRefusal } from './actions';
 import { layingBill, PLAN_TOOL } from './buildActions';
 import { FIRE_COST } from './campfire';
+import { STATIONS, type StationKind } from './stations';
 import { GATHER_VERB, SPECIES, type SpeciesDef } from './creatures';
 import { DEED_UPGRADES, UPGRADE_WORKERS } from './deed';
 import { DEED_STONE_GAP, deedRadiusAt, deedWorkersAt, MAX_DEED_LEVEL } from './deedsize';
@@ -111,9 +112,9 @@ export const needsSupply = (def: SpeciesDef, season: Season | null): boolean => 
 export function baitSays(g: Game, step: string, def: SpeciesDef): string {
   const season = fruitSeason(g.wallNow());
   const got = g.thePath?.supply[step];
-  if (got) return `Bait: ${name(got.item)} ×${got.n} (Path supply, ${got.season})`;
+  if (got) return `Bait: ${name(got.item)} ×${got.n} (Guiding Light supply, ${got.season})`;
   const now = dietInSeason(def, season);
-  if (!now.length) return `Bait: ${name(supplyItem(def))} ×${supplySize(def)} (Path supply, ${season})`;
+  if (!now.length) return `Bait: ${name(supplyItem(def))} ×${supplySize(def)} (Guiding Light supply, ${season})`;
   return `Bait: ${now.map(name).join(', ')} (in season)`;
 }
 
@@ -233,6 +234,9 @@ export function jobSays(g: Game, on: string, id: string, tool?: string): string 
   const t = tool ?? a?.tool;
   return [`Right-click: ${on}`, a?.label ?? id, t ? toolSays(g, t) : '', a?.skill ? skillName(a.skill) : ''].filter(Boolean).join(' · ');
 }
+/** A station set down as a piece is (`stations.ts`): "Right-click: the ground · Set furniture down · Campfire · Q/E rotate · click to place". */
+export const setDownSays = (on: string, kind: StationKind): string =>
+  `Right-click: ${on} · Set furniture down · ${STATIONS[kind].name} · Q/E rotate · click to place`;
 /** `goes` of a recipe in Crafting: "Crafting (R): Carve shafts · Log ×1 → Shaft ×4 · Carving knife (pack) · Carpentry". */
 export function craftSays(g: Game, id: string, goes = 1): string {
   const r = RECIPE_BY_ID.get(id);
@@ -331,7 +335,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   },
   {
     id: 'track', phase: 'stone', tame: 'bevere', skills: ['tracking'],
-    how: () => [trackSays('bevere'), `Noted (Path): ${PATH_KINDS.length} kinds, Track as if seen`],
+    how: () => [trackSays('bevere'), `Noted (Guiding Light): ${PATH_KINDS.length} kinds, Track as if seen`],
     why: (g) => [`Track: arrow to the nearest ${kind('bevere').name}, ${TRACK_SHOW} s · reach ${trackRange(trackLevel(g.skills.get('tracking')))} tiles`],
     show: { job: 'track', kind: 'bevere' },
     label: () => `Track ${kind('bevere').name}: Field guide (${defaultKey('win_guide')}), Track`,
@@ -387,7 +391,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   {
     id: 'cook', phase: 'stone', skills: ['cooking'],
     how: (g) => [
-      `${jobSays(g, 'the ground', 'build_campfire')} · ${itemDef('shaft').name} ×${FIRE_COST}`, jobSays(g, 'the campfire', 'light_campfire'),
+      `${setDownSays('the ground', 'campfire')} · ${itemDef('shaft').name} ×${FIRE_COST}`, jobSays(g, 'the campfire', 'light_campfire'),
       craftSays(g, `cook_${fishHeld(g)}`),
     ],
     why: () => [`${itemDef('cooked_fish').name}: food bar +${percent(foodFill('cooked_fish', KIT_QL))}`, `Bait for: ${listed(eatenBy('cooked_fish'))}`],
@@ -398,7 +402,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   // B. Set out.
   {
     id: 'walk', phase: 'out', skills: [],
-    how: (g) => [`Walk: the Path line's arrow · away from ${nearestStone(g, g.player.tileX, g.player.tileY)?.name ?? 'the runestone'}`],
+    how: (g) => [`Walk: the Guiding Light line's arrow · away from ${nearestStone(g, g.player.tileX, g.player.tileY)?.name ?? 'the runestone'}`],
     why: () => [`Found a settlement: ${DEED_STONE_GAP} tiles or more from every runestone`],
     show: { walk: true },
     label: (g) => {
@@ -418,7 +422,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   {
     id: 'site', phase: 'out', skills: [],
     how: (g) => [
-      g.pathSites.length ? `Walk: the Path line's arrow · sites ${g.pathSites.length}, the nearest first` : `Sites: within ${PATH_SITE.reach} tiles of you, none yet`,
+      g.pathSites.length ? `Walk: the Guiding Light line's arrow · sites ${g.pathSites.length}, the nearest first` : `Sites: within ${PATH_SITE.reach} tiles of you, none yet`,
       `Or any tile: ${jobSays(g, 'the ground', 'found_settlement')} · the refusal names the rule`,
     ],
     why: () => [
@@ -467,7 +471,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   },
   {
     id: 'campfire', phase: 'two', skills: [],
-    how: (g) => [`${jobSays(g, 'the ground inside the border', 'build_campfire')} · ${itemDef('shaft').name} ×${FIRE_COST}`],
+    how: () => [`${setDownSays('the ground inside the border', 'campfire')} · ${itemDef('shaft').name} ×${FIRE_COST}`],
     why: () => [`Level ${levelOf('campfire')}: ${DEED_UPGRADES[levelOf('campfire')][1].label}`],
     show: { job: 'build_campfire' },
     label: () => `Campfire inside the border: ${FIRE_COST} ${name('shaft')}s`,
@@ -529,7 +533,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   },
   {
     id: 'smelter', phase: 'three', skills: ['masonry'],
-    how: (g) => [craftSays(g, 'make_smelter'), jobSays(g, 'the ground inside the border', 'place_smelter')],
+    how: (g) => [craftSays(g, 'make_smelter'), setDownSays('the ground inside the border', 'smelter')],
     why: () => [`Level ${levelOf('smelter')}: ${DEED_UPGRADES[levelOf('smelter')][0].label}`, `Smelts: ore → lumps for the anvil ×${ANVIL_LUMPS} (${stepOf('anvil')})`],
     show: { job: 'make_smelter' },
     label: () => `Smelter: ${SMELTER_BRICKS()} ${name('stone_brick')}s, ${SMELTER_MORTAR()} ${name('mortar')}, ${name('trowel')}; inside the border`,
@@ -573,7 +577,7 @@ export const PATH_STEPS: readonly PathStep[] = [
   },
   {
     id: 'anvil', phase: 'four', skills: ['blacksmithing'],
-    how: (g) => [craftSays(g, 'make_anvil_mould'), jobSays(g, 'the smelter', 'cast_anvil'), jobSays(g, 'the ground inside the border', 'place_anvil')],
+    how: (g) => [craftSays(g, 'make_anvil_mould'), jobSays(g, 'the smelter', 'cast_anvil'), setDownSays('the ground inside the border', 'anvil')],
     why: () => [`Level ${levelOf('anvil')}: ${DEED_UPGRADES[levelOf('anvil')][0].label}`],
     show: { job: 'cast_anvil' },
     label: () => `${ANVIL_MOULD.name}: ${ANVIL_MOULD.sand} ${name('sand')}; cast the anvil: ${ANVIL_LUMPS} lumps; set down inside the border`,
@@ -705,7 +709,7 @@ export const stepNumber = (s: PathStep): number => PATH_STEPS.indexOf(s) + 1;
 /** The strip's line: "7/34 · Tame Sapgnaw · Bait: … · Taming 1". */
 export function stripSays(g: Game): string {
   const s = currentStep(g);
-  if (!s) return `Path: ${PATH_STEPS.length}/${PATH_STEPS.length} done`;
+  if (!s) return `Guiding Light: ${PATH_STEPS.length}/${PATH_STEPS.length} done`;
   return `${stepNumber(s)}/${PATH_STEPS.length} · ${s.label(g)}`;
 }
 
@@ -751,7 +755,7 @@ export function pathCheck(g: Game): void {
     g.tickedGoal?.(`${PATH_TICK}${s.id}`);
     if (fresh) {
       const step = PATH_STEP_BY_ID.get(s.id);
-      g.logMsg(step ? `Path: ${stepNumber(step)}/${PATH_STEPS.length} done.` : `Path: ${s.label(g)}: done.`, 'skill');
+      g.logMsg(step ? `Guiding Light: ${stepNumber(step)}/${PATH_STEPS.length} done.` : `Guiding Light: ${s.label(g)}: done.`, 'skill');
       g.events.emit('path');
       ticked.push(s.id);
     }

@@ -228,14 +228,14 @@ export class SettingsPanel {
     head('Interface');
     // The Path (`src/game/path.ts`): kept on the island with your body, not in this browser.
     add(
-      'Path',
-      html`Steps: runestone to settlement level ${MAX_DEED_LEVEL}, ${PATH_STEPS.length} of them; a line at the top of the screen and the Journal's Path tab (${kbd('win_path')}). Kept on the island.`,
+      'Guiding Light',
+      html`Steps: runestone to settlement level ${MAX_DEED_LEVEL}, ${PATH_STEPS.length} of them; a line at the top of the screen and the Journal's Guiding Light tab (${kbd('win_path')}). Kept on the island.`,
       () => game.thePath?.on ?? false,
       (v) => void game.pathDoor?.turn(v),
     );
     add(
-      'Path pop-ups',
-      'Card in the corner as each Path step ticks: done, next, how, why; a moving picture of the action. Close, Skip next, Path tab.',
+      'Guiding Light pop-ups',
+      'Card in the corner as each Guiding Light step ticks: done, next, how, why; a moving picture of the action. Close, Skip next, Guiding Light tab.',
       () => game.settings.pathPopups,
       (v) => {
         game.settings.pathPopups = v;

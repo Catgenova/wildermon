@@ -18,6 +18,7 @@ import { FOUNTAIN } from './fountain';
 import { GRAVE } from './grave';
 import { ASH_VENT, CINDER_VENT, DRAGON_ROOST, GOBLIN_WARREN, MAGMA_VENT, OGRE_CAVE, ORC_CAMP } from './lairs';
 import { ASH_LORD_VEIL, CHIEF_EAR, CINDER_ALPHA_FANG, GREAT_DRAGON_SCALE, MAGMA_CORE, OGRE_KING_JAW, WARLORD_TUSK } from './trophies';
+import { IRON_OUTCROP, ROCK_OUTCROP } from './outcropping';
 import { LAMP_PILLAR, LAMP_POST } from './lamps';
 import { MAILBOX } from './mailbox';
 import { OVEN } from './oven';
@@ -214,4 +215,7 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   ash_lord_veil: ASH_LORD_VEIL,
   magma_core: MAGMA_CORE,
   cinder_alpha_fang: CINDER_ALPHA_FANG,
+  // The outcroppings (`outcrops.ts`).
+  iron_outcrop: IRON_OUTCROP,
+  rock_outcrop: ROCK_OUTCROP,
 };

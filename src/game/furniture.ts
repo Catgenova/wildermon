@@ -44,6 +44,7 @@ import {
 } from './obsidiandefs';
 import { HAMMOCK_REST, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING } from './ropework';
 import { LAIR_KINDS } from './lairs';
+import { OUTCROP_KINDS, OUTCROP_USES, usesSaid } from './outcrops';
 
 /**
  * What a store takes, for the five that take one sort of thing: raw materials,
@@ -204,6 +205,11 @@ export interface FurnitureDef {
   lair?: boolean;
   /** A trophy out of a lair's hoard (`lairs.ts`): set down anywhere as decoration, and never built. */
   trophy?: boolean;
+  /**
+   * An outcropping (`outcrops.ts`): set down by the island at each daily reset, nobody's, never built, moved or
+   * taken; mined and nothing else (`outcrop_refusal`).
+   */
+  outcrop?: boolean;
   /**
    * What is planted at its feet and climbs it -- roses or lavender -- growing
    * from the moment it is set down (`roses.ts`): the island hands every
@@ -769,6 +775,8 @@ export const FURNITURE: FurnitureDef[] = [
    * mouth for an ogre cave and a nest of bones for a dragon roost.
    */
   ...LAIR_KINDS.map((k) => piece(k.id, k.name, 4, 4, [], 0, 0, '', undefined, { lair: true })),
+  /* The outcroppings (`outcrops.ts`): a tile each, set down by the island at each daily reset. */
+  ...OUTCROP_KINDS.map((k) => piece(k.id, k.name, 4, 4, [], 0, 0, '', undefined, { outcrop: true })),
   /* And the trophies their hoards hold, each on a stone plinth: set down as any piece is. */
   piece('chief_ear', 'Goblin chief\'s ear', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
   piece('warlord_tusk', 'Warlord\'s tusk', 1, 1, [], 0, 0, '', undefined, { trophy: true }),
@@ -999,6 +1007,8 @@ export interface PlacedFurniture {
    * `state -> skep_at`.
    */
   skepAt?: number;
+  /** For an outcropping, the swings that come off before it breaks (`outcrops.ts`); on the island `state -> uses`. */
+  uses?: number;
 }
 
 /** Whether a piece is a planter: a box of earth a crop is sown in (`FurnitureDef.planter`). */
@@ -1369,6 +1379,8 @@ export const hearthLeft = (f: PlacedFurniture): number => (f.fuel ?? 0) / hearth
 export const furnitureState = (f: PlacedFurniture): string => stateOf(f) + STATE_TAILS.map((tail) => tail(f)).join('') + enchantTail(f);
 function stateOf(f: PlacedFurniture): string {
   const def = furnitureDef(f.kind);
+  // An outcropping says its uses left and nothing else (`outcrops.ts`).
+  if (def.outcrop) return usesSaid(f.uses ?? OUTCROP_USES);
   const ql = `QL ${f.ql.toFixed(0)}`;
   if (holdsLiquid(f)) {
     const litres = litresIn(f);

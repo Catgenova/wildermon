@@ -41,8 +41,9 @@ import { HOARD_LUMPS, HOARD_MORE } from '../../game/butcher';
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, columnBill, floorBill, GLASS_ROOF, HEFT_WORDS, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIALS as WALL_MATERIALS, onlySaid, OUTSIDE_STAIR_LEVEL, takesAs,
   MAX_LEVELS, NO_PLAN_FROM, RAILING_HEIGHT, roofShapeDef, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, roofShapeOf, SIDE_NAMES, WALL_HEIGHT, wallBill, WALL_TYPE_BY_ID, WALL_TYPES,
-  describeNeeds, GARDEN_BED,
+  describeNeeds, GARDEN_BED, FLOOR_SHARE, heftWord, OBSIDIAN_GLASS, OBSIDIAN_GLASS_OPACITY,
 } from '../../game/building';
+import { MINE_JOB, OUTCROP_CLEAR, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCROP_STAGES, OUTCROP_USES, OUTCROPS_A_RING } from '../../game/outcrops';
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
 import { SPIRAL_TREADS } from '../../game/spiral';
 import { materialName } from '../../game/buildActions';
@@ -56,6 +57,7 @@ import { LAMP_INTO_WALL } from '../../game/lamps';
 import { STORE_REACH } from '../../game/crates';
 import { GREEN_ACTIONS, GREEN_DAY, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET, GREEN_WET_REACH } from '../../game/greening';
 import { FIRE_COST, FIRE_SUBTILES, FUELS } from '../../game/campfire';
+import { STATION_KINDS, STATIONS, stationDecayAt } from '../../game/stations';
 import {
   CHANNELS, CLASS_AT, CLASS_COLUMNS, CLASS_NODES, CLASS_TIER_AT, CLASSES, channelSays, NODES_PER_TRADE, PERK_CLASSES,
   PERK_TIER_AT, PERKS_PER_TIER, riteDef, RITES, type Channel,
@@ -130,7 +132,7 @@ import {
   footing, Game, goSeconds, hullSpeed, KIT_QL, kitQl, MAX_DEED_LEVEL, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, MAX_MOUNT_SPEED, ORDINARY_GAIN, overDrag, QL_BARE, QL_LOW,
   QL_SPAN, QUEUE_PER_MIND, TWILIGHT, wearPerUse,
   QL_TOP, deedLevel } from '../../game/game';
-import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
+import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, OBSIDIAN_PIECES, SLOTS, WEAPON_BY_ID, WEAPONS, type ArmourClass, type WeaponDef } from '../../game/gear';
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD, IMPROVE_FLOOR } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
@@ -147,7 +149,7 @@ import { MOBS_RANGE } from '../../game/keep';
 import { candleBurn, FIRE_REACH, HELD_LIGHTS, lanternReach, MEMORIAL_REACH, OVEN_REACH, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn, torchReach } from '../../game/light';
 import { MARK_CAP } from '../../game/marks';
 import { TOOL_JOBS } from '../../game/jobtools';
-import { MATERIAL_BY_ID, type MaterialDef } from '../../game/materials';
+import { MATERIAL_BY_ID, OBSIDIAN, type MaterialDef } from '../../game/materials';
 import { calmCap, CHOOSE_AT, PATH_LIST, PATH_TIER_AT, PICKS_PER_TIER, picksOf, SIT_CALM, SIT_REST, SIT_WORTH } from '../../game/meditation';
 import { COIN_METALS, COIN_QL_WEIGHT, COINS_PER_LUMP, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, METALS, MOULD_BY_ID, MOULD_SKILL, MOULDS, NAILS_PER_LUMP, PRECIOUS_METALS, RARE_METALS, SMITH_TOOL } from '../../game/metal';
 import { COIN_WORTH } from '../../game/money';
@@ -158,7 +160,7 @@ import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STE
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_SHOO, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { POST_FOLLOW_REACH, POST_LIFE_MAX, POST_LIFE_MIN, postRadius } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
-import { CRAFT_REACH, FERMENT_CELLAR_SAYS, lockedRecipes, needRecipeSays, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
+import { CRAFT_REACH, FERMENT_CELLAR_SAYS, KNAP_DIFFICULTY, KNAP_PER, KNAPPED, knapRecipeId, lockedRecipes, needRecipeSays, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, SEALED_ITEM, STATION_NAME, TRADE_BOOK_AT, TRADE_BOOK_SKILLS } from '../../game/recipes';
 import { VESSEL_BACK_QL } from '../../game/ferment';
 import { SHARES_EACH } from '../../game/feast';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
@@ -208,6 +210,8 @@ import {
 import { TURNS } from '../../render/view';
 import { ORE_DENSITY, seamShare } from '../../world/ore';
 import { lairOf, REGIONS } from '../../world/regions';
+import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_INLAND, LAVA_PATHS, LAVA_RADIUS, LAVA_SIZE, LAVA_SPARED_TILES, SERYLL_HEART } from '../../game/lava';
+import { LAVA_CHART } from '../../world/lavachart';
 import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
 import { FALL_SECS } from '../../game/fell';
@@ -261,7 +265,7 @@ import { benchTreeWords, FITTING_PIECES, poleBurn, practiceSkillWords } from '..
 import { ADORN_PIECES, PEA_NAMES, watersideWords } from '../../game/adorn';
 import { blackLanternBurn, FULL_WIND, glassChimeLoud, glintWords } from '../../game/obsidian';
 import {
-  BLACK_LANTERN_REACH, GLASS_CHIME_LEAST, LANTERN_CANDLES, LAVA_LAMP_REACH, OBSIDIAN, OBSIDIAN_FIT_TIME, OBSIDIAN_PIECES, ORB_DAY_REACH, ORB_NIGHT_REACH, THRONE_SEATS,
+  BLACK_LANTERN_REACH, GLASS_CHIME_LEAST, LANTERN_CANDLES, LAVA_LAMP_REACH, OBSIDIAN as OBSIDIAN_ITEM, OBSIDIAN_FIT_TIME, OBSIDIAN_PIECES as OBSIDIAN_DECOR, ORB_DAY_REACH, ORB_NIGHT_REACH, THRONE_SEATS,
 } from '../../game/obsidiandefs';
 import { FOUNTAINS } from '../../game/furniture';
 import {
@@ -296,6 +300,8 @@ import { fixed, setMarkup } from '../html';
 import { PATH_CARD_HOLD, PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
 import { KIT, kitBody, made as kitMade } from '../kit';
 
+/** The QL the help reads a station's decay an hour at. */
+const STATION_HELP_QL = 50;
 /** What a cellar's rock gives, by the stone: every stone's own shards. */
 const CELLAR_SHARDS = listed(ROCK_VARIANTS.filter((r) => r.yields.endsWith('_shards')).map((r) => itemDef(r.yields).name.toLowerCase()));
 /** The perk that lowers what a vein wants of a miner (`ore:below`). */
@@ -401,13 +407,12 @@ const countIn = (id: string, n: number): string => countOf(id, n, true);
 function infuseHelp(): string {
   const what = INFUSE_ELEMENTS.map((el) => {
     const d = INFUSE_INTO[el];
-    const into = el === 'dark' ? 'a weapon, armour or a shield (wielded or worn)' : listedOr((d?.into ?? []).map((id) => id.replace(/_/g, ' ')));
+    const into = el === 'dark' ? 'a weapon, armour or a shield (wielded or worn)' : el === 'ice' ? 'armour (worn)' : listedOr((d?.into ?? []).map((id) => id.replace(/_/g, ' ')));
     return `<li><b>${capital(el)}</b> into ${into}: ${(d?.label ?? '').toLowerCase()} ${d?.say(1) ?? ''} at strength 100%.</li>`;
   }).join('\n      ');
   return `<li><b>Infuse into</b> (a mote's menu, at an enchanter's plinth): ${INFUSE_MOTES} motes of one element into a thing it goes into, one element at a time, for ${INFUSE_DAYS} days;
       trains elementalism a full action. Strength = elementalism ÷ 100 × motes' QL ÷ 100 (×${1 + ATTUNE_STRENGTH} for the element you are attuned to) of each element's most:</li>
       ${what}
-      <li>Ice: into nothing (nothing held in a larder, barrel or crate decays).</li>
       <li><b>Attunement</b>: the element you collected most of over the last ${ATTUNE_DAYS} days: +${ATTUNE_MOTES} mote a swirl of it, +${percent(ATTUNE_STRENGTH)} strength infusing it.</li>
       <li><b>Sense mote swirls</b> (a tile's menu, once an hour): swirls within ${SENSE_BASE} + ${SENSE_PER_LEVEL} × elementalism tiles (${senseRange(100)} at 100) on the map for
       ${SENSE_SHOWN / 60} minutes; trains elementalism.</li>`;
@@ -754,6 +759,9 @@ const LOW_QL = 1;
 /** Seconds in an hour of the clock on the wall. */
 const HOUR = 3600;
 /** An hour of the island's clock as the hud shows it: "21:00". */
+/** What a cooling draught is brewed from (`brew_cooling_draught`): "2 mint, 1 L from a bucket of water and an ice mote". */
+const draughtBill = (): string =>
+  listed((RECIPE_BY_ID.get('brew_cooling_draught')?.inputs ?? []).map((i) => (i.litres ? `${i.litres} L from a ${itemDef(i.item).name.toLowerCase()}` : countOf(i.item, i.count ?? 1, true))));
 const hudHour = (h: number): string =>
   `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
 
@@ -890,6 +898,11 @@ const HOARD_DEEP = HOARD_METALS.filter((id) => !PRECIOUS_METALS.some((m) => id =
 const COMPOSITE = WEAPONS.find((w) => w.id === 'composite_bow') ?? WEAPONS[0];
 const BEST_WOOD_BOW = [...WOOD_BOWS].sort((a, b) => (b.range ?? 0) - (a.range ?? 0))[0] ?? WEAPONS[0];
 const SCALE_SUIT = ARMOUR.filter((a) => a.cls === 'scale').reduce((n, a) => n + need(`make_${a.id}`, 'dragon_scale'), 0);
+/** The obsidian set's obsidian, whole; the tools and weapons knapped from it; and what an edge of it is worth. */
+const OBSIDIAN_SUIT = OBSIDIAN_PIECES.reduce((n, id) => n + need(`make_${id}`, 'obsidian'), 0);
+const knappedSaid = (): string => listed(Object.keys(KNAPPED).map((id) => `${itemDef(id).name.toLowerCase()} (${bill(knapRecipeId(id))})`));
+const OBSIDIAN_NOTE = mat(OBSIDIAN.toLowerCase()).note;
+const OBS_GLASS = WALL_MATERIALS.find((m) => m.id === OBSIDIAN_GLASS) as (typeof WALL_MATERIALS)[number];
 /** The least and the most a trait of each tier moves the number it moves most. */
 const TIER_SPAN = Object.fromEntries(TIERS.map((tier) => {
   const most = TRAITS.filter((t) => t.tier === tier).map((t) => Math.max(...Object.values(t.effects).map((m) => Math.abs((m ?? 1) - 1))));
@@ -1183,7 +1196,7 @@ const jobSaid = (id: string): string => {
 const FIRST_HOUR_DO: Record<string, () => string> = {
   tree: () => `Right-click a tree: ${jobSaid('cut_down')}`,
   plank: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_planks')}, ${made('make_planks')} planks a log`,
-  fire: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_shafts')}, ${FIRE_COST} shafts; right-click the ground: ${jobSaid('build_campfire')}; right-click the fire: ${jobSaid('light_campfire')}`,
+  fire: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_shafts')}, ${FIRE_COST} shafts; right-click the ground: <b>Set furniture down</b> → <b>${STATIONS.campfire.name}</b>; right-click the fire: ${jobSaid('light_campfire')}`,
   cook: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>), next to a lit fire: ${cookSaid('cook_meat')}, ${cookSaid('bake_potato')}`,
   crate: () => `Crafting (<kbd>${keyOf('win_craft')}</kbd>): ${craftSaid('make_log_crate')}; right-click the ground: ${jobSaid('place_crate')}`,
   deed: () => `Right-click the ground: ${jobSaid('found_settlement')} (${lowName('deed_stake')}, in the pack)`,
@@ -1213,17 +1226,17 @@ function firstHour(): string {
 function pathHelp(): string {
   const kinds = PATH_KINDS.map((k) => SPECIES[k]?.name ?? k);
   return `
-    <h3>Path</h3>
+    <h3>Guiding Light</h3>
     <ul>
-      <li><b>Path</b>: ${PATH_STEPS.length} steps in ${PATH_PHASES.length} phases, runestone to settlement level ${MAX_DEED_LEVEL}; ${PATH_DETOURS.length} detours, never in the way. Optional; kept on the island.</li>
-      <li><b>On, off</b>: first coming ashore, the runestone card: <b>Path: On</b> unless switched. After: Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Path</b>; or the Path tab. Turned on later: starts at the first step not done.</li>
-      <li><b>Line at the top</b>: step number of ${PATH_STEPS.length}, the step, its bait and taming. Arrow: away from the stone to ${DEED_STONE_GAP} tiles, to a suggested site, or the last track on a tame step. <b>−</b>: folded to the step number. Click: the Path tab.</li>
-      <li><b>Path tab</b>: Journal (<kbd>${keyOf('win_path')}</kbd>): every step by phase, the current one marked, <b>Skip</b> per step (<b>Unskip</b> back), detours under their step.</li>
-      <li><b>Path card</b>: top right, as a step ticks: <b>Done</b>, <b>Next</b>, <b>How</b>, <b>Why</b>, a picture of you at the job; <b>Close</b>, <b>Skip next</b>, <b>Path tab</b>. Down on Close or the first job started after ${PATH_CARD_HOLD} s. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Path pop-ups</b>: On.</li>
+      <li><b>Guiding Light</b>: ${PATH_STEPS.length} steps in ${PATH_PHASES.length} phases, runestone to settlement level ${MAX_DEED_LEVEL}; ${PATH_DETOURS.length} detours, never in the way. Optional; kept on the island.</li>
+      <li><b>On, off</b>: first coming ashore, the runestone card: <b>Guiding Light: On</b> unless switched. After: Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light</b>; or the Guiding Light tab. Turned on later: starts at the first step not done.</li>
+      <li><b>Line at the top</b>: step number of ${PATH_STEPS.length}, the step, its bait and taming. Arrow: away from the stone to ${DEED_STONE_GAP} tiles, to a suggested site, or the last track on a tame step. <b>−</b>: folded to the step number. Click: the Guiding Light tab.</li>
+      <li><b>Guiding Light tab</b>: Journal (<kbd>${keyOf('win_path')}</kbd>): every step by phase, the current one marked, <b>Skip</b> per step (<b>Unskip</b> back), detours under their step.</li>
+      <li><b>Guiding Light card</b>: top right, as a step ticks: <b>Done</b>, <b>Next</b>, <b>How</b>, <b>Why</b>, a picture of you at the job; <b>Close</b>, <b>Skip next</b>, <b>Guiding Light tab</b>. Down on Close or the first job started after ${PATH_CARD_HOLD} s. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light pop-ups</b>: On.</li>
       <li><b>Ticks</b>: a step done ticks itself, early or late, once the island's own record shows it done.</li>
-      <li><b>Field guide</b>: Path on notes ${PATH_KINDS.length} kinds (${listed(kinds)}): <b>Noted (Path)</b>; Track as if seen. Noted: no seen count, goal or title.</li>
+      <li><b>Field guide</b>: Guiding Light on notes ${PATH_KINDS.length} kinds (${listed(kinds)}): <b>Noted (Guiding Light)</b>; Track as if seen. Noted: no seen count, goal or title.</li>
       <li><b>Suggested sites</b>: ${PATH_SITE.count} nearest, every ${PATH_SITE.every} tiles within ${PATH_SITE.reach} of you, ${PATH_SITE.apart} apart: every founding check; trees ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}; water within ${PATH_SITE.water}; bare rock within ${PATH_SITE.rock}.</li>
-      <li><b>Path supply</b>: a tame step whose kind eats nothing in season: its favourite food, enough to tame it ${percent(PATH_SURE)} of the time at its own chance, one offering a try. Issued: no sale, no trade, kept at death. Once a step.</li>
+      <li><b>Guiding Light supply</b>: a tame step whose kind eats nothing in season: its favourite food, enough to tame it ${percent(PATH_SURE)} of the time at its own chance, one offering a try. Issued: no sale, no trade, kept at death. Once a step.</li>
       <li><b>Skills</b>: ${PATH_SKILLS.length}: ${listed(PATH_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()))}.</li>
     </ul>`;
 }
@@ -1896,7 +1909,7 @@ export function helpText(): string {
     </ul>
     <h3>Campfires and cooking</h3>
     <ul>
-      <li><b>Build campfire</b> on any dry, open spot: ${FIRE_COST} shafts; fills a ${FIRE_SUBTILES} by ${FIRE_SUBTILES} block of the tile's spots.</li>
+      <li><b>Campfire</b>: right-click the ground, <b>Set furniture down</b> → <b>${STATIONS.campfire.name}</b>; ${FIRE_COST} shafts; a ${FIRE_SUBTILES} by ${FIRE_SUBTILES} block of the tile's spots, on dry open ground where nothing stands.</li>
       <li>Fuel, burn time a piece: ${FUELS.map((f) => `${f.said} ${dur(f.secs)}`).join(', ')}. Then <b>Light</b>.</li>
       <li>Peat: dug off a peat bed with a shovel; free.</li>
       <li><b>Cook</b> at a lit fire: cooked meat fills ${percent(itemDef('cooked_meat').food ?? 0)} of the food bar (raw ${percent(itemDef('meat').food ?? 0)}); baked potatoes;
@@ -1933,7 +1946,7 @@ export function helpText(): string {
     <h4>Smelter</h4>
     <ul>
       <li>Mining a seam gives <b>ore</b>. <b>Stone smelter</b>: masonry, ${bill('make_smelter', true)}, with a trowel; made in the crafting window, carried,
-      <b>set down</b> on ${SMELTER_W * SMELTER_H} spots of a tile on your own settlement. Picked up whole when cold, empty and raked out.</li>
+      <b>set down</b> (<b>Set furniture down</b>) on ${SMELTER_W} by ${SMELTER_H} spots of a tile, ${SMELTER_H} by ${SMELTER_W} facing east or west, on your own settlement. Picked up whole when cold, empty and raked out.</li>
       <li>Charges: <b>${CHARGE_PER_QL} a QL</b> of the smelter, up to ${chargesFor({ ql: CHARGE_QL })} at QL ${CHARGE_QL}; × its rarity's (Rarity). Fuel as a campfire (coal burns longest); light; charge with ore. Smelt time per piece: longer for fine ore and harder metal, shorter in a better smelter.
       Draw the lumps off when done.</li>
       <li>Lumps of one metal merge into one lump; quality (QL) = average weighted by size.</li>
@@ -1973,6 +1986,8 @@ export function helpText(): string {
       <li><b>Bottle</b>: holds ${itemDef('bottle').holds ?? 0} of one food or drink; contents rot at ${frac(itemDef('bottle').shelter ?? 1)} of the rate on the ground.</li>
       <li>Solid <b>stained glass</b> wall: ${billIn(WALL_MATERIALS.find((m) => m.id === 'stained_glass')?.bill ?? [])}; trowel; trains masonry. One firing glazes one wall.
       ${stainedOnly()}</li>
+      <li><b>Obsidian glass</b> solid wall: ${billIn(OBS_GLASS.bill)}; a floor ${percent(FLOOR_SHARE)} of that; trowel; trains masonry; ${OBS_GLASS.storeys} storeys,
+      ${heftWord(OBS_GLASS.heft)}. Opacity ${percent(OBSIDIAN_GLASS_OPACITY)}: what is behind or below shows at ${percent(1 - OBSIDIAN_GLASS_OPACITY)}. Sight passes through. ${onlySaid(OBS_GLASS)}</li>
       <li><b>${itemDef(TINTED_PANE).name}</b>: <b>Dye it</b>, ${litresWord(DYE_PANE_LITRES)} of dye a panel, one panel an action; keeps the colour; stacks apart from clear ones.</li>
       <li>A window or bay window is the colour of the <b>last panel fitted</b> (a clear panel last: clear). Seen by everybody, inside and out.
       Stained glass walls keep their gem colours and take no dyed panel.</li>
@@ -2332,8 +2347,8 @@ export function helpText(): string {
     </ul>
     <h3>Obsidian pieces</h3>
     <ul>
-      <li><b>${itemDef(OBSIDIAN).name}</b>: ${itemDef(OBSIDIAN).description ?? ''} Used in every piece below.</li>
-      ${OBSIDIAN_PIECES.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
+      <li><b>${itemDef(OBSIDIAN_ITEM).name}</b>: ${itemDef(OBSIDIAN_ITEM).description ?? ''} Used in every piece below.</li>
+      ${OBSIDIAN_DECOR.map((id) => `<li><b>${itemDef(id).name}</b>: ${bill(`make_${id}`)} (${workedAt(`make_${id}`)}, ${recipe(`make_${id}`).baseTime} s base). `
         + `${furnitureDef(id).w} by ${furnitureDef(id).h} subtiles. ${itemDef(id).description ?? ''}</li>`).join('')}
       <li><b>Put in a candle</b> (${OBSIDIAN_FIT_TIME} s base): ${LANTERN_CANDLES}; burns ${timeWords(blackLanternBurn(QL_LOW))} at QL ${QL_LOW}, ${timeWords(blackLanternBurn(QL_TOP))} at QL ${QL_TOP}. <b>Strike a light</b>: a flame in hand or within reach. <b>Put it out</b>: the candle kept. Light: ${BLACK_LANTERN_REACH} tiles at night.</li>
       <li>Obsidian throne: <b>Sit</b>, ${THRONE_SEATS} seat, the founder of the settlement it stands on only. <b>Examine</b>: that settlement's name, level, citizens (founder and roll) and workers, as they are now.</li>
@@ -2620,6 +2635,18 @@ export function helpText(): string {
       Yours, set by the stone used: carrying several does not help. Not used up.</li>
       <li><b>Travel back</b> on it in the pack: to the spot your last journey left from (or the nearest free tile if it cannot be stood on). Once a journey, no cooldown, any distance.</li>
       <li>Refused while: fighting or hunted; driving, pulling, riding or aboard anything; swimming; overloaded; a wildermon follows you; mid-action.</li>
+    </ul>
+    <h3>Outcroppings</h3>
+    <ul>
+      <li>At each daily reset (<b>${hudHour(TREE_DAWN_UTC)} UTC</b>): every outcropping removed; per safe ring (${SAFE_RING} tiles round the island's spawn and each Runestone):
+      ${listed(OUTCROP_KINDS.map((k) => `<b>${k.perRing} ${k.name.toLowerCase()}s</b>`))}, ${OUTCROPS_A_RING} in all.</li>
+      <li>Placed on: grass, dry, a random tile in the ring. Never on a settlement, a building, a road, a Runestone, a crate, a spring or a pool;
+      never beside another placed piece; never within ${OUTCROP_CLEAR} tiles of the spawn or a Runestone's centre.</li>
+      <li><b>${ACTION_BY_ID.get(OUTCROP_MINE)?.label}</b> (right-click it): pickaxe, ${MINE_JOB.skill}; time, stamina and success chance as Mine at a rock face (Miner's Sure Swing counted).</li>
+      <li>Per success: ${listed(OUTCROP_KINDS.map((k) => `${k.name.toLowerCase()} 1 ${itemDef(k.yields).name.toLowerCase()}`))}, all at <b>QL ${OUTCROP_QL}</b>
+      (skill and pickaxe QL do not change it); ${MINE_JOB.skill} trained as at a rock face. A failed swing uses none.</li>
+      <li><b>${OUTCROP_USES} uses</b> each; the last used: it breaks and is removed until the next daily reset. Examine its tile: uses left.</li>
+      <li>Drawn smaller and cracked as uses run down: ${OUTCROP_STAGES + 1} stages.</li>
     </ul>
     <h3>Enchanting</h3>
     ${enchantingHelp()}
@@ -3763,6 +3790,12 @@ export function helpText(): string {
       (best wooden bow: ${BEST_WOOD_BOW.range ?? 0} tiles, ${BEST_WOOD_BOW.damage} damage).</li>
       <li><b>Scale armour</b> (dragon scale on leather): stops <b>${percent(ARMOUR_CLASSES.scale.soak)}</b> of a blow (plate ${percent(ARMOUR_CLASSES.plate.soak)}); lighter than chain.
       Full suit: ${SCALE_SUIT} scales; one dragon: ${SPECIES.dragon.butcher.scale ?? 0}.</li>
+      <li><b>Obsidian armour</b> (obsidian on leather; at an anvil, hammer, platesmithing): stops <b>${percent(ARMOUR_CLASSES.obsidian.soak)}</b> of a blow (plate
+      ${percent(ARMOUR_CLASSES.plate.soak)}, scale ${percent(ARMOUR_CLASSES.scale.soak)}); ${armourSays('obsidian')}; full set burden ${percent(ARMOUR_CLASSES.obsidian.burden)}
+      (plate ${percent(ARMOUR_CLASSES.plate.burden)}). ${listed(OBSIDIAN_PIECES.map((id) => `${itemDef(id).name.toLowerCase()} ${bill(`make_${id}`)}, ${workedAt(`make_${id}`)}`))}.
+      Full suit: ${OBSIDIAN_SUIT} obsidian. Improved with obsidian; chisel and hammer.</li>
+      <li><b>Knapped obsidian</b> (chisel, stonecutting ${KNAP_DIFFICULTY} + ${KNAP_PER} an obsidian): ${knappedSaid()}. Obsidian: ${lowerFirst(OBSIDIAN_NOTE)}
+      Improved with obsidian at stonecutting; chisel and hammer.</li>
     </ul>
     <h3>Monster lairs</h3>
     <ul>
@@ -3796,6 +3829,20 @@ export function helpText(): string {
       <li><b>Sulfur</b>: butchering ${listed(MONSTER_KINDS.filter((id) => SPECIES[id].butcher.sulfur).map((id) => `${SPECIES[id].name.toLowerCase()} ${SPECIES[id].butcher.sulfur}`))};
       mining slate on ${volcanoName()}, ${percent(SULFUR_SLATE)} a go.</li>
       <li><b>${FIRE_STEEL_NAME}</b>: ${bill(FIRE_STEEL_RECIPE)}, ${workedAt(FIRE_STEEL_RECIPE)}, on ${volcanoName()} only. Weapons and tools of it: improve QL cap <b>+${FIRE_STEEL_CAP}</b> over your skill.</li>
+    </ul>
+    <h3>Volcano Isle: lava and heat</h3>
+    <ul>
+      <li><b>Lava</b>: a labyrinth on Volcano Isle, <b>${LAVA_RADIUS}</b> tiles round the caldera, on its land ${LAVA_INLAND * LAVA_SIZE / LAVA_CHART.n} tiles in from the water; one of
+      <b>${LAVA_DESIGNS}</b> designs, a new one at each daily reset (${hudHour(TREE_DAWN_UTC)} UTC), not repeated on consecutive days.
+      Corridors ${LAVA_CELL} tiles wide, walls ${LAVA_CELL} tiles thick.</li>
+      <li><b>${LAVA_PATHS}</b> ways in, about ${Math.round(360 / LAVA_PATHS)}° apart: each the only way through to the heart; every other corridor ends.</li>
+      <li><b>Heart</b>: ${LAVA_HEART} tiles round the caldera; no lava. Seryll: in the heart only, ${percent(SERYLL_HEART)} of its dry ground.</li>
+      <li>On lava: health <b>−${percent(LAVA_BURN)}/s</b>. No digging, building, setting down or founding on it. No creature steps on it.</li>
+      <li>Never on: a settlement, ${listed(LAVA_SPARED_TILES.map((t) => TILE_DEFS[t].name.toLowerCase()))}, a building, a foundation, anything set down.</li>
+      <li><b>Heat</b> (hud, on Volcano Isle): at ${metres(LAVA_BAND.foot)} m and up +${percent(HEAT_FILL)}/s, ×${HEAT_NEAR} with lava on or beside your tile;
+      full: health <b>−${percent(HEAT_BURN)}/s</b>; below: −${percent(HEAT_DRAIN)}/s.</li>
+      <li>Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece worn; −${percent(HEAT_ICE)} × strength per piece infused with <b>ice</b> (armour);
+      <b>${itemDef(COOLING_DRAUGHT).name}</b> (alchemy: ${draughtBill()}): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.</li>
     </ul>
     <h3>Traps</h3>
     <ul>
@@ -3960,6 +4007,9 @@ export function helpText(): string {
     <ul>
       <li><b>Flatten</b>: brings a tile to your standing height corner by corner; cuts above (dirt to pack), fills below (dirt from pack). On your own tile: to its lowest corner.</li>
       <li>Dropped items lie on your tile (pick up from its menu). Items outside decay, even while away: food within the hour, stone over days; higher QL lasts longer.</li>
+      <li><b>Stations</b> (${listed(STATION_KINDS.map((k) => STATIONS[k].name.toLowerCase()))}): set down from <b>Set furniture down</b> on the ground's menu; ghost follows the cursor; Q/E rotate; click to place; red: refused.
+      Decay off any settlement, damage an hour at QL ${STATION_HELP_QL}: ${listed(STATION_KINDS.map((k) => `${STATIONS[k].name.toLowerCase()} ${stationDecayAt(k, STATION_HELP_QL).toFixed(2)}`))};
+      under a roof ×${INDOORS_DECAY}; gone at ${DAMAGE_MAX}. On a settlement: none. Menu and Examine: damage, decay an hour, time left.</li>
       <li>Water skin: fill at any shore.</li>
       <li>Skill gain per ordinary action: about ${listed(GAIN_AT.map((v, i) => `<b>${gainSaid(v)}</b> at ${i === 0 ? 'level ' : ''}${v}`))}:
       ${Math.round(1 / gainAt(GAIN_AT[0]))} actions for the first point, ${Math.round(1 / gainAt(GAIN_AT[2]))} for the point after ${GAIN_AT[2]}, about <b>${Math.round(1 / (MIN_GAIN * GAIN_RATE))}</b>

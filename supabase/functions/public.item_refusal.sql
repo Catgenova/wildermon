@@ -39,6 +39,11 @@ begin
     if coalesce((v_p.stats->>'stamina')::double precision, 1) >= 0.999 then return 'Stamina already full.'; end if;
     return null;
 
+  -- A cooling draught (`lava.ts`), which anybody may drink.
+  elsif p_action = 'drink_draught' then
+    if v_it.def <> cooling_draught() then return draught_not_said(); end if;
+    return null;
+
   elsif p_action = 'take_tincture' then
     if v_it.def <> 'tincture' then return 'That is not a tincture.'; end if;
     return null;
@@ -111,7 +116,7 @@ begin
 
   elsif p_action = 'improve_item' then
     if unmendable(v_it.def) then return unmendable_says(v_it.def); end if;
-    select * into v_what from improvable_def where item = v_it.def;
+    select * into v_what from improvable_of(v_it.def, v_it.extra);
     if not found then return 'Cannot be improved.'; end if;
     if v_it.holder = 'bag' then return 'Take it out of the bag first.'; end if;
     if v_it.issued then

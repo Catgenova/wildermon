@@ -133,7 +133,7 @@ begin
       -- And the furnaces, which used to move only when somebody asked them a question.
       v_fired := v_fired + furnace_sweep(w.id);
       -- And what is lying about, going off where it lies.
-      v_rotted := v_rotted + ground_sweep(w.id);
+      v_rotted := v_rotted + ground_sweep(w.id) + station_sweep(w.id);
       v_gone := v_gone + log_out_idle(w.id);
     exception
       when lock_not_available then v_busy := v_busy + 1; -- put all in

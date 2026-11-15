@@ -47,7 +47,8 @@ import { lifeWords } from '../runecut-life';
 import { islandTime, LOCAL_NIGHT_ENDS, LOCAL_NIGHT_STARTS } from '../theme';
 import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOddities, RIM } from '../runecut-art';
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
-import { RECENT } from './craft';
+import { MAKES_SECTION, RECENT } from './craft';
+import { PREVIEW_FPS } from '../craftpreview';
 import { CAMPFIRE_LOGS } from '../../render/kit/campfire';
 import { SACK_FULL } from '../../render/kit/sack';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
@@ -58,7 +59,7 @@ import { SPIRAL_TREADS } from '../../game/spiral';
 import { BACK_PACE, BACK_SLACK, CIRCLE_R, COWARD_AT, COWARD_DRAG, DRAW_WALK, FALL_BACK, GUARD_RANGE, HUNTER_TURN, KEEP_OFF, MONSTER_TURN, PACK_CALL, PACK_MOST, THROW_HIT, THROW_REACH } from '../../game/fight';
 import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays, CROWD_BLOCK, FLANK_HIT, HEAVY_EVERY, HEAVY_HIT, HIDE_NAMES, HIDES, hideSays, LEG_SLOW_MOST, sideOf, WIND_UP, BLOW_DEFENSIVE, BLOW_HUNTER, BLOW_PREY, FIGHT_BACK_STILL, FIGHT_GIVE_UP, FIGHT_LEASH, FIGHT_STANCE_NAMES, FIGHT_STANCES, FIST, FOLLOW_RANGE, stanceSays, SWING_FLOOR, SWING_WIND, SWING_WIND_KG, swingSeconds, TARGET_RANGE, TIRED_AT, TIRED_SLOW, armourSwingSays, overburdenSwingSays } from '../../game/fight';
 import {
-  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
+  CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, OBSIDIAN_GLASS, OBSIDIAN_GLASS_OPACITY, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   NO_PLAN_FROM, OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
   STOREY_JOBS, describeNeeds, GARDEN_BED,
 } from '../../game/building';
@@ -79,6 +80,7 @@ import {
 import { tryGain } from '../../game/learn';
 import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sailingPace, TRAVEL_TOP_AT, VEHICLE_QL_TOP, vehicleQlPace } from '../../game/travel';
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
+import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_PATHS, LAVA_RADIUS, SERYLL_HEART } from '../../game/lava';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
@@ -110,6 +112,7 @@ import { CELLAR_AGEING, WINE_AGE_CAP, WINE_AGE_RATE } from '../../game/ageing';
 import { CUT_VINE, GRAPE_SEASON, TRELLIS_RULE, VINE_BEARS } from '../../game/vineyard';
 import { SEASONS } from '../../world/calendar';
 import { ARTIFACT_FOR, SHEAR_FROM, SHEAR_WOOL } from '../../game/creatureActions';
+import { MINE_JOB, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCROP_USES } from '../../game/outcrops';
 import { BREW_SPRING, BREW_SPRING_ALREADY, BREW_SPRING_MUL, BREWING_ACTION_BY_ID, BREWS, GRAPE_WINE_GRAPES, UNDRINKABLE } from '../../game/brewing';
 import { CHART_LEAST, CHART_QL_PER_TILE, CHART_SHEET } from '../../game/cartography';
 import { MEAD_AGE_CAP, MEAD_AGE_RATE } from '../../game/ageing';
@@ -137,14 +140,15 @@ import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES,
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
 import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
-import { furnaceMadeSaid, meltingSaid } from '../../game/smelter';
+import { furnaceMadeSaid, meltingSaid, SMELTER_H, SMELTER_W } from '../../game/smelter';
+import { STATION_KINDS, STATIONS, stationDecayAt } from '../../game/stations';
 import { TOOL_JOBS } from '../../game/jobtools';
 import { CLIP_OF_TOOL, clipOfJob } from '../../sculpt/anim/routes';
 import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
-import { CRAFT_REACH, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
+import { CRAFT_REACH, KNAPPED, knapRecipeId, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -166,6 +170,7 @@ import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
 import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
+import { OBSIDIAN_MATERIAL } from '../../game/materials';
 import { METER_BAD, METER_WARN } from '../kit';
 import { DEED_UPGRADES } from '../../game/deed';
 import { LYE_USE, SHORE_REACH } from '../../game/placeables';
@@ -189,7 +194,7 @@ import { defaultKey } from '../../game/keybinds';
 import { guideEntries, guidePages, wildShare } from '../../game/guide';
 import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY } from '../../game/keeper';
 import { awayFor } from '../../game/away';
-import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, BANE_BONUS, SHIELDS, SLOT_NAMES, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
+import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, OBSIDIAN_PIECES, SHIELDS, SLOT_NAMES, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
 import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, unmendableSays } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
@@ -403,6 +408,29 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // The stations set down as furniture is, and decaying off a settlement (`stations.ts`).
+  {
+    n: 622,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: ${listed(STATION_KINDS.map((k) => STATIONS[k].name.toLowerCase()))}: Set furniture down (ground menu); ghost follows the cursor; Q/E rotate; click to place; red: refused (was: Build campfire here, Set the smelter, kiln or anvil down here).`,
+      `New: smelter facing east or west: ${SMELTER_H} by ${SMELTER_W} spots (was: ${SMELTER_W} by ${SMELTER_H} only).`,
+      'Changed: campfire: refused where anything stands (was: a crate or a fire only); refused on water.',
+      'Changed: smelter: refused off a settlement of yours by the island too.',
+      `New: station decay off any settlement, damage an hour at QL 50: ${listed(STATION_KINDS.map((k) => `${STATIONS[k].name.toLowerCase()} ${stationDecayAt(k, 50).toFixed(2)}`))}; under a roof ×${INDOORS_DECAY}; gone at ${DAMAGE_MAX}. On a settlement: none.`,
+      'New: station menu, hover and Examine: damage, decay an hour, time left.',
+    ],
+  },
+  // Iron and rock outcroppings (`outcrops.ts`).
+  {
+    n: 624,
+    day: '2026-11-15',
+    lines: () => [
+      `New: outcroppings. At each ${RESET}: per safe ring (${SAFE_RING} tiles round the spawn and each Runestone), ${listed(OUTCROP_KINDS.map((k) => `${k.perRing} ${k.name.toLowerCase()}s`))}, on random dry grass; the day's before removed.`,
+      `${ACTION_BY_ID.get(OUTCROP_MINE)?.label ?? 'Mine'} (right-click): pickaxe, ${MINE_JOB.skill}; time, stamina and success chance as at a rock face. Per success: ${listed(OUTCROP_KINDS.map((k) => `${k.name.toLowerCase()} 1 ${itemDef(k.yields).name.toLowerCase()}`))}, QL ${OUTCROP_QL} (skill and pickaxe QL do not change it).`,
+      `${OUTCROP_USES} uses each; at 0: broken, removed until the next ${RESET}. Examine its tile: uses left.`,
+    ],
+  },
   {
     n: 1,
     day: '2026-09-25',
@@ -4503,6 +4531,57 @@ export const NEWS: News[] = [
       `New: fishing net: ${LIFT_DROPS * NET_LIFT.length} drops off the net as it is lifted, ${SHAKE_DROPS} at each of ${NET_SHAKES.length} shakes.`,
       `New: rowing under way: ${OAR_DROPS} drops a blade at the catch; whirl pair a blade a stroke, ${SWIRL_SECS} s.`,
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
+    ],
+  },
+  // The crafting window's preview (`craftpreview.ts`) and its search's order (`recipeRank`).
+  {
+    n: 620,
+    day: '2026-11-14',
+    lines: () => [
+      'New: Crafting window: preview of a recipe\'s result: row clicked, or pointed at.',
+      'Preview: furniture, stations, posts, traps, carts, wagons, boats: set down, turning, by day.',
+      'Preview: worn gear on your figure, nothing else worn; weapons in a fight; tools at their job; loaf, candle, lantern alone.',
+      'Preview: in the row\'s chosen material, kind or pattern; changes with it.',
+      `Preview: at most ${PREVIEW_FPS} frames a second. Animations Off, less motion, or no graphics card: one still frame.`,
+      `Changed: Crafting search: recipes making what was typed first, under ${MAKES_SECTION}: exact name, then name start, then name contains; moulds by what they cast. Pinned and Recent hidden while searching.`,
+    ],
+  },
+  // The Path renamed the Guiding Light (`src/game/path.ts`).
+  {
+    n: 623,
+    day: '2026-11-15',
+    lines: () => [
+      'Renamed: Path → Guiding Light.',
+    ],
+  },
+  // Obsidian gear and obsidian glass (`gear.ts` OBSIDIAN_PIECES, `recipes.ts` KNAPPED, `building.ts` OBSIDIAN_GLASS).
+  {
+    n: 617,
+    day: '2026-11-14',
+    lines: () => {
+      const C = ARMOUR_CLASSES, glass = MATERIAL_BY_ID.get(OBSIDIAN_GLASS);
+      return [
+        `New: obsidian armour, ${listed(OBSIDIAN_PIECES.map((id) => `${itemDef(id).name.toLowerCase()} (${recipeBill(`make_${id}`)})`))}: platesmithing at an anvil, hammer.`
+          + ` Soak ${pct(C.obsidian.soak)} (plate ${pct(C.plate.soak)}, scale ${pct(C.scale.soak)}); ${armourSays('obsidian')}; full set burden ${pct(C.obsidian.burden)} (plate ${pct(C.plate.burden)}).`,
+        `New: knapped obsidian, chisel, stonecutting: ${listed(Object.keys(KNAPPED).map((id) => `${itemDef(id).name.toLowerCase()} (${recipeBill(knapRecipeId(id))})`))}.`
+          + ` Obsidian: ${OBSIDIAN_MATERIAL.note.toLowerCase()}`,
+        `New: obsidian glass, solid wall (${wallBill(OBSIDIAN_GLASS)}) or floor; trowel, masonry; ${glass?.storeys ?? 0} storeys; opacity ${pct(OBSIDIAN_GLASS_OPACITY)}; sight passes through.`,
+        'New: obsidian pieces, tools and weapons improved with obsidian; chisel and hammer.',
+        'New: models: obsidian set; knapped heads and blades; obsidian glass walls and floors.',
+      ];
+    },
+  },
+  // Volcano Isle's lava and heat (`lava.ts`).
+  {
+    n: 616,
+    day: '2026-11-14',
+    lines: () => [
+      `New: lava on Volcano Isle: a labyrinth ${LAVA_RADIUS} tiles round the caldera, on its land; ${LAVA_DESIGNS} designs, a new one at each daily reset, never twice running; corridors ${LAVA_CELL} tiles wide; on the map.`,
+      `${LAVA_PATHS} ways in, about ${Math.round(360 / LAVA_PATHS)}° apart, each the only way through to the heart (${LAVA_HEART} tiles round the caldera, no lava); every other corridor ends.`,
+      `Changed: seryll lies in the labyrinth's heart only, on ${percent(SERYLL_HEART)} of its dry ground (was: anywhere on Volcano Isle).`,
+      `On lava: health −${percent(LAVA_BURN)}/s; no digging, building, setting down or founding; no creature steps on it. Never on a settlement, a road, a building or anything set down.`,
+      `New: heat meter (hud, Volcano Isle): +${percent(HEAT_FILL)}/s at ${metres(LAVA_BAND.foot)} m and up, ×${HEAT_NEAR} beside lava; full: health −${percent(HEAT_BURN)}/s; below: −${percent(HEAT_DRAIN)}/s.`,
+      `Heat fill: ×${1 - HEAT_SCALE} per dragon-scale piece; −${percent(HEAT_ICE)} × strength per ice-infused piece (ice now infuses armour); ${itemDef(COOLING_DRAUGHT).name} (alchemy; mint, water, ice mote): heat −${percent(DRAUGHT_DROP)}, fill ×${DRAUGHT_FILL} for ${DRAUGHT_SECS / 60} min.`,
     ],
   },
   // The level shown while set: the HUD's chip and the corners' marks (`Hud.drawLevel`, `Renderer.drawLevelMarks`).

@@ -4,6 +4,7 @@ import { FIRE_CAPACITY, FUEL_SAID, FUEL_VALUES, fuelAtHand, fuelledSaid, hasAshe
 import { burnsFor, heatSaid } from './words';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
+import type { Side } from './building';
 import { chargesFor, itemDef, itemName, rarityOf, type Item } from './items';
 import { world } from './pace';
 import type { CraftStock } from './recipes';
@@ -41,6 +42,8 @@ export interface PlacedKiln {
   /** Top-left subtile of its two by two block. */
   sx: number;
   sy: number;
+  /** Which way its mouth faces, as it was set down; south when unsaid. */
+  facing?: Side;
   /** Built quality: a better kiln fires faster and truer. */
   ql: number;
   fuel: number;
@@ -161,7 +164,7 @@ export const KILN_ACTIONS: ActionDef[] = [
       if (t.kind !== 'tile' || t.sx === undefined || t.sy === undefined) return;
       const item = t.itemUid !== undefined ? g.inventory.get(t.itemUid) : g.inventory.find('kiln');
       if (!item || item.id !== 'kiln' || !g.inventory.remove(item.uid, 1)) return;
-      const k = g.addKiln(t.x, t.y, t.sx, t.sy, item.ql);
+      const k = g.addKiln(t.x, t.y, t.sx, t.sy, item.ql, t.facing);
       // A rare kiln set down is a rare kiln: it takes a bigger load.
       if (item.rare) k.rare = item.rare;
       // Its enchantment and its wear go down with it, and come up again with it (`enchanting.ts`).

@@ -6,7 +6,7 @@ import type { Game } from './game';
 import { itemDef, itemName, liftRarity, rarityOf, RARITIES, RARITY_LIFT, temperOf, unmendable, unmendableSays, type Item } from './items';
 import { ingotOf, isMould, METALS } from './metal';
 import { waterNear } from './placeables';
-import { materialOfItem, matOf } from './materials';
+import { materialOf, materialOfItem, matOf, OBSIDIAN_MATERIAL } from './materials';
 import { FIRE_STEEL_CAP, FIRE_STEEL_NAME } from './volcano';
 import type { CraftStock } from './recipes';
 
@@ -60,7 +60,7 @@ export const outOfSaid = (lock: StockLock): string => `Out of ${lockSaid(lock)}.
  * whetstone for metal, a knife and a file for wood, a needle for cloth, an awl
  * for leather — and how much of itself it takes to build it up.
  */
-export type Material = 'metal' | 'wood' | 'cloth' | 'leather' | 'stone';
+export type Material = 'metal' | 'wood' | 'cloth' | 'leather' | 'stone' | 'obsidian';
 
 export interface MaterialDef {
   id: Material;
@@ -80,7 +80,8 @@ export const MATERIALS: Record<Material, MaterialDef> = {
   wood: { id: 'wood', name: 'wood', tools: ['carving_knife', 'file'], stock: ['plank', 'shaft'], skill: 'carpentry' },
   cloth: { id: 'cloth', name: 'cloth', tools: ['needle'], stock: ['cloth'], skill: 'tailoring' },
   leather: { id: 'leather', name: 'leather', tools: ['awl', 'needle'], stock: ['leather'], skill: 'leatherworking' },
-  stone: { id: 'stone', name: 'stone', tools: ['chisel', 'whetstone'], stock: ['rock_shards', 'slate_shards', 'marble_shards', 'sandstone_shards'], skill: 'stonecutting' },
+  stone: { id: 'stone', name: 'stone', tools: ['chisel', 'whetstone'], stock: ['rock_shards', 'slate_shards', 'marble_shards', 'sandstone_shards'], skill: 'stonecutting' },  // Obsidian, knapped and riveted (`recipes.ts` KNAPPED, OBSIDIAN_ARMOUR): worked with more of it.
+  obsidian: { id: 'obsidian', name: 'obsidian', tools: ['chisel', 'hammer'], stock: ['obsidian'], skill: 'stonecutting' },
 };
 
 /** Tools whose heads are metal, whatever the handle is. */
@@ -113,12 +114,24 @@ export const PACKS: Readonly<Record<string, { material: Material; skill: string 
 };
 const WOOD_TOOLS = new Set(['mallet', 'short_bow', 'medium_bow', 'long_bow', 'club', 'wooden_shield', 'lectern', 'fishing_rod', 'rope_tool']);
 
-/** What a thing is made of, and which skill judges work on it. */
-export function improvable(id: string): { material: MaterialDef; skill: string } | null {
+/**
+ * What a thing is made of, and which skill judges work on it. A tool or a weapon knapped from obsidian (its `extra`,
+ * `materials.ts` OBSIDIAN) is worked with obsidian at stonecutting, whatever the same thing in metal is worked with:
+ * the island's `improvable_of`.
+ */
+export function improvable(id: string, extra?: string): { material: MaterialDef; skill: string } | null {
+  const what = improvableDef(id);
+  return what && extra && materialOf(extra) === OBSIDIAN_MATERIAL && what.material.id !== 'obsidian'
+    ? { material: MATERIALS.obsidian, skill: MATERIALS.obsidian.skill } : what;
+}
+
+/** What a thing of this id is made of, and which skill judges work on it: the island's `improvable_def`. */
+export function improvableDef(id: string): { material: MaterialDef; skill: string } | null {
   // Restored gear nothing improves (`UNMENDABLE`), whatever it would be made of.
   if (unmendable({ id })) return null;
   const armour = ARMOUR_BY_ID.get(id);
   if (armour) {
+    if (armour.cls === 'obsidian') return { material: MATERIALS.obsidian, skill: 'platesmithing' };
     if (armour.cls === 'cloth') return { material: MATERIALS.cloth, skill: 'tailoring' };
     if (armour.cls === 'leather') return { material: MATERIALS.leather, skill: 'leatherworking' };
     return { material: MATERIALS.metal, skill: armour.cls === 'chain' ? 'chainsmithing' : 'platesmithing' };
@@ -172,7 +185,7 @@ export const improveStepAt = (level: number, ql: number): number => Math.max(0.0
  * made of (a Smith's Metal Polisher), as `perform_item` has it on the island.
  */
 export function improveStep(g: Game, item: Item, skill: string, ql = item.ql): number {
-  const what = improvable(item.id);
+  const what = improvable(item.id, item.extra);
   return improveStepAt(g.skills.get(skill), ql) * g.classChannel('fine', skill) * (what ? g.perk(`improve:${what.material.id}`, 1) : 1);
 }
 
@@ -219,7 +232,7 @@ export const madeOf = (item: Item): string | undefined => materialOfItem(item)?.
  * carried first, the poorest first. A kind is its item and what it is made of (`lockFor`).
  */
 export function stockKinds(g: Game, item: Item): Array<{ lock: StockLock; carried: number; stored: number; ql: number }> {
-  const what = improvable(item.id);
+  const what = improvable(item.id, item.extra);
   if (!what) return [];
   const made = madeOf(item);
   const kinds = new Map<string, { lock: StockLock; carried: number; stored: number; ql: number }>();
@@ -255,7 +268,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
       const item = g.inventory.get(t.uid);
       if (!item) return 'It is gone.';
       if (unmendable(item)) return unmendableSays(item);
-      const what = improvable(item.id);
+      const what = improvable(item.id, item.extra);
       if (!what) return 'Cannot be improved.';
       if (item.issued) return 'Starting kit cannot be improved: make your own.';
       if (item.dmg > IMPROVE_DAMAGE) return `Damage over ${IMPROVE_DAMAGE}: repair it first.`;
@@ -291,7 +304,7 @@ export const IMPROVE_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       if (t.kind !== 'item') return;
       const item = g.inventory.get(t.uid);
-      const what = item && improvable(item.id);
+      const what = item && improvable(item.id, item.extra);
       if (!item || !what) return;
       const made = madeOf(item);
       const lock = lockOf(t);

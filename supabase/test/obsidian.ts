@@ -303,11 +303,12 @@ begin
   v_orb := v_pl;
 
   -- 8. An obsidian wind chime: no hook on bare ground; hung from a lantern post on its tile.
-  ${at(26, 4)}
+  --    On the settlement: lava, which scales onto this small island, never lies on one.
+  ${at(18, 4)}
   ${build(OBSIDIAN_CHIME)}
-  ${ask('CHIME:nohook', 'place_furniture', TILE('v_it', 26, 4, 's'))}
-  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by) values (w, 'furniture', 'lamp_post', 26, 4, 0, 0, 26.125, 4.125, 40, u);
-  ${place('CHIME', TILE('v_it', 26, 4, 'e', 3, 2))}
+  ${ask('CHIME:nohook', 'place_furniture', TILE('v_it', 18, 4, 's'))}
+  insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by) values (w, 'furniture', 'lamp_post', 18, 4, 0, 0, 18.125, 4.125, 40, u);
+  ${place('CHIME', TILE('v_it', 18, 4, 'e', 3, 2))}
   v_chime := v_pl;
 
   -- 9. An obsidian bust on Mira's settlement: carved as Mira, with her look, by the stone bust's rule.

@@ -36,6 +36,11 @@ begin
     perform perform_swirl(p_world, p_uid, p_action, p_target);
     return;
   end if;
+  -- Mine, at an outcropping (`outcrops.ts`).
+  if outcrop_action(p_action) then
+    perform perform_outcrop(p_world, p_uid, p_action, p_target);
+    return;
+  end if;
   -- Reading a trail from the field guide (`tracking.ts`).
   if track_action(p_action) then
     perform perform_track(p_world, p_uid, p_action, p_target);

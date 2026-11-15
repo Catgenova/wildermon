@@ -95,7 +95,7 @@ export const BINDS: BindDef[] = [
   { id: 'win_stores', label: 'Stores', hint: 'Contents of every crate and cupboard on your settlement.', group: 'Windows', keys: ['KeyU'] },
   { id: 'win_journal', label: 'Journal', hint: 'Goals; tick themselves off.', group: 'Windows', keys: ['KeyJ'] },
   // Every letter is spoken for, and Home is the camera's: End is nobody's.
-  { id: 'win_path', label: 'Path', hint: 'Journal, Path tab: the steps, the one you are on, Skip, detours.', group: 'Windows', keys: ['End'] },
+  { id: 'win_path', label: 'Guiding Light', hint: 'Journal, Guiding Light tab: the steps, the one you are on, Skip, detours.', group: 'Windows', keys: ['End'] },
   // No key out of the box: it is for the few who keep an island, and every letter is spoken for.
   { id: 'win_keeper', label: 'Island keeper', hint: 'Open reports; everyone on the island: position, muted, barred; Move, Mute, Unmute, Kick, Unbar, Handled.', group: 'Windows', keys: [], keeper: true },
   { id: 'win_settings', label: 'Settings', hint: 'This window.', group: 'Windows', keys: ['KeyO'] },

@@ -29,7 +29,7 @@ export const HUSHED: ReadonlySet<string> = new Set([
   // swing twice.
   'attack_creature', 'shoot_creature',
   // Eating, drinking and sleeping. A body doing something to itself.
-  'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'study_map', 'read_recipe', 'read_formula', 'open_ferment', 'serve_dish', 'drink_tea',
+  'eat', 'drink', 'drink_skin', 'drink_from_vessel', 'sleep', 'study_book', 'study_map', 'read_recipe', 'read_formula', 'open_ferment', 'serve_dish', 'drink_tea', 'drink_draught',
   // Faith and the paths, which are the two things on this island done by
   // sitting still; and what is given up at the altar, and what it gives back.
   'pray', 'meditate', 'sacrifice', 'absorb_soul',
@@ -58,6 +58,8 @@ export const STROKE_BY_ID: Record<string, Stroke> = {
   drop_dirt: 'earth', drop_dirt_here: 'earth', change_tile: 'earth', dig_stump: 'earth',
   // A critter cache dug out of the winter ground by hand (`winter.ts`).
   dig_cache: 'earth',
+  // A pick into an outcropping (`outcrops.ts`), as into a face.
+  mine_outcrop: 'stone',
   take_ashes_oven: 'earth', take_ashes_fire: 'earth', take_ashes_smelter: 'earth', take_ashes_kiln: 'earth',
   // Stone, whether it is being cut or merely shifted.
   pave_cobble: 'stone', pave_slabs: 'stone', remove_paving: 'stone',

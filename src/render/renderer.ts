@@ -99,7 +99,8 @@ import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre } from '../game/campfire';
 import { drawCampfireNight } from './kit/campfire';
-import { SMELTER_H, SMELTER_W, smelterCentre } from '../game/smelter';
+import { smelterCentre, smelterSize } from '../game/smelter';
+import { stationCentreAt, stationFootprint, stationTurn } from '../game/stations';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
 import { KILN_SUBTILES, kilnCentre } from '../game/kiln';
 import { furnitureCentre, furnitureDef, hearthCapacity, isBoat, type PlacedFurniture, facingOf as pieceFacing, furnitureFootprint } from '../game/furniture';
@@ -144,6 +145,11 @@ import { drawPlantsFlat, drawPlantUpright, plantFoot, standsUp, type PlantFrame 
 import type { WaterPlant } from '../world/waterplants';
 import type { Swirl } from '../game/motes';
 import { drawSwirl, glowSwirl } from './swirls';
+import { drawLava, glowLava } from './lava';
+/** How far from the lava's box it can still be in view, in tiles. */
+const LAVA_VIEW = 160;
+import { isOutcropKind, outcropStage } from '../game/outcrops';
+import { OUTCROP_VARIANTS, outcropTrim } from './kit/outcropping';
 import { activeInfusion } from '../game/infusion';
 import { isRigged } from '../game/sailing';
 import { MOTE_ELEMENTS, type MoteElement } from '../game/motes';
@@ -538,6 +544,15 @@ export { type Pick } from './picking';
 import { drawPlinthRunes, plinthNight } from './plinth';
 import { plinthBusy } from '../game/plinth';
 import { ENCHANTERS_PLINTH } from '../game/enchant';
+
+/** The face and shade an anvil of a metal is drawn in: its own (`anvilTone`), or else its ore's. */
+function anvilColours(metal: string): [string, string] {
+  const own = anvilTone(metal);
+  if (own) return [own[0], own[1]];
+  const rock = ROCK_VARIANTS.find((r) => r.yields === `${metal}_ore`);
+  const c = rock ? rock.color : ([150, 150, 156] as const);
+  return [`rgb(${c[0]},${c[1]},${c[2]})`, `rgb(${Math.round(c[0] * 0.68)},${Math.round(c[1] * 0.68)},${Math.round(c[2] * 0.68)})`];
+}
 
 /** How far ahead of its line a piece lying flat sorts (`DrawEnt.key`): ahead of anything standing in it. */
 const FLAT_FIRST = 1e6;
@@ -1404,6 +1419,11 @@ export class Renderer {
    * painted over it.
    */
   private glows: Array<{ sx: number; sy: number; kind: string; view: PieceView }> = [];
+  /** The lava drawn this frame, ten numbers a tile (its four corners on screen, then the tile), and how many (`glowLava`). */
+  private lavaSeen: number[] = [];
+  private lavaN = 0;
+  /** Whether the day's lava can be in view this frame: you are within `LAVA_VIEW` tiles of its box. */
+  private lavaNear = false;
   /** The mote swirls drawn this frame and where, for their light to be added over the night (`glowSwirl`). */
   private swirlsSeen: Array<{ s: Swirl; x: number; y: number }> = [];
   /**
@@ -4424,6 +4444,13 @@ export class Renderer {
     this.hitSeq = 0;
     this.glows.length = 0;
     this.swirlsSeen.length = 0;
+    // The lava drawn this frame, for its glow over the night (`glowLava`), and whether any can be in view at all.
+    this.lavaN = 0;
+    {
+      const b = this.game.lavaBox();
+      const p = this.game.player;
+      this.lavaNear = p.x > b[0] - LAVA_VIEW && p.y > b[1] - LAVA_VIEW && p.x < b[2] + LAVA_VIEW && p.y < b[3] + LAVA_VIEW;
+    }
     this.infusedSeen = this.infusedThings();
     // After dark; and for an altar's stars, whenever the night layer is laid at all (`drawOverlays`), so it can be mixed small.
     const dark0 = this.game.darkness();
@@ -4758,6 +4785,24 @@ export class Renderer {
         if (seamed && !wet && !run && t0 === TileType.Rock) {
           const kind = world.rockFace(x, y);
           if (kind > 0) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
+        }
+
+        // The day's lava on Volcano Isle (`./lava`), over its ground: crusted where it stops; glowing after dark (`glowLava`).
+        if (this.lavaNear && !wet && this.game.lavaAt(x, y)) {
+          let open = 0;
+          for (let k = 0; k < 4; k++) {
+            const a = co[k], b = co[(k + 1) & 3];
+            const across = a[0] === b[0];
+            if (!this.game.lavaAt(across ? x + (a[0] === 0 ? -1 : 1) : x, across ? y : y + (a[1] === 0 ? -1 : 1))) open |= 1 << k;
+          }
+          drawLava(ctx, pts, co, open, x, y, this.anim, lit, this.still, this.calm);
+          if (lit) {
+            const o = this.lavaN * 10;
+            for (let k = 0; k < 8; k++) this.lavaSeen[o + k] = pts[k];
+            this.lavaSeen[o + 8] = x;
+            this.lavaSeen[o + 9] = y;
+            this.lavaN++;
+          }
         }
 
         // What stands on a line behind and reaches out over this tile's ground: drawn again over the part of it under its feet.
@@ -7430,7 +7475,7 @@ export class Renderer {
          * turned up by what the wash will take off them (`nightOver`).
          * Clicked by its solids.
          */
-        const kiln = ent.kiln, turn = this.camera.rotation, dark = this.game.darkness();
+        const kiln = ent.kiln, turn = this.camera.rotation + stationTurn(kiln.facing), dark = this.game.darkness();
         const look = { lit: kiln.lit, firing: kiln.lit && kiln.jobs.length > 0 };
         const [bl, bt, br, bb] = kilnBounds(turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7456,7 +7501,7 @@ export class Renderer {
          * off them (`nightOver`) -- not the runestones' keeping, which costs a
          * frame a box of everything drawn after it. Clicked by its solids.
          */
-        const sm = ent.smelter, turn = this.camera.rotation, dark = this.game.darkness();
+        const sm = ent.smelter, turn = this.camera.rotation + stationTurn(sm.facing), dark = this.game.darkness();
         const look = { lit: sm.lit, working: sm.lit && sm.jobs.length > 0 };
         const [bl, bt, br, bb] = smelterBounds(turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7468,21 +7513,15 @@ export class Renderer {
         if (look.lit && dark > 0.02) drawSmelterNight(ctx, ent.sx, ent.sy, zoom, turn, look, dark, this.anim, this.nightOver(ent.sx, ent.sy - 30 * zoom, dark));
         const [hl, ht, hr, hb] = smelterHit(turn, zoom);
         this.smelterHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + hl * zoom, top: ent.sy + ht * zoom, w: (hr - hl) * zoom, h: (hb - ht) * zoom, smelter: sm.id });
-        if (!behind) this.standsOn(...smelterCentre(sm), ent.sy, this.footReach(SMELTER_W, SMELTER_H, hl, hr), zoom);
+        if (!behind) this.standsOn(...smelterCentre(sm), ent.sy, this.footReach(...smelterSize(sm.facing), hl, hr), zoom);
         if (shines(ent.rare)) drawShine(ctx, ent.sx, ent.sy, zoom, ent.rare as number, sm.id, this.anim, (hr - hl) * zoom, (hb - ht) * 0.75 * zoom);
         continue;
       }
       if (ent.kind === 'anvil' && ent.anvil) {
         // An anvil takes the colour of the metal it was cast from, on a block with a rune cut in it (`forge.ts`), lit over the night after dark.
-        const an = ent.anvil, turn = this.camera.rotation, dark = this.game.darkness();
-        let [face, shade] = anvilTone(an.metal) ?? ['', ''];
-        if (!face) {
-          // A metal with no colour of its own drawn: its ore's.
-          const rock = ROCK_VARIANTS.find((r) => r.yields === `${an.metal}_ore`);
-          const c = rock ? rock.color : ([150, 150, 156] as const);
-          face = `rgb(${c[0]},${c[1]},${c[2]})`;
-          shade = `rgb(${Math.round(c[0] * 0.68)},${Math.round(c[1] * 0.68)},${Math.round(c[2] * 0.68)})`;
-        }
+        // Turned the way it was set down (`stationTurn`).
+        const an = ent.anvil, turn = this.camera.rotation + stationTurn(an.facing), dark = this.game.darkness();
+        const [face, shade] = anvilColours(an.metal);
         const variant = anvilVariant(an.x, an.y, an.sx, an.sy);
         const [bl, bt, br, bb] = anvilBounds(face, shade, variant, turn, zoom);
         const box: [number, number, number, number] = [ent.sx + bl * zoom, ent.sy + bt * zoom, (br - bl) * zoom, (bb - bt) * zoom];
@@ -7680,7 +7719,7 @@ export class Renderer {
       }
       if (ent.kind === 'campfire' && ent.fire) {
         const fire = ent.fire;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim, this.camera.rotation, fire.ash ?? 0));
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawCampfire(g, px, py, zoom, fire.lit, fire.fuel, this.anim, this.camera.rotation + stationTurn(fire.facing), fire.ash ?? 0));
         // Its fire after dark, added as light in its own place (`kit/campfire.ts`), as a smelter's is.
         const dark = fire.lit ? this.game.darkness() : 0;
         if (dark > 0.02) drawCampfireNight(ctx, ent.sx, ent.sy, zoom, fire.fuel, dark, this.anim, this.nightOver(ent.sx, ent.sy - 12 * zoom, dark));
@@ -8480,11 +8519,31 @@ export class Renderer {
      * top, a way down is the hole it would go down through.
      */
     const below = this.cellarFrame && this.game.buildings.cellarDone(ghost.x, ghost.y)
-      && (ghost.kind === 'furniture' || ghost.level === 0);
+      && (ghost.kind === 'furniture' || (ghost.kind === 'stairs' && ghost.level === 0));
     if (below !== this.inCellarPass) return;
     ctx.save();
     ctx.globalAlpha = 0.6;
-    if (ghost.kind === 'furniture') {
+    if (ghost.kind === 'station') {
+      // A station as itself, cold, turned the way it would be set down (`stations.ts`).
+      const [wx, wy] = stationCentreAt(ghost.station, ghost.x, ghost.y, ghost.sx, ghost.sy, ghost.facing);
+      const px = cam.worldToScreenX(wx, wy);
+      const py = cam.worldToScreenY(wx, wy, this.standTop(wx, wy));
+      const turn = cam.rotation + stationTurn(ghost.facing);
+      if (ghost.station === 'campfire') drawCampfire(ctx, px, py, zoom, false, 0, this.anim, turn, 0);
+      else if (ghost.station === 'smelter') drawSmelter(ctx, px, py, zoom, turn, { lit: false, working: false }, 0, this.anim, false);
+      else if (ghost.station === 'kiln') drawKiln(ctx, px, py, zoom, turn, { lit: false, firing: false }, 0, this.anim, false);
+      else {
+        const [face, shade] = anvilColours(ghost.metal ?? 'copper');
+        drawAnvil(ctx, px, py, zoom, face, shade, turn, anvilVariant(ghost.x, ghost.y, ghost.sx, ghost.sy), 0, this.anim, false);
+      }
+      if (!ghost.ok) {
+        const [w, h] = stationFootprint(ghost.station, ghost.facing);
+        ctx.fillStyle = 'rgba(214, 58, 42, 0.5)';
+        ctx.beginPath();
+        ctx.ellipse(px, py, 9 * Math.max(w, h) * zoom, 4.5 * Math.max(w, h) * zoom, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (ghost.kind === 'furniture') {
       const [w, h] = furnitureFootprint(ghost.piece, ghost.facing);
       const wx = ghost.x + (ghost.sx + w / 2) / SUBTILES;
       const wy = ghost.y + (ghost.sy + h / 2) / SUBTILES;
@@ -10166,7 +10225,8 @@ export class Renderer {
        * between it and the next tile of it -- except seen through, where the
        * hair laid twice is a line across the ceiling.
        */
-      const cx = fx(0.5, 0.5), cy = fy(0.5, 0.5), grow = alpha < 1 ? 0 : 0.5;
+      // Nor glass seen through all over (`MaterialDef.opacity`), which the hair laid twice would line at every joint.
+      const cx = fx(0.5, 0.5), cy = fy(0.5, 0.5), grow = alpha < 1 || (bare.opacity ?? 1) < 1 ? 0 : 0.5;
       ctx.beginPath();
       for (const [u, v] of corners) {
         const px = fx(u, v), py = fy(u, v), l = Math.hypot(px - cx, py - cy) || 1;
@@ -10225,6 +10285,8 @@ export class Renderer {
     const decked = floor.level === 0 && bld.pierTiles.size > 0 && bld.onPiers(x, y);
     if (done && (floor.level > 0 || decked)) {
       const st = stairStyle(floor.material);
+      // Its edge as seen through as its deck (`MaterialDef.opacity`).
+      ctx.globalAlpha = alpha * (bare.opacity ?? 1);
       const lum = (c: readonly [number, number, number]): number => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
       const C = (c: readonly [number, number, number], k: number, a = 1): string =>
         paint ? rgb(paint, k * Math.max(0.6, Math.min(1.3, lum(c) / Math.max(1, lum(st.string)))), a) : rgb(c, k, a);
@@ -11375,6 +11437,8 @@ export class Renderer {
     if (!this.fast) this.life.glow(ctx);
     // And the mote swirls' glow and glints, the same way (`glowSwirl`).
     if (dark > 0.02) for (const w of this.swirlsSeen) glowSwirl(ctx, w.x, w.y, zoom, w.s.element, this.anim, w.s.id, dark);
+    // And the lava, burning through the night (`glowLava`).
+    if (dark > 0.02 && this.lavaN) glowLava(ctx, this.lavaSeen, this.lavaN, dark, this.anim, this.calm);
     // And the spells' light, over the night too, and the screen's tint for a great one of your own over that.
     this.spells.glowPass(ctx);
     this.spells.screenPass(ctx, this.canvas.width, this.canvas.height);
@@ -11512,6 +11576,8 @@ export class Renderer {
   }
 
   private pieceTrim(f: PlacedFurniture): number | undefined {
+    // An outcropping: how far it is mined down, and its shape off its tile (`outcrops.ts`).
+    if (isOutcropKind(f.kind)) return outcropTrim(outcropStage(f.uses), Math.floor(hash2(f.x, f.y, 89) * OUTCROP_VARIANTS));
     // A cart's or a wagon's wheels, as far round as she has rolled.
     if (WHEELS[f.kind]) return this.wheelTurn(f);
     // A rowing boat somebody is rowing has her oars out in their hands, not shipped in her.

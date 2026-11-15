@@ -5385,6 +5385,9 @@ const wheelBlock = (at: Array<[number, number, number, number]>, i: number): num
   return y;
 };
 
+/** Whether a piece has a model of its own (the kit's, a den's, the plinth's or `MODELS`), not the plain box `build` stands in for one. */
+export const pieceModelled = (kind: string): boolean => kind === ENCHANTERS_PLINTH || isDen(kind) || isKit(kind) || Object.hasOwn(MODELS, kind);
+
 /**
  * Draw one piece with its floor contact at (sx, sy), turned as `view` says
  * and built of `material`. A sail's trim is taken to the nearest twentieth,

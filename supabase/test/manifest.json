@@ -1526,6 +1526,12 @@
     "why": "The Artisan's fourth trade, at a hot smelter: sand melted into lumps, a lump blown into the panel every window, bay and glasshouse roof is glazed with, a bottle, and a gem and sand fired into the panes a stained glass wall is leaded from. Each job the same on both sides and made on the island; a failed firing keeps its gem; the stained glass wall's bill, and a bottle's room, alike on both sides."
   },
   {
+    "file": "supabase/test/obsidiangear.ts",
+    "title": "Obsidian armour, knapped obsidian and obsidian glass, on both sides",
+    "shard": 3,
+    "why": "Asked for: \"Add obsidian armor set, unique obsidian models for tools and weapons, dark obsidian glass walls and floors with 80% opacity. Obsidian only drops from monsters killed on the volcano isle.\" Obsidian made and found by nothing; the five pieces, their class between plate and scale, best against cuts and burns and worst against crushing, each recipe the same on both sides and riveted only at an anvil; every knapped tool and weapon's recipe the same on both sides, Obsidian the keenest edge, truest bite and fastest wear on both, improved with obsidian; obsidian glass's bill, tool, skill, storeys and heft the same, a solid wall or a floor only, built on the island with a storey over it."
+  },
+  {
     "file": "supabase/test/arcane.ts",
     "title": "A stone, and what you can get out of it",
     "shard": 3,
@@ -3209,6 +3215,24 @@
     "why": "Asked for: new harder monsters that live only on Volcano Isle, each at a vent with a boss and a hoard; obsidian only off monsters killed there; mining seryll with a chance to summon monsters, never in a settlement or the safe ring, gone after their time; sulfur, and fire-tempered steel made only at a smelter there with a raised QL cap. Every number the same on both sides; the vents sited on the island and nowhere else, their kinds standing nowhere else; a carcass's island read at the butchering; the chance held either side of its line; the summons' leash, refusals and going; the smelter refused off the island in the browser's words; the cap on both sides; the blinding, the burns and the frost."
   },
   {
+    "file": "supabase/test/lava.ts",
+    "title": "Volcano Isle's labyrinth of lava: ten designs, one a day, three true paths each, and its heat held off",
+    "shard": 3,
+    "why": "Asked for: a labyrinth of lava radius 500 round the caldera with only 3 true paths from outside to its heart, 10 designs, one chosen daily; and heat to prepare for. The chart's table of the island's land as the chart works it out; every design the same on both sides block for block, with the same ways in and out, and each with exactly three true paths at 1024 and at 4096: all shut, the heart out of reach; one open, in reach, through its own wedge only; the day's design the same both sides for sixty days, never twice running, all ten coming round; every tile of the box the same lava today and tomorrow; a way with no lava to the heart, both lairs and both seams on sixty days; no lava on water, the heart, a settlement, a road, a building, a piece or a lair; health off on lava, nothing planted, dug, set down or founded on it in the same words, no creature on it; the heat filling, twice beside lava, burning at full only for the part of a stretch it was full, draining below; each of dragon scale, an ice infusion and a cooling draught slowing it by its stated amount; the draught brewed, drunk and refused; and a design made and a tile asked, timed."
+  },
+  {
+    "file": "supabase/test/seryllhome.ts",
+    "title": "Seryll lies in the heart of the labyrinth and nowhere else, on the generator and on an island moved",
+    "shard": 3,
+    "why": "Asked for: seryll only within the labyrinth's interior safe area. The generator at 4096 on two seeds lays none outside the heart and about its share inside; an island founded on the old ground, seryll scattered and none in the heart, moved by seryllHome: none outside but on a tile somebody changed, exactly the generator's in the heart, nothing else changed, written down, and a second run changes nothing."
+  },
+  {
+    "file": "supabase/test/outcrops.ts",
+    "title": "Outcroppings set down daily on grass in the safe ring, mined twenty times at QL 5, gone until the next reset",
+    "shard": 3,
+    "why": "Asked for: iron and rock outcroppings that spawn at random within the Runestone safe zones on grass daily, mined 20 times before breaking and gone until the next daily reset; everything off one at QL 5. Every kind and number the same on both sides; Mine at one is mining's job; a reset sets each kind's count round the spawn and every Runestone, each on dry grass inside its ring, clear of the centres, off settlements, roads, dirt, water and other pieces; the daily tick runs it; Examine says its uses; nothing but Mine is done to one; twenty swings at QL 5, each a use, the last removing it, Mine refused after; the next reset sets a whole new set."
+  },
+  {
     "file": "supabase/test/path.ts",
     "title": "The Path: steps the island confirms, sites, supplies and noted kinds",
     "shard": 5,
@@ -3243,5 +3267,24 @@
       "NAMEICONS_STRICT": "1"
     },
     "why": "\"Create runecut trade and class icons to display next to player names in chat and in game.\" Every trade and class has an icon of its own, trades on a round stone and classes on a shield, edged in the stones' ink. On an island of its own: the roster's columns carry each player's trade and class to an islander, and every line of talk from before you came says who said it (`rpc_chat`'s `by`). Then, in Chrome, the event window's talk, the Social window and the name plates over people's heads show each player's trade and class, titled, none for a player with neither; a trade changed on the island changes the lines already drawn; Settings, Name icons, takes them all away and puts them back."
+  },
+  {
+    "file": "supabase/test/stations.ts",
+    "title": "A campfire, a smelter, a kiln and an anvil set down as furniture is, and decaying off a settlement",
+    "shard": 5,
+    "why": "Set down from the furniture placement: a smelter's block turns with its facing on both sides and stands where the browser anchored it; a campfire, a kiln and an anvil keep the way they face; refused where anything stands, a smelter off a settlement of yours, in the browser's words. Off a settlement a station takes its item's damage an hour (a campfire its shafts'), the same number on both sides, charged by the world's round and gone at a hundred; on a settlement none; picked up, its damage goes into the pack."
+  },
+  {
+    "file": "supabase/test/craftpreview.ts",
+    "title": "The crafting window: a preview of what a recipe makes, in its material; search puts what makes the thing first",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "CRAFTPREVIEW_STRICT": "1"
+    },
+    "why": "Asked for: \"the crafting menu should show a preview of the item for anything that has one, e.g. gear or furniture\", then \"that gear should update when changing material selection, e.g. pine to cedar barrel\", and the recipe that makes what was typed first in the search. Which things have a preview is read off the models; this asks the kinds of a spread of things and none for a plank, a stew or a scroll; in Chrome, a row clicked shows its preview drawn and lit, a row with no model no strip, the pointer on another row that one's and off the window the chosen one's; a barrel in pine and in cedar two pictures and pine again the pine one, a sword in iron and in gold two; \"plank\" the plank first and \"nail\" the nail mould first under Makes, before every recipe that takes nails; the window shut stops the drawing and opened again starts it; Animations Off one still frame."
   }
 ]

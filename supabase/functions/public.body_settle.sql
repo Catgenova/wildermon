@@ -9,6 +9,7 @@ declare p player; secs double precision;
         deep boolean; swum double precision; swim_from timestamptz; nagged timestamptz;
         cost double precision; gasped double precision; i int;
         v_upkeep double precision; v_free double precision; v_drain double precision;
+        v_heat double precision; v_hsaid double precision; v_hs record; v_tx int; v_ty int; v_on boolean;
 begin
   select * into p from player where world_id = p_world and uid = p_uid for update;
   if not found then return; end if;
@@ -129,6 +130,26 @@ begin
     nagged := null;
   end if;
 
+  /*
+   * Volcano Isle's heat and lava (`lava.ts`): the meter fills in the heat, beside lava the faster, and takes health
+   * once full; it drains below; lava underfoot burns. Nothing of it for a body away.
+   */
+  v_heat := coalesce((p.stats->>'heat')::double precision, 0);
+  v_hsaid := (p.stats->>'heatSaid')::double precision;
+  v_tx := floor(p.x)::int; v_ty := floor(p.y)::int;
+  if not p.away and (v_heat > 0 or lava_heat_on(p_world, v_tx, v_ty)) then
+    v_on := coalesce(p.level, 0) = 0 and p.aboard is null and lava_at(p_world, v_tx, v_ty);
+    select * into v_hs from heat_step(v_heat, hp, secs, lava_heat_on(p_world, v_tx, v_ty),
+      v_on or (coalesce(p.level, 0) = 0 and p.aboard is null and lava_near(p_world, v_tx, v_ty)), v_on,
+      heat_mul(p_world, p_uid, (p.stats->>'cool')::double precision));
+    v_heat := v_hs.heat;
+    hp := v_hs.health;
+    if (v_on or v_hs.at_full) and (v_hsaid is null or extract(epoch from now()) - v_hsaid > heat_warn()) then
+      perform tell(p_world, p_uid, case when v_on then heat_lava_said() else heat_full_said() end, 'error');
+      v_hsaid := extract(epoch from now());
+    end if;
+  end if;
+
   -- Nothing knits while you are trying not to drown.
   if not deep and h > heal_fed() and t > heal_fed() and hp < 1 then
     hp := least(1, hp + secs * heal_rate());
@@ -178,6 +199,8 @@ begin
       coalesce(stats, '{}'::jsonb),
       '{hunger}', to_jsonb(h)), '{thirst}', to_jsonb(t)),
       '{stamina}', to_jsonb(w)), '{health}', to_jsonb(hp))
+      -- And the heat (`lava.ts`), and when its warning was last said.
+      || jsonb_build_object('heat', v_heat) || case when v_hsaid is null then '{}'::jsonb else jsonb_build_object('heatSaid', v_hsaid) end
     where world_id = p_world and uid = p_uid;
   -- And a body that has taken its last breath, where every other death goes.
   if hp <= 0 then perform player_die(p_world, p_uid); end if;

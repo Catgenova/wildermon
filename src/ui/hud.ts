@@ -25,6 +25,9 @@ import { EffectRow } from './effects';
 import { TRACK_SHOW } from '../game/tracking';
 import type { Tooltip } from './tooltip';
 import { nextFrame } from './repaint';
+import { kitMeter, type Meaning } from './kit';
+import { chartRegion } from '../world/chart';
+import { HEAT_SAID, heatGear, heatMul, LAVA_ISLE } from '../game/lava';
 
 export interface HudCallbacks {
   toggle: (id: string) => void;
@@ -201,6 +204,10 @@ export class Hud {
   private stopBtn: HTMLButtonElement;
   private beltDue = 0;
   private foodEl: HTMLDivElement;
+  /** Volcano Isle's heat (`lava.ts`): its row, the interior kit's meter, and its value; shown on Volcano Isle only. */
+  private heatRow: HTMLDivElement;
+  private heatMeter: ReturnType<typeof kitMeter>;
+  private heatValue: HTMLSpanElement;
   private foodBars = new Map<string, HTMLDivElement>();
   private numbersTaken: () => boolean;
 
@@ -237,6 +244,18 @@ export class Hud {
       status.append(row);
       this.bars[id] = { fill, value };
     }
+    // Volcano Isle's heat (`lava.ts`), under the four: on Volcano Isle only.
+    this.heatRow = document.createElement('div');
+    this.heatRow.className = 'hud-bar-row hud-heat';
+    const heatName = document.createElement('span');
+    heatName.className = 'hud-bar-label';
+    heatName.textContent = HEAT_SAID.label;
+    this.heatMeter = kitMeter('hud-heat-meter', 'hud-heat-fill');
+    this.heatValue = document.createElement('span');
+    this.heatValue.className = 'hud-bar-value';
+    this.heatRow.append(heatName, this.heatMeter.el, this.heatValue);
+    this.heatRow.hidden = true;
+    status.append(this.heatRow);
     /*
      * What is actually in you: four thin bars under the food bar. Eating well
      * holds hunger and thirst off; eating well in all four teaches you more,
@@ -837,6 +856,29 @@ export class Hud {
    * anybody reads, and nothing is written at all unless it differs from what
    * is already on the screen.
    */
+  /** The heat meter (`lava.ts`): shown on Volcano Isle, filled to what the island said, its rule and what slows it in its title. */
+  private heatUpdate(): void {
+    const g = this.game;
+    const p = g.player;
+    const on = chartRegion(p.x, p.y, g.world.w) === LAVA_ISLE;
+    if (this.heatRow.hidden === on) this.heatRow.hidden = !on;
+    if (!on) return;
+    const v = Math.max(0, Math.min(1, g.heat));
+    const m: Meaning = v >= 1 ? 'bad' : v >= 0.5 ? 'warn' : 'good';
+    const pct = `${Math.round(v * 100)}%`;
+    if (this.said.get(this.heatValue) !== pct) {
+      this.said.set(this.heatValue, pct);
+      this.heatMeter.set(v, m);
+      this.heatValue.textContent = pct;
+    }
+    const now = g.wallNow();
+    const gear = heatGear(Object.values(p.equipped).map((uid) => (uid === null || uid === undefined ? null : g.inventory.get(uid))), now);
+    const draught = g.cooledUntil > now;
+    const mul = heatMul(gear.scale, gear.ice, draught);
+    const tip = `${HEAT_SAID.rule}\n${HEAT_SAID.cool}\nFill now ×${mul.toFixed(2)}: ${gear.scale} dragon-scale, ${gear.ice.length} ice-infused${draught ? `, draught ${Math.ceil((g.cooledUntil - now) / 60)} min` : ''}.`;
+    if (this.heatRow.title !== tip) this.heatRow.title = tip;
+  }
+
   update(renderer: Renderer, fps: number): void {
     const now = performance.now();
     if (now - this.lastAt < HUD_EVERY) return;
@@ -852,6 +894,7 @@ export class Hud {
       bar.fill.style.width = pct;
       bar.value.textContent = pct;
     }
+    this.heatUpdate();
     // How big the stamina bar is: body stamina grows it (`staminaBar`).
     const size = `Stamina bar ×${this.game.staminaBar().toFixed(2)} of level ${CHAR_START}`;
     const row = this.bars.stamina?.value.parentElement;

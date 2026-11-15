@@ -2399,8 +2399,8 @@ export interface FigurePose {
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
    * hair is not drawn under it. The plate, leather and chain sets' pieces are off unless asked for, each plain unless `enchanted` says so.
    */
-  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots', boolean>> & {
-    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots', boolean>>;
+  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots' | ObsidianPiece, boolean>> & {
+    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots' | ObsidianPiece, boolean>>;
     /**
      * The metal each plate or chain piece is smithed from (`GearPiece.material`): its plates or its mail drawn in it (`src/sculpt/lowpoly.ts` plateMat); none, its own colours.
      * The scale set's pieces (`scale`, one for the set) in dragon scale's colour (`DRAGON_SCALE`), or a metal's where one is named.
@@ -6545,6 +6545,8 @@ const TOON_THIN_PX = 2, TOON_FLECK_PX = 0.8;
 export type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 /** The chain set's sculpted pieces (`src/sculpt/lowpoly.ts`: the coif, the hauberk and sleeves, the shawl, the leggings, the boots). */
 export type ChainPiece = 'chainCoif' | 'chainChest' | 'chainShawl' | 'chainLegs' | 'chainBoots';
+/** The obsidian set's pieces on a low-poly body (`../sculpt/lowpoly.ts`, `tools/sculpt/garments/obsidian.mjs`). */
+export type ObsidianPiece = 'obsidianHelm' | 'obsidianChest' | 'obsidianShawl' | 'obsidianLegs' | 'obsidianBoots';
 /** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`; the plate shawl's mantle its clasps and rim), and the scale set's, all in one material. */
 export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | ChainPiece | 'scale';
 /** The cloth and leather sculpted pieces a dye colours (`FigurePose.outfit.dye`). */
@@ -9510,6 +9512,8 @@ const SHIELD: Record<string, (dyed: boolean) => Mesh> = {
     return join(mesh(v, f), paint, pale, boss);
   },
 };
+/** Whether a body is drawn wearing or holding a piece: a worn model (`MODELS`), a weapon (`WEAPONS`) or a shield (`SHIELD`). */
+export const gearModelled = (id: string): boolean => Object.hasOwn(MODELS, id) || Object.hasOwn(WEAPONS, id) || Object.hasOwn(SHIELD, id);
 const shields = new Map<string, Mesh | null>();
 function shieldOf(id: string, dyed: boolean): Mesh | null {
   const key = `${id}|${dyed}`;
@@ -11548,7 +11552,10 @@ const SCULPT: {
   batch: { begin: (count: number, cw: number, ch: number, now: number) => number; end: () => void; last: () => GlTile | null; blit: (ctx: CanvasRenderingContext2D, t: GlTile) => void } | null;
   /** The clip a body plays alone and where in it, for the loops of work and a fight (`clipLoop`, `../sculpt/sculpted.ts` clipNow). */
   clipNow: ((pose: FigurePose) => { name: string; t: number; length: number; fading: boolean } | null) | null;
-} = { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false, batch: null, clipNow: null };
+  /** The things a body holds that have a model of their own, and that model drawn alone (`../sculpt/sculpted.ts` drawPropAlone). */
+  props: ReadonlySet<string> | null;
+  prop: ((ctx: CanvasRenderingContext2D | null, sx: number, sy: number, zoom: number, piece: GearPiece, facing: number, dpr: number) => [number, number, number, number] | null) | null;
+} = { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false, batch: null, clipNow: null, props: null, prop: null };
 let FLAT: boolean | undefined;
 /**
  * Whether people are drawn flat here: only a browser the sculpted bodies cannot be drawn in -- no WebGL2, no float colour
@@ -11585,10 +11592,20 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
       SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.fx = m.SCULPT_FX; SCULPT.noGl = !m.glDraws();
       SCULPT.batch = { begin: m.glBatchBegin, end: m.glBatchEnd, last: m.glBatchLast, blit: m.glBlit };
       SCULPT.clipNow = m.clipNow;
+      SCULPT.props = new Set(m.propIds());
+      SCULPT.prop = m.drawPropAlone;
       SCULPT.flips++;
     }).catch(() => { SCULPT.loading = false; });
   }
 }
+/** Whether a thing has a model of its own that a sculpted body holds, drawn alone by `drawPropAlone`: known once they have loaded. */
+export const propModelled = (id: string): boolean => !SCULPT.noGl && !!SCULPT.props?.has(id);
+/**
+ * That model alone, its foot at (sx, sy), seen from `facing` eighths round: its box at zoom one from its foot (left, top,
+ * right, bottom), or null where it is not drawn. No `ctx`: the box alone.
+ */
+export const drawPropAlone = (ctx: CanvasRenderingContext2D | null, sx: number, sy: number, zoom: number, piece: GearPiece, facing: number, dpr: number): [number, number, number, number] | null =>
+  SCULPT.prop && !SCULPT.noGl ? SCULPT.prop(ctx, sx, sy, zoom, piece, facing, dpr) : null;
 /** Whether the sculpted bodies are on and loaded, so a figure drawn now is drawn sculpted where it can be. */
 export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
 /** The effect marks on the clips, followed per body (`../sculpt/fxmarks.ts`), once the sculpted bodies have loaded; and whether their GL is the processor's (`glSoftware`). */

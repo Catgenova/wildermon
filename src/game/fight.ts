@@ -1,6 +1,6 @@
 import type { ActionDef } from './actions';
 import type { Game } from './game';
-import { ARMOUR, ARMOUR_BY_ID, bowRange, FIST_REACH, reachOf, SHIELDS, slotOf, THROWN_PAST, WEAPON_BY_ID, WEAPON_REACH, WEAPONS, type ArmourClass, type HeldKind, type Slot, type WeaponDef } from './gear';
+import { ARMOUR, ARMOUR_BY_ID, ARMOUR_CLASSES, bowRange, FIST_REACH, reachOf, SHIELDS, slotOf, THROWN_PAST, WEAPON_BY_ID, WEAPON_REACH, WEAPONS, type ArmourClass, type HeldKind, type Slot, type WeaponDef } from './gear';
 import { swingEnchant } from './enchant';
 import { describeFrom, describeWith, itemDef, type Item } from './items';
 import type { SpeciesDef } from './creatures';
@@ -126,7 +126,7 @@ export const ARMOUR_SWING_FULL = 0.1;
  * for: cloth and leather at half their weight, chain and scale at their
  * weight, plate at a quarter again. The island's `armour_swing_by`.
  */
-export const ARMOUR_SWING_BY: Record<ArmourClass, number> = { cloth: 0.5, leather: 0.5, chain: 1, scale: 1, plate: 1.25 };
+export const ARMOUR_SWING_BY: Record<ArmourClass, number> = { cloth: 0.5, leather: 0.5, chain: 1, scale: 1, obsidian: 1, plate: 1.25 };
 /** And a shield in the off hand, which is no family of armour: at its own weight, as it always counted. The island's `shield_swing_by`. */
 export const SHIELD_SWING_BY = 1;
 /**
@@ -184,7 +184,7 @@ const setOf = (cls: ArmourClass): { kg: number; counted: number } => {
   return { kg: ids.reduce((n, id) => n + (itemDef(id)?.weight ?? 0), 0), counted: ids.reduce((n, id) => n + swingKgOf(id), 0) };
 };
 /** The families in the order they are told, lightest share first. */
-const SWING_FAMILIES: ArmourClass[] = ['cloth', 'leather', 'chain', 'scale', 'plate'];
+const SWING_FAMILIES: ArmourClass[] = ['cloth', 'leather', 'chain', 'scale', 'obsidian', 'plate'];
 /** "×0.5", "×1.25". */
 const timesSaid = (m: number): string => `×${+m.toFixed(2)}`;
 /**
@@ -399,6 +399,8 @@ export const ARMOUR_VS: Record<ArmourClass, Record<WoundKind, number>> = {
   chain: { cut: 1.25, pierce: 0.75, crush: 0.7, bite: 1.1, burn: 1 },
   plate: { cut: 1.15, pierce: 1.1, crush: 0.85, bite: 1.1, burn: 1 },
   scale: { cut: 1.15, pierce: 0.9, crush: 1, bite: 1, burn: 1.25 },
+  // Obsidian: the best against an edge and fire of any, and brittle under a weight (a maul or a club takes it worst).
+  obsidian: { cut: 1.3, pierce: 1.05, crush: 0.6, bite: 1.1, burn: 1.3 },
 };
 
 /* ---- Heavy blows ------------------------------------------------------- */
@@ -818,6 +820,8 @@ export const armourSays = (cls: ArmourClass): string => {
   const t = ARMOUR_VS[cls];
   return `absorbs: ${(Object.keys(t) as WoundKind[]).filter((k) => t[k] !== 1).map((k) => `${BLOW_WORDS[k]} ${changeOf(t[k])}`).join(', ')}`;
 };
+// The obsidian set's line: its class's soak and burden, and what each blow does to it (`items.ts` OBSIDIAN_SAYS).
+for (const a of ARMOUR) if (a.cls === 'obsidian') describeFrom(a.id, { ...ARMOUR_CLASSES.obsidian, says: armourSays('obsidian') });
 /** Which weapons strike which kind of blow, by their kinds: "swords, axes and knives cut". */
 export const blowSays = (b: BlowKind): string => {
   const kinds = Object.entries(WOUND_BY_WEAPON).filter(([, v]) => v === b).map(([k]) => k);

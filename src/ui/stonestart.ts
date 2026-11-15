@@ -159,8 +159,8 @@ export function pickStone(card: Element | null, stones: readonly Runestone[], pa
 }
 
 /** What the Path switch on the card says, on and off. */
-export const PATH_SWITCH_SAYS = (on: boolean): string => `Path: ${on ? 'On' : 'Off'}`;
-export const PATH_SWITCH_TIP = 'Path: step-by-step goals, runestone to a level 5 settlement; Journal, Path tab';
+export const PATH_SWITCH_SAYS = (on: boolean): string => `Guiding Light: ${on ? 'On' : 'Off'}`;
+export const PATH_SWITCH_TIP = 'Guiding Light: step-by-step goals, runestone to a level 5 settlement; Journal, Guiding Light tab';
 
 /** The card's Path switch: a button that turns `path.on` over and says which it is. */
 function pathSwitch(path: { on: boolean }): HTMLElement {

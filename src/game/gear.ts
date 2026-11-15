@@ -53,7 +53,7 @@ export const HIT_LOCATIONS: Array<[HitPart, number]> = [
   ['feet', 0.12],
 ];
 
-export type ArmourClass = 'cloth' | 'leather' | 'chain' | 'plate' | 'scale';
+export type ArmourClass = 'cloth' | 'leather' | 'chain' | 'plate' | 'scale' | 'obsidian';
 
 export interface ArmourClassDef {
   id: ArmourClass;
@@ -75,6 +75,8 @@ export const ARMOUR_CLASSES: Record<ArmourClass, ArmourClassDef> = {
   // It turns more than plate and weighs less than chain, and there is exactly
   // one way to get any.
   scale: { id: 'scale', name: 'Scale', skill: 'plate_armour', soak: 0.74, burden: 0.11 },
+  // Obsidian (`OBSIDIAN_PIECES`): between plate and scale in soak, lighter than plate; what each blow does to it is `fight.ts` ARMOUR_VS.
+  obsidian: { id: 'obsidian', name: 'Obsidian', skill: 'plate_armour', soak: 0.68, burden: 0.18 },
 };
 
 export interface ArmourDef {
@@ -98,7 +100,7 @@ export const ANCIENT_HELM_SIGHT = 3;
 export const ANCIENT_SWORD_SWING = 0.75;
 describeFrom(ANCIENT_HELM, { sight: ANCIENT_HELM_SIGHT });
 
-/** Every piece: five slots in each of the four classes. */
+/** Every piece: five slots in each class. */
 export const ARMOUR: ArmourDef[] = [
   armour('wool_cap', 'head', 'cloth'),
   armour('cloth_tunic', 'chest', 'cloth'),
@@ -127,7 +129,14 @@ export const ARMOUR: ArmourDef[] = [
   armour('scale_shawl', 'shawl', 'scale'),
   armour('scale_leggings', 'legs', 'scale'),
   armour('scale_boots', 'feet', 'scale'),
+  armour('obsidian_helm', 'head', 'obsidian'),
+  armour('obsidian_cuirass', 'chest', 'obsidian'),
+  armour('obsidian_shawl', 'shawl', 'obsidian'),
+  armour('obsidian_leggings', 'legs', 'obsidian'),
+  armour('obsidian_boots', 'feet', 'obsidian'),
 ];
+/** The obsidian set, head to feet: knapped obsidian on leather, made at an anvil (`recipes.ts` make_obsidian_*). */
+export const OBSIDIAN_PIECES: readonly string[] = ARMOUR.filter((a) => a.cls === 'obsidian').map((a) => a.id);
 
 export const ARMOUR_BY_ID = new Map(ARMOUR.map((a) => [a.id, a]));
 export const isArmour = (id: string): boolean => ARMOUR_BY_ID.has(id);

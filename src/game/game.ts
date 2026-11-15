@@ -32,7 +32,7 @@ import { UNDONE_PLANS, type PlanAnswer } from './planarea';
 import { CRATE_DEFS, crateCentre, crateName, crateCapacity, crateShut, crateUnits, STORE_REACH, SUBTILES, subtileOf, type CrateKind, type PlacedCrate } from './crates';
 import { anvilAnchor, anvilCentre, anvilCovers, anvilName, ANVIL_SUBTILES, type PlacedAnvil } from './anvil';
 import { fireAnchor, fireCentre, fireCovers, FIRE_SUBTILES, type PlacedCampfire } from './campfire';
-import { furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, SMELTER_H, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, SMELTER_W, type PlacedSmelter, type Plume } from './smelter';
+import { backOf, furnaceMadeSaid, smelterAnchor, smelterCentre, smelterCovers, smelterName, smelterSize, SMELTER_PLUME, SMELTER_PLUME_WORKING, SMELTER_STACK_BACK, SMELTER_STACK_UP, type PlacedSmelter, type Plume } from './smelter';
 import { kilnAnchor, kilnCentre, kilnCovers, kilnName, KILN_GLOW, KILN_GLOW_FIRING, KILN_PLUME, KILN_PLUME_FIRING, KILN_SUBTILES, KILN_VENT_BACK, KILN_VENT_UP, type PlacedKiln } from './kiln';
 import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, FURNITURE, ONE_ALTAR, deckSpot, isPlanter, furnitureAnchor, furnitureCapacity, furnitureCentre, furnitureCovers, furnitureDef, furnitureHeft, furnitureHolds, furnitureKg, furnitureRefuses, furnitureRoom, furnitureUnits, hiveRoom, POND_EVERY, rackDeck, rackSpots, teamOf, vehicleOf, type LiquidKind, type PlacedFurniture, furnitureName, facingOf, LIQUID_NAME, isBoat, furnitureFootprint, holdsLiquid, WATER_AT_HAND, STATION_REACH, type BoatDef, pieceShut, isFountain } from './furniture';
 import { hiveTakes } from './bees';
@@ -101,6 +101,7 @@ import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_W
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
+import { gameLava, LAVA_CELL, LAVA_SPARED_TILES, LB_LAVA, LB_OPENS, LB_WAY, lavaBlockIn, lavaByte, lavaDay, lavaDesign, lavaDesignOf, lavaLights, type LavaDesign, type LavaLand } from './lava';
 import { TRACKING, trackLevel, type Trail } from './tracking';
 import { hasRunestones, runestoneAt, RUNESTONES, stonePoint, stoneTiles } from './runestones';
 import { AWARENESS, Vision } from './vision';
@@ -440,6 +441,8 @@ export { wearPerUse };
 /** No team takes a vehicle faster than this, whatever is in the traces. */
 export const MAX_VEHICLE_SPEED = 4;
 /** How far ahead of the shafts a hitched team walks. */
+/** How long a block of the day's lava is believed before it is asked of the ground again, in ms (`Game.lavaBlockAt`). */
+const LAVA_MEMO_MS = 5000;
 const TRACE_LENGTH = 1.6;
 /** How fast a mount works its dinner off under a rider. One in the traces does not. */
 const HAUL_HUNGER = 0.0006;
@@ -1909,6 +1912,9 @@ export class Game {
   attuned: MoteElement | null = null;
   /** When you last sensed the swirls, in epoch seconds, as the island said it. */
   sensedAt = 0;
+  /** Volcano Isle's heat on you, 0 to 1, and until when a cooling draught slows it (epoch seconds), as the island said them (`lava.ts`). */
+  heat = 0;
+  cooledUntil = 0;
   /** The last sensing of the swirls (`infusion.ts`): when, in real seconds, and how far it reached; drawn on the map a while. */
   sensed: { real: number; x: number; y: number; range: number } | null = null;
 
@@ -4082,6 +4088,8 @@ export class Game {
     for (const l of this.spellLights) out.push(l);
     // A mote swirl's own small glow, soft as a spell's (`swirlLight`).
     if (this.swirls.size) for (const s of this.swirls.values()) if (near(s.x, s.y)) out.push(swirlLight(s));
+    // The day's lava on Volcano Isle, round you (`lavaLights`).
+    for (const l of lavaLights(this, px, py)) out.push(l);
     // The runestones' runes, round the middle of each (`runestoneLight`).
     if (hasRunestones(this.world.w)) {
       for (const s of RUNESTONES) {
@@ -4142,12 +4150,14 @@ export class Game {
     for (const k of this.kilns.values()) {
       if (!k.lit || !near(k.x, k.y)) continue;
       const [cx, cy] = kilnCentre(k);
-      out.push({ x: cx, y: cy - KILN_VENT_BACK, heat: 0.85, lift: KILN_VENT_UP, plume: k.jobs.length ? KILN_PLUME_FIRING : KILN_PLUME });
+      const [bx, by] = backOf(k.facing);
+      out.push({ x: cx + bx * KILN_VENT_BACK, y: cy + by * KILN_VENT_BACK, heat: 0.85, lift: KILN_VENT_UP, plume: k.jobs.length ? KILN_PLUME_FIRING : KILN_PLUME });
     }
     for (const sm of this.smelters.values()) {
       if (!sm.lit || !near(sm.x, sm.y)) continue;
       const [cx, cy] = smelterCentre(sm);
-      out.push({ x: cx, y: cy - SMELTER_STACK_BACK, heat: 1, lift: SMELTER_STACK_UP, plume: sm.jobs.length ? SMELTER_PLUME_WORKING : SMELTER_PLUME });
+      const [bx, by] = backOf(sm.facing);
+      out.push({ x: cx + bx * SMELTER_STACK_BACK, y: cy + by * SMELTER_STACK_BACK, heat: 1, lift: SMELTER_STACK_UP, plume: sm.jobs.length ? SMELTER_PLUME_WORKING : SMELTER_PLUME });
     }
     return out;
   }
@@ -7823,9 +7833,9 @@ export class Game {
     return undefined;
   }
 
-  addCampfire(x: number, y: number, sx: number, sy: number, fuel = 0, lit = false): PlacedCampfire {
+  addCampfire(x: number, y: number, sx: number, sy: number, fuel = 0, lit = false, facing: Side = 's'): PlacedCampfire {
     const [ax, ay] = fireAnchor(sx, sy);
-    const fire: PlacedCampfire = { id: this.nextFireId++, x, y, sx: ax, sy: ay, fuel, lit };
+    const fire: PlacedCampfire = { id: this.nextFireId++, x, y, sx: ax, sy: ay, fuel, lit, facing };
     this.campfires.set(fire.id, fire);
     this.placed.campfires.add(fire);
     this.events.emit('crate');
@@ -7856,12 +7866,13 @@ export class Game {
     if (this.world.slope(x, y) > steepest) return `Too steep: slope over ${metres(steepest)} m.`;
     if (this.isToken(x, y)) return 'Not on the totem.';
     if (this.buildings.buildingAt(x, y)) return 'Not inside a building.';
+    // Whatever stands there, as for any piece set down (the island's `piece_block_taken`).
     for (let dy = 0; dy < FIRE_SUBTILES; dy++) {
       for (let dx = 0; dx < FIRE_SUBTILES; dx++) {
-        if (this.crateAt(x, y, ax + dx, ay + dy)) return 'A crate is in the way.';
-        if (this.campfireAt(x, y, ax + dx, ay + dy)) return 'Already a fire there.';
+        if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
+    if (this.columnInBlock(x, y, ax, ay, FIRE_SUBTILES, FIRE_SUBTILES)) return 'Something is already standing there.';
     return null;
   }
 
@@ -7887,6 +7898,8 @@ export class Game {
     // An oven's own recipes want an oven, lit: a brazier is a hearth but bakes nothing (the island's `at_station`).
     if (station === 'oven') return this.litOvenNear() !== undefined;
     if (station === 'smelter') return this.hotSmelterNear() !== undefined;
+    // An anvil, set down (`anvil.ts`; the island's `at_station`).
+    if (station === 'anvil') return this.anvilNear() !== undefined;
     // A cauldron hearth, alight (`adorn.ts`; the island's `at_station`).
     if (station === CAULDRON_STATION) return this.litOvenNear(2.6, CAULDRON_HEARTH) !== undefined;
     return this.furnitureNear(station) !== undefined;
@@ -7926,6 +7939,17 @@ export class Game {
       if (best || !s.lit) return;
       const [cx, cy] = smelterCentre(s);
       if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = s;
+    }, this.player.level);
+    return best;
+  }
+
+  /** An anvil set down within reach of the work: the `anvil` station. */
+  anvilNear(range = 2.6): PlacedAnvil | undefined {
+    let best: PlacedAnvil | undefined;
+    this.placed.anvils.around(this.player.x, this.player.y, range + 1, (a) => {
+      if (best) return;
+      const [cx, cy] = anvilCentre(a);
+      if (Math.hypot(cx - this.player.x, cy - this.player.y) <= range) best = a;
     }, this.player.level);
     return best;
   }
@@ -9107,17 +9131,19 @@ export class Game {
       // Down in a cellar: only furniture goes down there, and says so.
       // Down in a cellar, or a storey up: a wagon driven up a wide staircase (`driveStorey`).
       const down = (r.level ?? 0) < 0 ? { level: CELLAR_LEVEL } : (r.level ?? 0) > 0 ? { level: r.level as number } : {};
+      // Which way a station was set down (`stations.ts`): south for one set down before it could be turned.
+      const facing = (r.facing ?? 's') as Side;
       if (r.kind === 'campfire' || r.kind === 'fire') {
-        built.campfires.set(r.id, { ...at, fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
+        built.campfires.set(r.id, { ...at, facing, ql: r.ql ?? 20, ...(r.dmg ? { dmg: r.dmg } : {}), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0, ...(r.infuse ? { infuse: r.infuse } : {}) });
       } else if (r.kind === 'smelter') {
         built.smelters.set(r.id, {
-          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, facing, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
       } else if (r.kind === 'kiln') {
         built.kilns.set(r.id, {
-          ...at, ...kept, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
+          ...at, ...kept, facing, ql: r.ql ?? 20, rare: rarityStep(r.rare), fuel: r.fuel ?? 0, lit: !!r.lit, ash: r.ash ?? 0,
           jobs: furnaceJobs(r.state?.jobs),
           output: furnaceOutput(r.id, r.state?.output),
         });
@@ -9127,7 +9153,7 @@ export class Game {
         // `anvil_ql` read it back from there; `material` is never written for
         // one. Reported as "made a copper anvil and placed down an iron anvil":
         // this read `material`, found nothing, and called every anvil iron.
-        built.anvils.set(r.id, { ...at, ...kept, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
+        built.anvils.set(r.id, { ...at, ...kept, facing, ql: r.ql ?? 20, metal: r.sub ?? 'copper', rare: rarityStep(r.rare) });
       } else if (r.kind === 'post') {
         const p: PlacedPost = { ...at, ql: r.ql ?? 20, dmg: r.dmg ?? 0, worker: null, name: r.name ?? undefined, material: r.material ?? undefined };
         built.posts.set(r.id, p);
@@ -9198,6 +9224,8 @@ export class Game {
           ...(adornFrom(r.garden) ? { adorn: adornFrom(r.garden) } : {}),
           // When a skep was set down or last emptied, which what it has made is worked out from (`bees.ts`).
           ...(typeof r.state?.skep_at === 'number' ? { skepAt: r.state.skep_at } : {}),
+          // An outcropping's swings left before it breaks (`outcrops.ts`).
+          ...(typeof r.state?.uses === 'number' ? { uses: r.state.uses } : {}),
           /*
            * The reins and the shafts, which the island has always sent and
            * this dropped: somebody who took the reins on an island walked
@@ -9668,9 +9696,9 @@ export class Game {
     return p.tiles.has(y * this.world.w + x);
   }
 
-  addSmelter(x: number, y: number, sx: number, sy: number, ql: number): PlacedSmelter {
-    const [ax, ay] = smelterAnchor(sx, sy);
-    const s: PlacedSmelter = { id: this.nextSmelterId++, x, y, sx: ax, sy: ay, ql, fuel: 0, lit: false, jobs: [], output: [] };
+  addSmelter(x: number, y: number, sx: number, sy: number, ql: number, facing: Side = 's'): PlacedSmelter {
+    const [ax, ay] = smelterAnchor(sx, sy, facing);
+    const s: PlacedSmelter = { id: this.nextSmelterId++, x, y, sx: ax, sy: ay, facing, ql, fuel: 0, lit: false, jobs: [], output: [] };
     this.smelters.set(s.id, s);
     this.placed.smelters.add(s);
     this.events.emit('smelter');
@@ -9689,26 +9717,27 @@ export class Game {
   }
 
   /** Why a smelter cannot stand on this block of subtiles, or null. */
-  smelterPlaceReason(x: number, y: number, sx: number, sy: number): string | null {
-    const [ax, ay] = smelterAnchor(sx, sy);
+  smelterPlaceReason(x: number, y: number, sx: number, sy: number, facing: Side = 's'): string | null {
+    const [ax, ay] = smelterAnchor(sx, sy, facing);
+    const [w, h] = smelterSize(facing);
     const deck = this.deckFooting(x, y);
     if (deck === false || (deck === null && (!this.world.isPassable(x, y) || this.world.hasWater(x, y)))) return 'Smelter needs dry, solid ground.';
     const steepest = 12;
     if (deck === null && this.world.slope(x, y) > steepest) return `Too uneven: slope over ${metres(steepest)} m.`;
     if (this.isToken(x, y)) return 'Not on the totem.';
-    for (let dy = 0; dy < SMELTER_H; dy++) {
-      for (let dx = 0; dx < SMELTER_W; dx++) {
+    for (let dy = 0; dy < h; dy++) {
+      for (let dx = 0; dx < w; dx++) {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
     // Nor in the corner a column stands in (`columnInBlock`).
-    if (this.columnInBlock(x, y, ax, ay, SMELTER_W, SMELTER_H)) return 'Something is already standing there.';
+    if (this.columnInBlock(x, y, ax, ay, w, h)) return 'Something is already standing there.';
     return null;
   }
 
-  addKiln(x: number, y: number, sx: number, sy: number, ql: number): PlacedKiln {
+  addKiln(x: number, y: number, sx: number, sy: number, ql: number, facing: Side = 's'): PlacedKiln {
     const [ax, ay] = kilnAnchor(sx, sy);
-    const k: PlacedKiln = { id: this.nextKilnId++, x, y, sx: ax, sy: ay, ql, fuel: 0, lit: false, jobs: [], output: [] };
+    const k: PlacedKiln = { id: this.nextKilnId++, x, y, sx: ax, sy: ay, facing, ql, fuel: 0, lit: false, jobs: [], output: [] };
     this.kilns.set(k.id, k);
     this.placed.kilns.add(k);
     this.events.emit('smelter');
@@ -10110,9 +10139,9 @@ export class Game {
     return item;
   }
 
-  addAnvil(x: number, y: number, sx: number, sy: number, metal: string, ql: number): PlacedAnvil {
+  addAnvil(x: number, y: number, sx: number, sy: number, metal: string, ql: number, facing: Side = 's'): PlacedAnvil {
     const [ax, ay] = anvilAnchor(sx, sy);
-    const a: PlacedAnvil = { id: this.nextAnvilId++, x, y, sx: ax, sy: ay, metal, ql };
+    const a: PlacedAnvil = { id: this.nextAnvilId++, x, y, sx: ax, sy: ay, facing, metal, ql };
     this.anvils.set(a.id, a);
     this.placed.anvils.add(a);
     this.events.emit('smelter');
@@ -10142,6 +10171,8 @@ export class Game {
         if (this.occupiedSubtile(x, y, ax + dx, ay + dy)) return 'Something is already standing there.';
       }
     }
+    // Nor in the corner a column stands in (the island's `block_taken`).
+    if (this.columnInBlock(x, y, ax, ay, ANVIL_SUBTILES, ANVIL_SUBTILES)) return 'Something is already standing there.';
     return null;
   }
 
@@ -10328,6 +10359,60 @@ export class Game {
   /** Pull up whatever is planted on a tile. */
   pullWater(x: number, y: number): void {
     if (this.waterPlants.delete(tileKey(x, y))) this.events.emit('world', x, y);
+  }
+
+  /** The lava's ground as this browser holds it (`gameLava`); today's design, and what its blocks a lair or a seam may open came to. */
+  private lavaLand: LavaLand | null = null;
+  private lavaMemo: { day: number; made: number; design: LavaDesign; box: [number, number, number, number]; opens: Map<number, boolean> } | null = null;
+
+  /** The day today's lava was laid for (`lavaDay`). */
+  lavaToday(): number {
+    return lavaDay(this.wallNow());
+  }
+
+  /** Today's design of the labyrinth (`lavaDesignOf`), asked again every few seconds: the day turns, and what is on its blocks can change. */
+  lavaNow(): NonNullable<Game['lavaMemo']> {
+    const now = performance.now();
+    const had = this.lavaMemo;
+    if (had && now - had.made <= LAVA_MEMO_MS) return had;
+    const day = this.lavaToday();
+    const design = lavaDesign(this.world.w, lavaDesignOf(this.world.seed, day));
+    const box: [number, number, number, number] = [design.bxa * LAVA_CELL, design.bya * LAVA_CELL, (design.bxa + design.nbx) * LAVA_CELL, (design.bya + design.nby) * LAVA_CELL];
+    const m = { day, made: now, design, box, opens: new Map<number, boolean>() };
+    this.lavaMemo = m;
+    return m;
+  }
+
+  /** Whether a whole block of the labyrinth is lava today (`lavaBlockIn`): its design's byte, and what a lair or a seam opens. */
+  lavaBlockAt(bx: number, by: number): boolean {
+    const m = this.lavaNow();
+    const b = lavaByte(m.design, bx, by);
+    if (!(b & LB_LAVA)) return false;
+    if (!(b & (LB_OPENS | LB_WAY))) return true;
+    const key = bx * 65536 + by;
+    let v = m.opens.get(key);
+    if (v === undefined) {
+      this.lavaLand ??= gameLava(this);
+      v = lavaBlockIn(this.lavaLand, m.design, bx, by);
+      m.opens.set(key, v);
+    }
+    return v;
+  }
+
+  /** Whether lava lies on a tile today (`lava.ts`, the island's `lava_at`): its block's, not on water and not where lava is spared. */
+  lavaAt(x: number, y: number): boolean {
+    const m = this.lavaNow();
+    if (x < m.box[0] || y < m.box[1] || x >= m.box[2] || y >= m.box[3] || !this.world.inBounds(x, y)) return false;
+    if (!this.lavaBlockAt(Math.floor(x / LAVA_CELL), Math.floor(y / LAVA_CELL))) return false;
+    this.lavaLand ??= gameLava(this);
+    const w = this.world;
+    if (w.getHeight(x, y) + w.getHeight(x + 1, y) + w.getHeight(x + 1, y + 1) + w.getHeight(x, y + 1) < 0) return false;
+    return !LAVA_SPARED_TILES.includes(w.getTile(x, y)) && !this.lavaLand.spared(x, y);
+  }
+
+  /** The box today's labyrinth lies in, in tiles: west, north, east, south. */
+  lavaBox(): readonly [number, number, number, number] {
+    return this.lavaNow().box;
   }
 
   /** The mote swirl turning over a tile, if there is one (`motes.ts`). */

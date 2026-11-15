@@ -28,7 +28,7 @@ import { HERBS, WOUND_KINDS } from './wounds';
 import { TRAPS } from './trapdefs';
 import { BELL_HEARD_BASE, BELL_HEARD_PER_QL, BELL_HEARD_TOP_QL, BELL_ROPE, bellHeard, isLayUp, LEAD_PACE, LEAD_ROPE, ROPE_INPUTS, ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_WALK, ROPE_WALK_QL, ropeBlend, ropeFailUnits, ROPEMAKING, TWINE_MADE } from './ropework';
 import { BREWS } from './brewing';
-import { isMaterialKind, matOf, type MaterialKind } from './materials';
+import { isMaterialKind, matOf, OBSIDIAN, type MaterialKind } from './materials';
 import { TREE_DEFS } from '../world/tiles';
 import { CLASSES } from './classes';
 import { CIRCLET_STONES } from './gems';
@@ -89,9 +89,9 @@ const article = (id: string): string => (/^[aeiou]/.test(lower(id)) ? 'an ' : 'a
 export type RecipeCategory = 'Woodwork' | 'Furniture' | 'Stonework' | 'Clay & thatch' | 'Cloth' | 'Alchemy' | 'Writing' | 'Cooking' | 'Smelting' | 'Glassblowing'
   | 'Jewellery' | 'Mending' | 'Enchanting';
 /** A place a recipe has to be worked at, beyond what is carried. */
-export type Station = 'campfire' | 'oven' | 'smelter' | 'spindle' | 'loom' | typeof PAPER_PRESS | typeof ENCHANTERS_PLINTH | typeof BUTTER_CHURN | typeof CAULDRON_STATION;
+export type Station = 'campfire' | 'oven' | 'smelter' | 'spindle' | 'loom' | 'anvil' | typeof PAPER_PRESS | typeof ENCHANTERS_PLINTH | typeof BUTTER_CHURN | typeof CAULDRON_STATION;
 /** What a station is called where a recipe says it wants one. The island's `station_name` is generated from this. */
-export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', oven: 'lit oven', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom', paper_press: 'paper press',
+export const STATION_NAME: Record<Station, string> = { campfire: 'lit campfire', oven: 'lit oven', smelter: 'hot smelter', spindle: 'spindle', loom: 'loom', anvil: 'anvil', paper_press: 'paper press',
   [ENCHANTERS_PLINTH]: PLINTH_NAME, [BUTTER_CHURN]: 'butter churn', [CAULDRON_STATION]: 'lit cauldron hearth' };
 
 export interface RecipeInput {
@@ -575,8 +575,62 @@ const DISTIL_RECIPES: Recipe[] = BREWS.map((b): Recipe => ({
 }));
 RECIPES.push(...MOULD_RECIPES, ...SMELTER_RECIPES, ...PRESS_RECIPES, ...DISTIL_RECIPES);
 
+/**
+ * The obsidian set (`gear.ts` OBSIDIAN_PIECES): obsidian riveted onto a leather backing at an anvil, platesmithing, with
+ * a hammer. Obsidian, and leather, per piece; the difficulty each.
+ */
+export const OBSIDIAN_ARMOUR: Readonly<Record<string, { obsidian: number; leather: number; difficulty: number; time: number }>> = {
+  obsidian_helm: { obsidian: 4, leather: 2, difficulty: 60, time: 24 },
+  obsidian_cuirass: { obsidian: 10, leather: 5, difficulty: 70, time: 42 },
+  obsidian_shawl: { obsidian: 6, leather: 3, difficulty: 64, time: 32 },
+  obsidian_leggings: { obsidian: 8, leather: 4, difficulty: 66, time: 36 },
+  obsidian_boots: { obsidian: 5, leather: 3, difficulty: 62, time: 28 },
+};
+const OBSIDIAN_ARMOUR_RECIPES: Recipe[] = Object.entries(OBSIDIAN_ARMOUR).map(([id, a]) => ({
+  id: `make_${id}`, category: 'Smelting' as RecipeCategory, result: id,
+  inputs: [{ item: 'obsidian', count: a.obsidian }, { item: 'leather', count: a.leather }],
+  tool: SMITH_TOOL, station: 'anvil' as Station, skill: 'platesmithing',
+  label: `Rivet ${/s$/.test(id) ? '' : 'an '}${lower(id)}`, verb: 'riveting obsidian', baseTime: a.time, stamina: 0.06, difficulty: a.difficulty, done: '', spareOnFail: true,
+}));
+/**
+ * The tools and weapons knapped whole from obsidian, its edge or point flaked with a chisel, stonecutting: the item made
+ * (of `OBSIDIAN`, `materials.ts`), the obsidian it takes, and the haft or grip it is set in. Difficulty and time by the
+ * obsidian: `KNAP_DIFFICULTY` and `KNAP_PER` more for each piece.
+ */
+export const KNAPPED: Readonly<Record<string, { obsidian: number; grip: string; grips?: number }>> = {
+  hatchet: { obsidian: 2, grip: 'shaft' },
+  pickaxe: { obsidian: 3, grip: 'shaft' },
+  shovel: { obsidian: 3, grip: 'shaft' },
+  saw: { obsidian: 3, grip: 'plank' },
+  carving_knife: { obsidian: 1, grip: 'leather' },
+  butchering_knife: { obsidian: 1, grip: 'leather' },
+  sickle: { obsidian: 2, grip: 'shaft' },
+  hammer: { obsidian: 3, grip: 'shaft' },
+  chisel: { obsidian: 1, grip: 'leather' },
+  hunting_knife: { obsidian: 1, grip: 'leather' },
+  short_sword: { obsidian: 3, grip: 'leather' },
+  sword: { obsidian: 4, grip: 'leather' },
+  long_sword: { obsidian: 5, grip: 'leather', grips: 2 },
+  battle_axe: { obsidian: 4, grip: 'shaft' },
+  maul: { obsidian: 5, grip: 'shaft' },
+  spear: { obsidian: 2, grip: 'shaft' },
+  javelin: { obsidian: 1, grip: 'shaft' },
+  throwing_axe: { obsidian: 2, grip: 'shaft' },
+};
+export const KNAP_DIFFICULTY = 34;
+export const KNAP_PER = 6;
+export const knapRecipeId = (id: string): string => `knap_obsidian_${id}`;
+const KNAP_RECIPES: Recipe[] = Object.entries(KNAPPED).map(([id, k]) => ({
+  id: knapRecipeId(id), category: 'Stonework' as RecipeCategory, result: id,
+  inputs: [{ item: 'obsidian', count: k.obsidian }, { item: k.grip, count: k.grips ?? 1 }],
+  tool: 'chisel', skill: 'stonecutting', extra: OBSIDIAN, title: `Obsidian ${lower(id)}`,
+  label: `Knap an obsidian ${lower(id)}`, verb: 'knapping obsidian', baseTime: 6 + KNAP_PER * k.obsidian / 2, stamina: 0.04,
+  difficulty: KNAP_DIFFICULTY + KNAP_PER * k.obsidian, done: '', spareOnFail: true,
+}));
+RECIPES.push(...OBSIDIAN_ARMOUR_RECIPES, ...KNAP_RECIPES);
+
 /** The pieces of furniture, each nailed together by a fine carpenter; a grave is dug by dying, a lair is the island's and a trophy comes out of a lair's hoard: none built. */
-const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair && !f.trophy).map((f) => ({
+const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair && !f.trophy && !f.outcrop).map((f) => ({
   id: `make_${f.id}`,
   category: 'Furniture' as RecipeCategory,
   result: f.id,
@@ -805,6 +859,16 @@ const REMEDY_RECIPES: Recipe[] = HERBS.flatMap((herb): Recipe[] => [
 ]);
 
 RECIPES.push(...REMEDY_RECIPES);
+
+/**
+ * A cooling draught (`lava.ts`): mint, water and an ice mote, against Volcano Isle's heat. Anybody may brew it.
+ */
+RECIPES.push({
+  id: 'brew_cooling_draught', category: 'Alchemy', result: 'cooling_draught', count: 2,
+  inputs: [{ item: 'mint', count: 2 }, { item: 'water_bucket', litres: 1 }, { item: 'ice_mote' }], skill: 'alchemy',
+  label: 'Brew a cooling draught', verb: 'brewing a draught', baseTime: 10, stamina: 0.02, difficulty: 25,
+  done: '', spareOnFail: true,
+});
 
 /**
  * The traps that are *built*, out of the same book the game reads them from.
