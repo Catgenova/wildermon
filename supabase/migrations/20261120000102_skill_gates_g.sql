@@ -44,8 +44,9 @@ $$;
 select pg_temp.patch_fn('errand_step(uuid,integer,text)',
 $o$        if why_n is not null then why := 'stairs'; return next; return; end if;$o$,
 $n$        if why_n is not null then why := 'stairs'; return next; return; end if;
-        -- Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest.
-        select array['bridge', s.kind], s.n into why_what, why_n from hod_span_gate(p_world, c, dd.x, dd.y, rng) s;
+        -- Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest. The
+        -- function always gives one row, its outs null when there is no such span: only a named bridge is a gate.
+        select array['bridge', s.kind], s.n into why_what, why_n from hod_span_gate(p_world, c, dd.x, dd.y, rng) s where s.kind is not null;
         if why_what is not null then why := 'gate'; return next; return; end if;$n$);
 
 select private.lock_doors();

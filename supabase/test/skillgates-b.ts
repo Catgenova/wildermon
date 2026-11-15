@@ -140,7 +140,7 @@ create or replace function world_wind(p_world uuid, out dir double precision, ou
 do $t$
 declare w uuid; u uuid := '${U}'; v_m int; v_p bigint; v_c int; i int; t jsonb;
 begin
-  insert into said select 'GATES', string_agg(kind || ':' || id || ':' || name || ':' || skill || ':' || level, ',' order by kind, id) from skill_gate;
+  insert into said select 'GATES', string_agg(kind || ':' || id || ':' || name || ':' || skill || ':' || level, ',' order by kind collate "C", id collate "C") from skill_gate;
   insert into said select 'ROCK_DEF', string_agg(yields || ':' || level, ',' order by id) from rock_def;
   insert into said select 'TAME_DEF', string_agg(id || ':' || tame_level, ',' order by id) from species_def where id in (select id from skill_gate where kind = 'tame');
   insert into said select 'FISH_DEF', string_agg(id || ':' || level, ',' order by id) from fish_def;
@@ -321,11 +321,13 @@ rollback;
 `).split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)] as [string, string]));
 
 const said = (k: string): string => isle.get(k) ?? '';
+/** Code-unit order, as the island's `collate "C"`: the same on every server's locale. */
+const byCode = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /* ---- the table: the island's is the browser's, and every number is the one it had ---- */
 
 {
-  const mine = [...SKILL_GATES].sort((a, b) => (a.kind + a.id < b.kind + b.id ? -1 : 1)).map((g) => `${g.kind}:${g.id}:${g.name}:${g.skill}:${g.level}`).join(',');
+  const mine = [...SKILL_GATES].sort((a, b) => byCode(a.kind, b.kind) || byCode(a.id, b.id)).map((g) => `${g.kind}:${g.id}:${g.name}:${g.skill}:${g.level}`).join(',');
   check('the island\'s skill_gate is the browser\'s SKILL_GATES, row for row', said('GATES') === mine, `island ${said('GATES')} / browser ${mine}`);
   const seams = Object.entries(OLD_SEAMS).filter(([id, lv]) => gateOf('seam', id)?.level !== lv || gateOf('vein', id)?.level !== lv);
   const rocks = ROCK_VARIANTS.filter((r) => !r.yields.endsWith('_shards'));

@@ -639,6 +639,11 @@ drive: no worker gate. Built (`helmGate`, `helm_gate_refusal`).
 * Tests: `supabase/test/skillgates-g.ts`; `skillgates.ts` asks its unidentified seed of cabbage; `skillgates-c.ts` and
   `skillgates-f.ts` read alloys at their recipe's level and a map read under its gate; `obsidiangear.ts` works at 99;
   `noplan.ts` (main's free roofing) gives the island's builder the plank roof's carpentry for its one ask.
+* CI on batch G: `hod_span_gate` always gives one row, its outs null with no span over the level, so a hod carrier
+  with none said `gate` with no bridge; only a named bridge is a gate now (`errand_step`). `skillgates.ts` and
+  `skillgates-b.ts` order the tables in code-unit order on both sides (`collate "C"`), as the server's locale sorted
+  `make_ember_heart_scroll` after `make_emberbrand_scroll`. `repurpose.ts` pins a browser worker's rarity and size
+  form, as the island's `ready` does.
 
 ## 10. Open questions
 

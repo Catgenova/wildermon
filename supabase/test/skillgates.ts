@@ -104,8 +104,8 @@ do $t$
 declare w uuid; u uuid := '${U}'; u2 uuid := '${U2}'; v_m int; box int; v_it bigint; v_seed bigint; v_onion bigint; v_sp bigint;
         tile jsonb := jsonb_build_object('kind', 'tile', 'x', ${T + 3}, 'y', ${T});
 begin
-  insert into said select 'GATES', string_agg(kind || ':' || id || ':' || name || ':' || skill || ':' || level, ',' order by kind, id) from skill_gate;
-  insert into said select 'ITEMS', string_agg(item || ':' || extra || ':' || kind || ':' || id || ':' || noun, ',' order by item, extra) from skill_gate_item;
+  insert into said select 'GATES', string_agg(kind || ':' || id || ':' || name || ':' || skill || ':' || level, ',' order by kind collate "C", id collate "C") from skill_gate;
+  insert into said select 'ITEMS', string_agg(item || ':' || extra || ':' || kind || ':' || id || ':' || noun, ',' order by item collate "C", extra collate "C") from skill_gate_item;
   insert into world (name, seed, size, spawn_x, spawn_y, ready) values ('Gates', 306, 120, ${T}, ${T}, true) returning id into w;
   perform land_blank(w, 120);
   perform land_set_tile(w, x, y, tile_id('Grass')) from generate_series(0, 119) x, generate_series(0, 119) y;
@@ -242,14 +242,16 @@ rollback;
 `).split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)] as [string, string]));
 
 const said = (k: string): string => isle.get(k) ?? '';
+/** Code-unit order, as the island's `collate "C"`: the same on every server's locale. */
+const byCode = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /* ---- the defs -------------------------------------------------------------- */
 
 {
-  const mine = [...SKILL_GATES].sort((a, b) => (a.kind + a.id < b.kind + b.id ? -1 : a.kind + a.id > b.kind + b.id ? 1 : 0))
+  const mine = [...SKILL_GATES].sort((a, b) => byCode(a.kind, b.kind) || byCode(a.id, b.id))
     .map((g) => `${g.kind}:${g.id}:${g.name}:${g.skill}:${g.level}`).join(',');
   check('the island\'s skill_gate is the browser\'s SKILL_GATES, row for row', said('GATES') === mine, `island ${said('GATES')} / browser ${mine}`);
-  const items = [...GATED_ITEMS].sort((a, b) => (a.item + a.extra < b.item + b.extra ? -1 : a.item + a.extra > b.item + b.extra ? 1 : 0))
+  const items = [...GATED_ITEMS].sort((a, b) => byCode(a.item, b.item) || byCode(a.extra, b.extra))
     .map((x) => `${x.item}:${x.extra}:${x.gate.kind}:${x.gate.id}:${x.noun}`).join(',');
   check(`and skill_gate_item is GATED_ITEMS (${GATED_ITEMS.length}: every seed and every species' sprout)`, said('ITEMS') === items, `island ${said('ITEMS')} / browser ${items}`);
   const trees = TREE_DEFS.map((t) => gateOf('tree', t.name.toLowerCase()));

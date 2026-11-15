@@ -45,8 +45,9 @@ begin
         -- Work the stores have for a storey up no staircase goes to: `stairs`, and that storey (`hod_unreached`).
         why_n := hod_unreached(p_world, c.keeper, dd.x, dd.y, rng);
         if why_n is not null then why := 'stairs'; return next; return; end if;
-        -- Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest.
-        select array['bridge', s.kind], s.n into why_what, why_n from hod_span_gate(p_world, c, dd.x, dd.y, rng) s;
+        -- Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest. The
+        -- function always gives one row, its outs null when there is no such span: only a named bridge is a gate.
+        select array['bridge', s.kind], s.n into why_what, why_n from hod_span_gate(p_world, c, dd.x, dd.y, rng) s where s.kind is not null;
         if why_what is not null then why := 'gate'; return next; return; end if;
         -- Work within reach wanting only what the stores do not hold: `stock`, and what it wants. None: `range`.
         select * into v_wet from hod_wanted(p_world, dd.x, dd.y, rng, c.keeper);

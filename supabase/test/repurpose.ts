@@ -916,6 +916,10 @@ const worker = (g: Game, id: string): Creature => {
   // At every recipe's level up to a first stage's (`craftgates.ts`): this is about the trade, not its gate.
   c.skills = workerHands();
   c.traits = [];
+  // Rolled at its spawn, a rarity or a bigger form would multiply what it makes (`bloodMul`): pinned, as the island's
+  // `ready` pins them, so both sides make the same.
+  c.rare = 0;
+  c.formSize = undefined;
   return c;
 };
 for (const k of CASES) {
