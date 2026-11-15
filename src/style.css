@@ -3415,6 +3415,54 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   }
 }
 
+/* What the recipe chosen or pointed at makes, drawn (`craftpreview.ts`): its picture, its name and material beside it. */
+.craft-preview {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--ui-border);
+}
+
+.craft-preview[hidden] {
+  display: none;
+}
+
+.craft-preview-pic {
+  flex: none;
+  width: 136px;
+  height: 96px;
+  border: 1px solid var(--ui-border);
+  border-radius: 2px;
+  background: var(--ui-bg);
+}
+
+.craft-preview-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  color: var(--ui-text);
+}
+
+.craft-preview-text small {
+  color: var(--t-dim, #9a9a9a);
+}
+
+/* Narrow, and on a phone: a thumbnail beside the name. */
+@container (max-width: 280px) {
+  .craft-preview-pic {
+    width: 68px;
+    height: 48px;
+  }
+}
+
+#ui.phone .craft-preview-pic {
+  width: 68px;
+  height: 48px;
+}
+
 /* Skills ----------------------------------------------------------------- */
 
 .skill-group {

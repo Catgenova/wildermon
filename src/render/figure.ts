@@ -9512,6 +9512,8 @@ const SHIELD: Record<string, (dyed: boolean) => Mesh> = {
     return join(mesh(v, f), paint, pale, boss);
   },
 };
+/** Whether a body is drawn wearing or holding a piece: a worn model (`MODELS`), a weapon (`WEAPONS`) or a shield (`SHIELD`). */
+export const gearModelled = (id: string): boolean => Object.hasOwn(MODELS, id) || Object.hasOwn(WEAPONS, id) || Object.hasOwn(SHIELD, id);
 const shields = new Map<string, Mesh | null>();
 function shieldOf(id: string, dyed: boolean): Mesh | null {
   const key = `${id}|${dyed}`;
@@ -11550,7 +11552,10 @@ const SCULPT: {
   batch: { begin: (count: number, cw: number, ch: number, now: number) => number; end: () => void; last: () => GlTile | null; blit: (ctx: CanvasRenderingContext2D, t: GlTile) => void } | null;
   /** The clip a body plays alone and where in it, for the loops of work and a fight (`clipLoop`, `../sculpt/sculpted.ts` clipNow). */
   clipNow: ((pose: FigurePose) => { name: string; t: number; length: number; fading: boolean } | null) | null;
-} = { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false, batch: null, clipNow: null };
+  /** The things a body holds that have a model of their own, and that model drawn alone (`../sculpt/sculpted.ts` drawPropAlone). */
+  props: ReadonlySet<string> | null;
+  prop: ((ctx: CanvasRenderingContext2D | null, sx: number, sy: number, zoom: number, piece: GearPiece, facing: number, dpr: number) => [number, number, number, number] | null) | null;
+} = { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false, batch: null, clipNow: null, props: null, prop: null };
 let FLAT: boolean | undefined;
 /**
  * Whether people are drawn flat here: only a browser the sculpted bodies cannot be drawn in -- no WebGL2, no float colour
@@ -11587,10 +11592,20 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
       SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.fx = m.SCULPT_FX; SCULPT.noGl = !m.glDraws();
       SCULPT.batch = { begin: m.glBatchBegin, end: m.glBatchEnd, last: m.glBatchLast, blit: m.glBlit };
       SCULPT.clipNow = m.clipNow;
+      SCULPT.props = new Set(m.propIds());
+      SCULPT.prop = m.drawPropAlone;
       SCULPT.flips++;
     }).catch(() => { SCULPT.loading = false; });
   }
 }
+/** Whether a thing has a model of its own that a sculpted body holds, drawn alone by `drawPropAlone`: known once they have loaded. */
+export const propModelled = (id: string): boolean => !SCULPT.noGl && !!SCULPT.props?.has(id);
+/**
+ * That model alone, its foot at (sx, sy), seen from `facing` eighths round: its box at zoom one from its foot (left, top,
+ * right, bottom), or null where it is not drawn. No `ctx`: the box alone.
+ */
+export const drawPropAlone = (ctx: CanvasRenderingContext2D | null, sx: number, sy: number, zoom: number, piece: GearPiece, facing: number, dpr: number): [number, number, number, number] | null =>
+  SCULPT.prop && !SCULPT.noGl ? SCULPT.prop(ctx, sx, sy, zoom, piece, facing, dpr) : null;
 /** Whether the sculpted bodies are on and loaded, so a figure drawn now is drawn sculpted where it can be. */
 export const sculptedReady = (): boolean => SCULPT.on && !!SCULPT.draw;
 /** The effect marks on the clips, followed per body (`../sculpt/fxmarks.ts`), once the sculpted bodies have loaded; and whether their GL is the processor's (`glSoftware`). */

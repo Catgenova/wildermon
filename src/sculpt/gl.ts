@@ -33,7 +33,7 @@ export interface DrawOpts {
 export const BOX = { left: -42, right: 42, top: -66, bottom: 14 };
 /** And what of a body in the water is under its surface (`SculptDraw.water`): down to the feet of one upright in it. */
 export const UNDER_BOX = { left: -42, right: 42, top: -30, bottom: 52 };
-const boxOf = (d: SculptDraw): typeof BOX => (d.water?.keep === 'under' ? UNDER_BOX : BOX);
+const boxOf = (d: SculptDraw): typeof BOX => d.box ?? (d.water?.keep === 'under' ? UNDER_BOX : BOX);
 const MAX_BONES = 80;
 /** Materials a draw may use: a low-poly body's own (`bodyMaterials`), its garments' and its sword's (plain or enchanted) after them. */
 const MAX_MATS = 128;
@@ -558,6 +558,8 @@ export interface SculptDraw {
   low?: LowLight;
   /** A slash trail over it (`./anim/trail.ts`). */
   trail?: TrailDraw;
+  /** The screen box it is drawn in at zoom one, figure units, where it is not a body's (`BOX`): a thing drawn alone. */
+  box?: typeof BOX;
   /** The weight of each of the bake's corrective shapes (`Baked.shapes`) in this pose, nought to one. */
   shapes?: ArrayLike<number>;
   /**

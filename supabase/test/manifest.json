@@ -3273,5 +3273,18 @@
     "title": "A campfire, a smelter, a kiln and an anvil set down as furniture is, and decaying off a settlement",
     "shard": 5,
     "why": "Set down from the furniture placement: a smelter's block turns with its facing on both sides and stands where the browser anchored it; a campfire, a kiln and an anvil keep the way they face; refused where anything stands, a smelter off a settlement of yours, in the browser's words. Off a settlement a station takes its item's damage an hour (a campfire its shafts'), the same number on both sides, charged by the world's round and gone at a hundred; on a settlement none; picked up, its damage goes into the pack."
+  },
+  {
+    "file": "supabase/test/craftpreview.ts",
+    "title": "The crafting window: a preview of what a recipe makes, in its material; search puts what makes the thing first",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "CRAFTPREVIEW_STRICT": "1"
+    },
+    "why": "Asked for: \"the crafting menu should show a preview of the item for anything that has one, e.g. gear or furniture\", then \"that gear should update when changing material selection, e.g. pine to cedar barrel\", and the recipe that makes what was typed first in the search. Which things have a preview is read off the models; this asks the kinds of a spread of things and none for a plank, a stew or a scroll; in Chrome, a row clicked shows its preview drawn and lit, a row with no model no strip, the pointer on another row that one's and off the window the chosen one's; a barrel in pine and in cedar two pictures and pine again the pine one, a sword in iron and in gold two; \"plank\" the plank first and \"nail\" the nail mould first under Makes, before every recipe that takes nails; the window shut stops the drawing and opened again starts it; Animations Off one still frame."
   }
 ]

@@ -20,11 +20,54 @@ import { bandOf, STRIDE } from './bake';
 import type { Band } from './sdf';
 import { drawSculptGL, forgetBuffers, glContext } from './gl';
 export { glSoftware, glBatchBegin, glBatchEnd, glBatchLast, glBlit, type GlTile } from './gl';
+/** The things a body holds that have a model of their own, by id (`PROPS` in `./lowpoly.ts`). */
+export const propIds = (): string[] => lowPropIds();
+/** A thing's model alone, as `drawPropAlone` last drew it, by its id and material: the few lately drawn. */
+const PROP_DRAWS = new Map<string, SculptDraw>();
+const PROPS_KEPT = 8;
+/** Figure units left round a thing alone, for its ink. */
+const PROP_PAD = 1.5;
+/**
+ * A thing a body holds drawn alone (`lowPropDraw`), its foot at (sx, sy), in its material, seen from `facing` (eighths
+ * round, any fraction of one: nought from in front): the crafting window's preview. Drawn in a box of its own size,
+ * not a body's (`BOX`): close up, a body's box is a canvas of many thousand pixels. Its box on the screen at zoom one,
+ * left, top, right, bottom from its foot; null where it is not drawn. No `ctx`: the box alone, nothing drawn.
+ */
+export function drawPropAlone(ctx: CanvasRenderingContext2D | null, sx: number, sy: number, zoom: number, piece: GearPiece, facing: number, dpr: number): [number, number, number, number] | null {
+  const key = `${piece.id}|${piece.material ?? ''}`;
+  let d = PROP_DRAWS.get(key);
+  if (!d) {
+    d = lowPropDraw(piece.id, piece, 0);
+    if (!d) return null;
+    PROP_DRAWS.set(key, d);
+    if (PROP_DRAWS.size > PROPS_KEPT) {
+      const [old, gone] = PROP_DRAWS.entries().next().value as [string, SculptDraw];
+      PROP_DRAWS.delete(old);
+      forgetBuffers(gone.baked);
+    }
+  } else {
+    PROP_DRAWS.delete(key);
+    PROP_DRAWS.set(key, d);
+  }
+  const view = viewOf(facing), v = d.baked.verts;
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  for (let i = 0; i < d.baked.nVerts; i++) {
+    const [x, y] = onScreen(view, [v[i * STRIDE], v[i * STRIDE + 1], v[i * STRIDE + 2]]);
+    left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+  }
+  if (!(right > left)) return null;
+  const box = { left: left - PROP_PAD, top: top - PROP_PAD, right: right + PROP_PAD, bottom: bottom + PROP_PAD };
+  if (ctx && !drawSculptGL(ctx, sx, sy, zoom, { ...d, view, box }, { dpr })) return null;
+  return [box.left, box.top, box.right, box.bottom];
+}
 /** Whether this browser's GL draws the sculpted bodies at all: WebGL2, the float colour buffer, and shaders that fit it. */
 export const glDraws = (): boolean => !!glContext();
 export { SCULPT_FX } from './fxmarks';
 import { bakedAt, built, forgetBuilt, proportionsOf, sculptScene, type Built } from './index';
-import { hasLowBody, lowScene } from './lowpoly';
+import { hasLowBody, lowPropDraw, lowPropIds, lowScene } from './lowpoly';
+import { onScreen, viewOf } from '../render/figure';
+import type { GearPiece } from '../contract/gear';
+import type { SculptDraw } from './gl';
 import { clipFor, poseFading } from './anim';
 
 /**
