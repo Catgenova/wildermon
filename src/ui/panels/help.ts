@@ -215,6 +215,7 @@ import {
 import { STEPS_BACK, stepsBack, STONE_DIFFICULTY, STONE_STEPS_BILL, TIMBER_DIFFICULTY, TIMBER_STEPS_BILL } from '../../game/steps';
 import { LAVENDER_RULE, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT } from '../../render/furniture';
+import { LEVEL_REACH } from '../../render/levelmarks';
 import { FLOWER_MOST, FLOWER_SEASONS } from '../../world/flowers';
 import { SEASON_DAYS, SEASONS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
 import { BLOOMS, BUSH_EVERGREEN, BUSH_FLOWER_FROM, evergreen, LEAF_DAYS, SHED_DAYS, TURN_DAYS } from '../../render/foliage';
@@ -3869,9 +3870,12 @@ export function helpText(): string {
     <ul>
       <li>Every corner: soil over bedrock. <b>Digging</b> lowers the corner nearest the click (marker) and takes a spadeful of its soil; stops at rock.
       All corners bare: the tile becomes rock (whatever lies there, possibly a seam). <b>Drop dirt</b> at a corner of rock, ore or a seam: +${DROP_RAISE} soil, tile dirt; <b>Change tile</b> on it as on any dirt. Rock raised by <b>Raise rock</b> (concrete, rubble).</li>
-      <li><b>Take the level here</b> (right-click a corner): that height becomes the target. <b>Flatten</b> aims at it instead of your own tile.
+      <li><b>Set level here</b> (right-click a corner): that height becomes the target. <b>Flatten</b> aims at it instead of your own tile.
       <b>Digging</b> and <b>Chip corner</b> stop at the mark going down; <b>Drop dirt</b> and <b>concrete</b> stop at it going up (a repeat run ends when level).
-      The Tile window shows the cursor corner's distance from it. <b>Clear the level</b> removes it.</li>
+      The Tile window shows the cursor corner's distance from it. <b>Clear level</b> removes it.</li>
+      <li>While a level is set: status panel <b>Level</b> chip with its height; <b>×</b> on it: Clear level.
+      Corners up to ${LEVEL_REACH} away from the cursor's corner (no cursor: yours) marked: green at the level, amber above (stem down), blue below (stem up).
+      Ring: the corner it was set at, set from this browser.</li>
     </ul>
     <h4>Foundations</h4>
     <ul>

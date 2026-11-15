@@ -1178,6 +1178,34 @@ export class Game {
    * mark in every browser you open.
    */
   level: number | null = null;
+  /**
+   * The corner the level was set at, for its mark on the ground: this
+   * browser's own asking, kept once the island's level comes back at that
+   * corner's height (`sawLevel`). Null for a level set in another browser or
+   * before this page opened. Not saved.
+   */
+  levelAt: { cx: number; cy: number } | null = null;
+  /** The corner `take_level` was last asked at, until the island's level answers it. */
+  private levelAsked: { cx: number; cy: number } | null = null;
+
+  /**
+   * The level as the island has it, and the corner it was set at when this
+   * browser asked: says `level` when either changes, for the HUD's chip and
+   * the marks on the ground.
+   */
+  sawLevel(level: number | null): void {
+    const was = this.level, wasAt = this.levelAt;
+    const asked = this.levelAsked;
+    if (level === null) {
+      this.levelAt = null;
+      this.levelAsked = null;
+    } else if (asked && this.world.getHeight(asked.cx, asked.cy) === level) {
+      this.levelAt = asked;
+      this.levelAsked = null;
+    } else if (level !== was) this.levelAt = null;
+    this.level = level;
+    if (level !== was || this.levelAt !== wasAt) this.events.emit('level');
+  }
 
   /**
    * The last track read (`tracking.ts`), for the arrow on the screen while it
@@ -5619,6 +5647,8 @@ export class Game {
     target = keepJobLevel(this.buildings, def.id, target);
     const named = target.kind === 'item' ? target.uid : 'itemUid' in target ? target.itemUid : undefined;
     this.lastAsked = { def, target, goes, was: named !== undefined ? this.inventory.get(named)?.id : undefined };
+    // The corner a level is asked at, for its mark once the island's level answers (`sawLevel`).
+    if (def.id === 'take_level' && target.kind === 'tile') this.levelAsked = { cx: target.cx, cy: target.cy };
     // A wall or a floor planned by hand is your last plan, to undo (`planarea.ts`).
     if (UNDONE_PLANS.has(def.id)) this.plannedAt = Date.now();
     // gates: a hidden door asked for is kept only while a plan of a wall on its border is in hand or lined up (`keepHiddenAsks`).
@@ -9374,7 +9404,7 @@ export class Game {
     if (ground.treesAgo !== undefined && Number.isFinite(ground.treesAgo)) this.treesAt = Date.now() / 1000 - ground.treesAgo;
     // The level is the island's when you are on one: taking it is an ask
     // like any other, and this is the answer coming back.
-    if (ground.level !== undefined) this.level = ground.level;
+    if (ground.level !== undefined) this.sawLevel(ground.level);
     /*
      * The island's wall clock, which the year is read off: a field's clock is
      * the year's integral to the second, so this machine's being a few

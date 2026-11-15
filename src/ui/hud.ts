@@ -164,6 +164,10 @@ export class Hud {
   private aroundText = document.createElement('span');
   private aroundStop!: HTMLButtonElement;
   private gearEl: HTMLDivElement;
+  /** The surveyor's level, while one is set: its height and a button that clears it. */
+  private levelEl = document.createElement('div');
+  private levelText = document.createElement('span');
+  private levelClear = document.createElement('button');
   private eatBtn!: HTMLButtonElement;
   private stanceBtn!: HTMLButtonElement;
   /** The sleep bonus switch: "Sleep bonus: on · 2 h 5 m left" (`sleep.ts`). */
@@ -345,6 +349,32 @@ export class Hud {
     this.aroundStop.addEventListener('click', () => this.stopAround());
     this.aroundEl.append(this.aroundText, this.aroundStop);
     status.append(this.aroundEl);
+    /*
+     * The level, while one is set (`take_level`): its height, and × to clear
+     * it as Clear level does. Drawn when the island's level changes
+     * (`Game.sawLevel` says `level`), not on the next tick.
+     */
+    this.levelEl.className = 'hud-companion hud-level';
+    this.levelEl.hidden = true;
+    const levelMark = document.createElement('span');
+    levelMark.className = 'hud-level-mark';
+    setMarkup(levelMark, fixed(
+      '<svg viewBox="0 0 16 10" width="16" height="10" aria-hidden="true"><rect x="0.5" y="2.5" width="15" height="5" rx="2.5" class="hud-level-tube"/><circle cx="8" cy="5" r="1.6" class="hud-level-bubble"/><path d="M5.5 2.5v5M10.5 2.5v5" class="hud-level-line"/></svg>'));
+    this.levelText.className = 'hud-level-text';
+    this.levelClear.type = 'button';
+    this.levelClear.className = 'hud-mini hud-level-clear';
+    this.levelClear.textContent = '\u00d7';
+    this.levelClear.title = 'Clear level';
+    this.levelClear.setAttribute('aria-label', 'Clear level');
+    this.levelClear.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.clearLevel();
+    });
+    this.levelEl.append(levelMark, this.levelText, this.levelClear);
+    status.append(this.levelEl);
+    this.game.events.on('level', () => this.drawLevel());
+    this.game.events.on('reset', () => this.drawLevel());
+    this.drawLevel();
     root.append(status);
     /*
      * On a phone the status panel is the bars at the foot of the screen, and a
@@ -726,6 +756,23 @@ export class Hud {
     const first = this.game.creatures.aroundYou()[0];
     const def = ACTION_BY_ID.get('stop_work_around');
     if (first && def) this.game.requestAction(def, { kind: 'creature', id: first.id });
+  }
+
+  /** Clear the level, as its menu entry does: asked of the island, at your own tile. */
+  private clearLevel(): void {
+    const def = ACTION_BY_ID.get('clear_level');
+    const p = this.game.player;
+    if (def && this.game.level !== null) this.game.requestAction(def, { kind: 'tile', x: p.tileX, y: p.tileY, cx: p.tileX, cy: p.tileY });
+  }
+
+  /** The level's chip: shown while one is set, with its height and, set from here, its corner. */
+  private drawLevel(): void {
+    const level = this.game.level;
+    this.levelEl.hidden = level === null;
+    if (level === null) return;
+    this.say(this.levelText, `Level ${metres(level)} m`);
+    const at = this.game.levelAt;
+    this.tip(this.levelEl, `Level ${metres(level)} m${at ? ` · set at corner ${at.cx}, ${at.cy}` : ''} · Flatten: to it · Dig, Chip corner: down to it · Drop dirt, concrete: up to it · Corner marks: green at, amber above, blue below`);
   }
 
   private feedCompanion(): void {

@@ -1,4 +1,5 @@
 import { actOf, beastFrame } from './beasts';
+import { LEVEL_ABOVE, LEVEL_AT, LEVEL_BELOW, LEVEL_REACH } from './levelmarks';
 import { sunAt } from './sun';
 import { gearFrom, wornWire } from '../game/worn';
 import { materialOf } from '../game/materials';
@@ -11180,6 +11181,67 @@ export class Renderer {
     ctx.fill();
   }
 
+  /**
+   * The level's marks on the ground, while one is set: each corner within
+   * `LEVEL_REACH` of the cursor's corner (your own, with no cursor) a short
+   * dash, green at the level, amber above it with a stem down, blue below it
+   * with a stem up; fainter further out. And a ring where it was set, when it
+   * was set from here (`Game.levelAt`). A path a colour a ring: at most twelve.
+   */
+  private drawLevelMarks(ctx: CanvasRenderingContext2D, zoom: number, level: number): void {
+    const game = this.game;
+    const w = game.world;
+    const cam = this.camera;
+    const s = Math.max(0.8, zoom);
+    const set = game.levelAt;
+    if (set && w.cornerInBounds(set.cx, set.cy)) {
+      const sx = cam.worldToScreenX(set.cx, set.cy), sy = cam.worldToScreenY(set.cx, set.cy, level);
+      ctx.lineWidth = 1.25 * s;
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, 7 * s, 3.5 * s, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    const hover = this.hover;
+    const ox = hover && !hover.down ? hover.cx : Math.round(game.player.x);
+    const oy = hover && !hover.down ? hover.cy : Math.round(game.player.y);
+    const R = LEVEL_REACH;
+    const half = 4 * s, stem = 3 * s;
+    for (const [rgb, sign] of [[LEVEL_AT, 0], [LEVEL_ABOVE, 1], [LEVEL_BELOW, -1]] as const) {
+      // Faded by distance, a ring at a time (the square of corners `ring` out), each ring one path.
+      for (let ring = 0; ring <= R; ring++) {
+        let any = false;
+        ctx.beginPath();
+        for (let dy = -ring; dy <= ring; dy++) for (let dx = -ring; dx <= ring; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== ring) continue;
+          const cx = ox + dx, cy = oy + dy;
+          if (!w.cornerInBounds(cx, cy)) continue;
+          const h = w.getHeight(cx, cy);
+          if (Math.sign(h - level) !== sign) continue;
+          const sx = cam.worldToScreenX(cx, cy), sy = cam.worldToScreenY(cx, cy, h);
+          ctx.moveTo(sx - half, sy);
+          ctx.lineTo(sx + half, sy);
+          if (sign !== 0) {
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx, sy + sign * stem);
+          }
+          any = true;
+        }
+        if (!any) continue;
+        const a = 0.95 - (0.5 * ring) / R;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = 3 * s;
+        ctx.strokeStyle = `rgba(20,16,12,${(a * 0.55).toFixed(2)})`;
+        ctx.stroke();
+        ctx.lineWidth = 1.5 * s;
+        ctx.strokeStyle = `rgba(${rgb},${a.toFixed(2)})`;
+        ctx.stroke();
+      }
+    }
+    ctx.lineCap = 'butt';
+    ctx.lineWidth = 1;
+  }
+
   private drawOverlays(ctx: CanvasRenderingContext2D, zoom: number): void {
     const game = this.game;
     const w = game.world;
@@ -11327,6 +11389,8 @@ export class Renderer {
 
     const hover = this.hover;
     this.drawProspected(ctx);
+    // The level's marks round the cursor, while one is set (`drawLevelMarks`); not down in a cellar.
+    if (game.level !== null && !this.cellarFrame) this.drawLevelMarks(ctx, zoom, game.level);
     // A settlement previewed draws the borders already standing beside it, as your own being on does.
     const previewed = this.previewShown();
     if ((game.deed && (game.settings.deedBorder || (hover && game.isMyToken(hover.x, hover.y)))) || previewed) this.drawDeedBorder(ctx);
