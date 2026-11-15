@@ -155,7 +155,7 @@ How a level is chosen, in order:
 | Taming | `skill_gate('tame', species)` (`TAME_GATE`) the kind's base; +15 per stage (`TAME_STAGE_GATE`) on top; words "Logchewer: needs taming 16; have 1.0." by the stage's name (`tameRefusal`, `tame_gate_refusal`), for Tame and Take catch | Base kept, off the ladder (`KEPT_OFF_LADDER`). Built |
 | Fish | `skill_gate('fish', id)` (`FISH_GATE`); still a pool filter (a gated fish is not caught), and the Unlocks list names them | Kept, off the ladder. Built |
 | Veins by prospecting | `skill_gate('vein', yield)`, each seam's mining level: every vein in reach is marked and glows; one over your prospecting is "Unidentified metal" in Prospect's lines, a find told to you, the tile's reading and name, with "5 prospecting required to identify this vein." (`seenVein`/`veinTip`, `seen_vein`/`vein_tip`), per viewer | Built |
-| Stone faces by mining | `skill_gate('stone', yield)` (`STONE_GATE`): Mine and Chip corner on a bare face; a quarrier's work at its task skill (`quarryGate`/`stone_gate`), idle `gate` naming the stone (`stoneIdle`/`stone_idle`) | Rock 1, sandstone 10, slate 20, marble 30. Built |
+| Stone faces by mining | `skill_gate('stone', yield)` (`STONE_GATE`): Mine and Chip corner on a bare face; a quarrier's work at its own mining (`quarryGate`/`stone_gate`, `workerGateOpen`), idle `gate` naming the stone (`stoneIdle`/`stone_idle`) | Rock 1, sandstone 10, slate 20, marble 30. Built |
 | Storeys, foundation depth | Stay their own rules: a level per storey or per metre is a scale, not a thing | — |
 | Perk, class, path, faith tiers; trade book; trait reading | Stay: choices and readings, not things refused | — |
 

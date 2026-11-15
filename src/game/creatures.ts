@@ -62,7 +62,7 @@ import { HYBRID_HARDY, HYBRID_WORK, HYBRIDS, type HybridCross } from './hybridli
 import { world } from './pace';
 import { emptyCrate, shutIn, standingCrate } from './crating';
 import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, type WorkLedger } from './workerledger';
-import { gateOf, gateOpen, nameGates, skillGateRefusal, sproutGate, TAME_GATE, TAME_STAGE_GATE, treeGate, workerGateOpen, workerItemOpen, type SkillGate } from './skillgates';
+import { gateOf, nameGates, skillGateRefusal, sproutGate, TAME_GATE, TAME_STAGE_GATE, treeGate, workerGateOpen, workerItemOpen, type SkillGate } from './skillgates';
 import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
 import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
@@ -6806,12 +6806,11 @@ export class Creatures {
 
   /**
    * Why a quarrier with no face to cut in `range` of its ground is idle, past "no bare rock to cut": a plain face whose
-   * stone's gate (`STONE_GATE`) is over its own level, the lowest gate then the nearest, as `gateIdle` says a tree. The
+   * stone's gate (`STONE_GATE`) is over its own level in mining, the lowest gate then the nearest, as `gateIdle` says a tree. The
    * faces asked are those `gatherable('quarry')` would take but for the gate. The island's `stone_idle`.
    */
   private stoneIdle(game: Game, c: Creature, site: { x: number; y: number }, range: number): { why: IdleWhy; n: number; what?: string[] } | null {
     const w = game.world;
-    const skill = taskSkill(c, this.species(c));
     let best: { level: number; d: number; id: string } | null = null;
     for (let dy = -range; dy <= range; dy++) {
       for (let dx = -range; dx <= range; dx++) {
@@ -6819,7 +6818,7 @@ export class Creatures {
         if (!w.inBounds(x, y) || !STONE_FACES.has(w.getTile(x, y)) || this.claimed(x, y, c)) continue;
         if (c.mode === 'deed' && !game.workerGround(x, y)) continue;
         const gate = quarryGate(w, x, y);
-        if (gateOpen(gate, skill) || w.rockHeight(x, y) <= -MINE_DEPTH || !this.reachableFace(game, x, y)) continue;
+        if (workerGateOpen(c, gate) || w.rockHeight(x, y) <= -MINE_DEPTH || !this.reachableFace(game, x, y)) continue;
         const d = Math.max(Math.abs(dx), Math.abs(dy));
         if (!best || gate!.level < best.level || (gate!.level === best.level && d < best.d)) best = { level: gate!.level, d, id: gate!.id };
       }
@@ -7567,8 +7566,8 @@ export class Creatures {
       // Bare stone with no metal in it, snow over it or not, and one cutter to a face.
       const rock = bedrockAt(game.world, x, y);
       if (!STONE_FACES.has(game.world.getTile(x, y)) || isSeam(rock)) return false;
-      // And only a stone its own level, its task skill, may quarry (`STONE_GATE`; the island's `worker_gatherable`).
-      if (c && !gateOpen(quarryGate(game.world, x, y), taskSkill(c, this.species(c)))) return false;
+      // And only a stone its own level in mining may quarry (`STONE_GATE`, `workerGateOpen`; the island's `worker_gatherable`).
+      if (c && !workerGateOpen(c, quarryGate(game.world, x, y))) return false;
       return game.world.rockHeight(x, y) > -MINE_DEPTH && this.reachableFace(game, x, y) && !this.claimed(x, y, c);
     }
     if (kind === 'peat') {
@@ -7961,7 +7960,7 @@ export class Creatures {
     const rock = bedrockAt(w, c.workX, c.workY);
     if (!STONE_FACES.has(w.getTile(c.workX, c.workY)) || isSeam(rock)) return null;
     // Never a stone over its own level, however it came to be at one (`STONE_GATE`; the island's `worker_do`).
-    if (!gateOpen(quarryGate(w, c.workX, c.workY), taskSkill(c, this.species(c)))) return null;
+    if (!workerGateOpen(c, quarryGate(w, c.workX, c.workY))) return null;
     const skill = c.skills[GATHER_SKILL.quarry] ?? 1;
     this.gainSkill(game, c, GATHER_SKILL.quarry, 0.225);
     const ql = Math.min(100, Math.max(1, skill * (0.6 + game.rand() * 0.8) + 1));
