@@ -2462,9 +2462,10 @@ export interface FigurePose {
   mannequin?: boolean;
   /**
    * A bust (a stone bust's, `../game/fitting.ts`): every colour of the body taken most of the way to the stone it is
-   * carved in (`BUST_STONE`), so its own skin, hair and cloth show only as the stone's tones.
+   * carved in (`BUST_STONE`), so its own skin, hair and cloth show only as the stone's tones; `glass`, an obsidian
+   * bust's, the same to its volcanic glass (`BUST_GLASS`).
    */
-  stone?: boolean;
+  stone?: boolean | 'glass';
 }
 
 /** A mannequin's wood, in the light and turned from it: the kit's oak, a step paler (`woodTone`). */
@@ -2472,6 +2473,9 @@ export const MANNEQUIN_WOOD = '#efcda4';
 /** A bust's stone, and how far each of the body's own colours goes to it. */
 export const BUST_STONE = '#e2d8cc';
 export const BUST_STONE_K = 0.78;
+/** An obsidian bust's glass, and how far each of the body's own colours goes to it: further, glass showing less of what was carved. */
+export const BUST_GLASS = '#5a5070';
+export const BUST_GLASS_K = 0.86;
 
 /** A body veiled: see `FigurePose.veil`. `colour` is '#rrggbb'; `tint` and `fade` nought to one. */
 export interface FigureVeil {
@@ -6238,9 +6242,9 @@ export const BEAST_BASE: Record<BeastMat, RGB> = {
 function paletteOf(p: FigurePose, look: Look): Palette {
   // A bust all in its stone, its own colours a breath under it (`FigurePose.stone`).
   if (p.stone) {
-    const st = hex(BUST_STONE);
+    const st = hex(p.stone === 'glass' ? BUST_GLASS : BUST_STONE), k = p.stone === 'glass' ? BUST_GLASS_K : BUST_STONE_K;
     const own = paletteOf({ ...p, stone: false }, look);
-    return Object.fromEntries(Object.entries(own).map(([k, c]) => [k, mixRGB(c, st, BUST_STONE_K)])) as Palette;
+    return Object.fromEntries(Object.entries(own).map(([n, c]) => [n, mixRGB(c, st, k)])) as Palette;
   }
   // A mannequin all of its wood: no face, no hair, no cloth of its own (`FigurePose.mannequin`).
   if (p.mannequin) {

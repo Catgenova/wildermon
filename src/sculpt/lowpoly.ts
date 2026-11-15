@@ -249,7 +249,7 @@ import TAPER from './assets/taper.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
-import { BARREL, BUST_STONE, BUST_STONE_K, MANNEQUIN_WOOD, DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, seatOf, viewOf, woodTone, type ChainPiece, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
+import { BARREL, BUST_GLASS, BUST_GLASS_K, BUST_STONE, BUST_STONE_K, MANNEQUIN_WOOD, DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, seatOf, viewOf, woodTone, type ChainPiece, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
 import { DEFAULT_LOOK, type Look } from '../game/look';
 import { ANCIENT_SWORD } from '../game/gear';
 import { STRIDE, type Baked } from './bake';
@@ -1849,7 +1849,7 @@ export function lowScene(given: FigurePose, part: 'over' | 'under' = 'over'): Sc
   const dressedIn = materialsOf(look, drawn, lit, piece?.material, pieces, pose.outfit?.metal, pose.outfit?.dye, USED.get(baked), kitOf(pose));
   // (a mannequin's body all of its wood, face, hair and undergarment alike: `FigurePose.mannequin`)
   // (and a bust's all most of the way to its stone: `FigurePose.stone`)
-  const materials = pose.mannequin ? woodenBody(dressedIn) : pose.stone ? stoneBody(dressedIn) : dressedIn, low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
+  const materials = pose.mannequin ? woodenBody(dressedIn) : pose.stone ? stoneBody(dressedIn, pose.stone === 'glass') : dressedIn, low: LowLight = { sh: SH[who], tone: toneOf(materials), fit: FIT_SKIN };
   const bones = body.bones(pose, worn), trail = (inHand && prop && trails(prop)) || fight ? body.trail(pose, lit === 'enchanted') : undefined;
   const shapes = body.shapes();
   // astride, what of the body is behind the beast's barrel (the far leg down its flank) left out, as the flat figure's is
@@ -1876,17 +1876,19 @@ function woodenBody(of: Material[]): Material[] {
 
 /** A body's materials taken `BUST_STONE_K` of the way to a bust's stone, unlit and unshone: its own colours a breath under it (`FigurePose.stone`). */
 const STONY = new WeakMap<Material[], Material[]>();
-function stoneBody(of: Material[]): Material[] {
-  let out = STONY.get(of);
+const GLASSY = new WeakMap<Material[], Material[]>();
+function stoneBody(of: Material[], glass = false): Material[] {
+  const kept = glass ? GLASSY : STONY;
+  let out = kept.get(of);
   if (!out) {
     const to = (h: string): number[] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-    const st = to(BUST_STONE);
+    const st = to(glass ? BUST_GLASS : BUST_STONE), K = glass ? BUST_GLASS_K : BUST_STONE_K;
     out = of.map((m) => {
       if (!m || !/^#[0-9a-f]{6}$/i.test(m.colour)) return m;
-      const c = to(m.colour).map((v, i) => Math.round(v + (st[i] - v) * BUST_STONE_K));
+      const c = to(m.colour).map((v, i) => Math.round(v + (st[i] - v) * K));
       return { ...m, colour: `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`, emissive: false, metal: false };
     });
-    STONY.set(of, out);
+    kept.set(of, out);
   }
   return out;
 }

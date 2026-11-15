@@ -478,6 +478,34 @@ const SCENES: Record<string, { about: string; tile: (x: number, y: number) => nu
       game.bridges.set(9370, { id: 9370, kind: 'footbridge', ax: 28, ay: 23, bx: 28, by: 25, height: 4, spans: [{ x: 28, y: 24, needed: { plank: 0 }, total: { plank: 10 } }] } as never);
     },
   },
+  obsidian: {
+    about: 'The obsidian pieces in place: a black glass lantern alight, an obsidian throne, an obelisk named, a dragon-glass fountain running, a shard garden, an obsidian vase of wildflowers, a lava lamp column, an obsidian wind chime hung from a lantern post, busts of two citizens, an ember orb, and a glass shard path three tiles long along the north side of a row.',
+    tile: () => TileType.Grass,
+    height: () => 4,
+    dress: (game) => {
+      const now = Date.now() / 1000;
+      const piece = (id: number, kind: string, x: number, y: number, more: Partial<PlacedFurniture> = {}): void => {
+        const f = { id, kind, x, y, sx: 0, sy: 0, facing: 's', ql: 50, items: [], ...more } as unknown as PlacedFurniture;
+        game.furniture.set(id, f);
+        game.placed.furniture.add(f);
+      };
+      // The scenes' trees off the tiles the pieces stand on; the body stands at 24, 24.
+      for (const [x, y] of [[22, 22], [27, 23], [22, 27], [26, 26]]) game.world.setTile(x, y, TileType.Grass, 0);
+      piece(9401, 'black_glass_lantern', 22, 22, { sx: 1, sy: 1, lit: true, fuel: 3600 });
+      piece(9402, 'obsidian_throne', 23, 22, { sx: 1, sy: 1 });
+      piece(9403, 'obsidian_obelisk', 25, 22, { sx: 1, sy: 1, engraving: 'Ash Spire' } as Partial<PlacedFurniture>);
+      piece(9404, 'dragon_glass_fountain', 22, 24, { sx: 0, sy: 0, litres: 50 } as Partial<PlacedFurniture>);
+      piece(9405, 'shard_garden', 26, 22, { sx: 1, sy: 1 });
+      piece(9406, 'obsidian_vase', 27, 22, { sx: 1, sy: 1, furnish: { vase: { n: 3, ql: 50, at: now } } });
+      piece(9407, 'lava_lamp', 26, 24, { sx: 1, sy: 1 });
+      piece(9408, 'lamp_post', 25, 26, { sx: 0, sy: 0 });
+      piece(9409, 'obsidian_wind_chime', 25, 26, { sx: 3, sy: 2, facing: 'e' });
+      piece(9410, 'obsidian_bust', 26, 26, { sx: 1, sy: 1, fitting: { bust: { uid: 'a', name: 'Mira', look: { gender: 'woman', hair: 'braid', skin: 0.2, hairColour: 0.08, hairBright: 0.7 } } } });
+      piece(9411, 'obsidian_bust', 27, 26, { sx: 1, sy: 1, fitting: { bust: { uid: 'b', name: 'Otto', look: { gender: 'man', hair: 'afro', skin: 0.7, hairColour: 0.5, hairBright: 0.2 } } } });
+      piece(9412, 'ember_orb', 27, 24, { sx: 1, sy: 1 });
+      [22, 23, 24].forEach((x, i) => piece(9420 + i, 'glass_shard_path', x, 27, { sx: 0, sy: 0, facing: 'n' }));
+    },
+  },
   rock: { about: 'A rock face and its steps: stone and the outcrops.', tile: (x, y) => (Math.abs(x - 24) < 6 || y < 18 ? TileType.Rock : TileType.Grass), height: (x, y) => (y < 18 ? 90 : Math.abs(x - 24) < 6 ? 60 : 30) },
 };
 

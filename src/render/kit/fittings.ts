@@ -440,7 +440,7 @@ export const BUST_PLINTH = 8.2;
  * of their shoulders in stone: set by `render/fittinglook.ts`, which brings in
  * the figure. `seed` is the piece's id.
  */
-export const bust: { draw: ((ctx: Ctx, sx: number, sy: number, zoom: number, view: KitView, seed: number) => void) | null } = { draw: null };
+export const bust: { draw: ((ctx: Ctx, sx: number, sy: number, zoom: number, view: KitView, seed: number, glass?: boolean) => void) | null } = { draw: null };
 const PLINTH: Tone = toneOf('#ece0d0', '#a8969a');
 
 function bustOf(look: KitLook): KitModel {

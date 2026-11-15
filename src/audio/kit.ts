@@ -241,6 +241,22 @@ export function windChime(ctx: BaseAudioContext, dest: AudioNode, at: number, v:
   }
 }
 
+/**
+ * An obsidian wind chime (`obsidian.ts`): shards of glass touching, bright and
+ * thin, a note or three higher than a wooden chime's with a glassy tick on
+ * each; `loud` its share of its loudest, by the wind (`glassChimeLoud`).
+ */
+const GLASS_NOTES = [1046.5, 1174.66, 1318.51, 1567.98, 1760];
+export function glassChime(ctx: BaseAudioContext, dest: AudioNode, at: number, v: number, loud: number): void {
+  const n = 2 + (v > 0.5 ? 1 : 0);
+  for (let i = 0; i < n; i++) {
+    const f = GLASS_NOTES[Math.floor((v * 7 + i * 3) % GLASS_NOTES.length)];
+    const t = at + i * (0.07 + v * 0.06);
+    burst(ctx, dest, t, { dur: 0.015, freq: 6200, q: 1.4, gain: 0.05 * loud, attack: 0.001 });
+    ring(ctx, dest, t, { freq: f, dur: 1.3, gain: 0.04 * loud, type: 'sine', partials: [[1, 0.6], [2.76, 0.25], [5.4, 0.15]] });
+  }
+}
+
 /** A blow that landed on something, and one that landed on you. */
 export function blow(ctx: BaseAudioContext, dest: AudioNode, at: number, taken: boolean, v: number): void {
   if (taken) {
