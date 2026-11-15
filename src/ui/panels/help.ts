@@ -2007,7 +2007,7 @@ export function helpText(): string {
     <ul>
       <li>Storey arrows (toolbar, once anything is built): <b>pin one storey</b>, up to the tallest building's roof. Every other storey hidden, above and below:
       walls, floors, roofs, and the furniture and people on them. Clicks and walks: onto that storey's floor (mounted: wide staircases only). Its menu: that storey's
-      building work, <i>Plan staircase up</i>, furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
+      building work, <i>Plan staircase up</i> and <i>Build … up</i> (the staircase or ladder planned over it), furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
       <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
       <li>Pinned one above a building's top storey: its <b>roof</b>, alone. Unplanned roof tiles marked out; a pitched roof picked on its slopes, not walked onto;
       its menu: the roof's work only. A storey under it: no roof drawn, no roof work.</li>

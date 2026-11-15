@@ -409,6 +409,14 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 
 export const NEWS: News[] = [
+  // A staircase or a ladder planned on the storey over, built from the one it is climbed from (`wayUpPlanned`).
+  {
+    n: 629,
+    day: '2026-11-15',
+    lines: () => [
+      'Fixed: staircase, single staircase, spiral staircase or ladder planned on storey 2 and up: no Build on the storey under it. Now: "Build … up (storey N)" in that storey\'s menu on its tile.',
+    ],
+  },
   // A walk up to a storey whose staircase is only planned (`Game.unbuiltWayUp`).
   {
     n: 625,

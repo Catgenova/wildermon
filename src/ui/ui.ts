@@ -10,7 +10,7 @@ import type { Pick, Renderer } from '../render/renderer';
 import { TileType, TREE_DEFS, treeAge, treeSpecies, SLAB_BY_ITEM } from '../world/tiles';
 import { ACTION_BY_ID, type ActionDef, type Target, deedAcrossAt, foundingPreview, fruitSprout, SPOIL_ORDER, SPOIL_TILE } from '../game/actions';
 import { BARTER_REACH, BARTER_SAID } from '../game/barter';
-import { BUILD_ACTION_BY_ID, layingBill, materialName } from '../game/buildActions';
+import { BUILD_ACTION_BY_ID, layingBill, materialName, wayUpPlanned } from '../game/buildActions';
 import {
   describeNeeds,
   FENCE_TYPES,
@@ -4228,6 +4228,12 @@ export class UI {
     }
     // Every tile of the storey with no floor at once, laid out before it is asked for (`planarea.ts`).
     entries.push(...this.areaFloorRows(b, level, x, y));
+    // The way up to the next storey planned on the floor slot over it, built from here, where it is climbed from (`wayUpPlanned`).
+    const wayUp = wayUpPlanned(g, b, level, x, y);
+    if (wayUp) {
+      entries.push(build(act('build_floor'), { ...base, level: level + 1 },
+        `Build ${floorName(wayUp)} up (storey ${level + 2}) · needs ${describeNeeds(wayUp, materialName)}`, wayUp));
+    }
     // Pinned on a storey, the way up to the next from its floor: a flight or a ladder on the floor slot over it.
     if (pinned !== null && level + 1 < b.levels && !bld.floor(level + 1, x, y)) entries.push(...stairsUpEntries(g, base, level + 1, side,
       (at, lv, material, kind, sd, hand) => this.startPlacingStairs(at, lv, material, kind, sd, false, hand)));
