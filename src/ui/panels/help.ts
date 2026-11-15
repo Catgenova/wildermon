@@ -47,7 +47,7 @@ import { MINE_JOB, OUTCROP_CLEAR, OUTCROP_KINDS, OUTCROP_MINE, OUTCROP_QL, OUTCR
 import { CELLAR_ACTION_BY_ID, CELLAR_DAYLIGHT, cellarOutdoor } from '../../game/cellar';
 import { SPIRAL_TREADS } from '../../game/spiral';
 import { materialName } from '../../game/buildActions';
-import { BED_COVERED, BED_ONE_CROP } from '../../game/gardenbed';
+import { BED_COVERED, bedStoreySaid } from '../../game/gardenbed';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_SEEN, COUNTER_WALL } from '../../game/counters';
 import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
 import { FIND_SHOWN } from '../../game/marketfind';
@@ -1499,6 +1499,7 @@ export function helpText(): string {
       <li>Crafting window foot: every queued action, current first, with its count, time at your current pace (speed multiplier) and, for a craft, what it will use and from where
       (pack, bags or a named store) after the actions ahead.</li>
       <li>Reorder: drag by the grip, or <b>&uarr;</b> / <b>&darr;</b>. <b>&times;</b> removes. The current action never moves.</li>
+      <li>Current action's <b>&times;</b>: stops it and its remaining repeats, starts the next in queue; the rest stay queued. Queue empty: stop only.</li>
     </ul>
     <h3>What the characteristics are for</h3>
     <ul>
@@ -2014,7 +2015,7 @@ export function helpText(): string {
       building work, <i>Plan staircase up</i> and <i>Build … up</i> (the staircase or ladder planned over it), furniture set down on it. Label <i>1st</i>, <i>2nd</i>…; click for <i>Auto</i> (every storey).
       <kbd>Page Up</kbd> / <kbd>Page Down</kbd> do the same.</li>
       <li>Pinned one above a building's top storey: its <b>roof</b>, alone. Unplanned roof tiles marked out; a pitched roof picked on its slopes, not walked onto;
-      its menu: the roof's work only. A storey under it: no roof drawn, no roof work.</li>
+      its menu: the roof's work only. A storey under it: no roof drawn; the top storey's menu: <i>Plan roof</i> on that tile.</li>
       <li>Once any cellar is dug: <i>Cellar</i>, below the ground floor: every nearby cellar as dug, buildings over them removed. Contents and people in a cellar
       show only to somebody in it, within their sight.</li>
       <li><b>◪</b>, <kbd>X</kbd> or the Settings box: <b>hides the walls facing you</b>; far walls stay. Always on while a storey is pinned.</li>
@@ -2047,7 +2048,8 @@ export function helpText(): string {
       built (<b>Build change</b>, as Build wall); with the last material, the new wall. Still going up: replanned in place, new bill. Refused: fence, half wall or
       railing on a wall something rests on; a material lighter than the heaviest wall above, glass excepted; a counter with goods or takings; a padlocked portcullis. The standing
       type and material again: change dropped.</li>
-      <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips.</li>
+      <li>Roof: <b>Plan roof</b> tile by tile once the top storey's walls are done; neighbours join into ridges and hips. Any tile of the footprint, floor or not.
+      A tile over the ground storey with no floor: an open well, no walls asked on its sides. Every wall planned on the top storey: finished first.</li>
       <li>Plans over an area, max ${PLAN_AREA_MOST} pieces: <b>Plan walls all round</b>, <b>Plan floor: every tile</b> (the storey shown), <b>Plan roof: every tile</b>;
       <b>Plan building over an area</b>, <b>Add an area to</b>, <b>Extend over an area</b> (rectangle to the cursor). Ghost of every piece first; red: refused.</li>
       <li>Plan bar: each material summed over the plan; Need, Carried, Stored (crates on its tiles, stores within building reach), Short. Plan or click: planned,
@@ -2085,10 +2087,10 @@ export function helpText(): string {
     <ul>
       <li><b>Plan floor</b> offers <b>${GARDEN_BED.name.toLowerCase()}</b>, any storey: ${bedTile()} per tile; mallet; trains carpentry. ${onlySaid(GARDEN_BED)}</li>
       <li>Ribbons: ${bedMake()} only. Hod carriers: timber and dirt only.</li>
-      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the storey you stand on (all field rules and Farmer perks included).</li>
+      <li>Finished: a field, no tilling. Sow, tend, harvest and patches from the bed's storey (all field rules and Farmer perks included). Picked on a pinned storey: walks you up to it first. Asked from another storey: "${bedStoreySaid(1)}"</li>
       <li>Growth: <b>${growthWords(GLASSHOUSE_GROWTH)} in every season</b>, winter included, while open: nothing finished above it, or the nearest finished thing above a glass roof.</li>
       <li>Covered (floor, staircase or roof not of glass above): "${BED_COVERED}" Growing crop: holds its progress until uncovered.</li>
-      <li>One crop per tile, any storey: "${BED_ONE_CROP}"</li>
+      <li>One crop per storey of a tile: a bed over another bed or a field grows its own crop.</li>
       <li>Removed or relaid in another material: its crop goes with it. Settlement farm workers: beds on any storey a finished staircase reaches.</li>
     </ul>
     <h4>Fences, gates, half walls</h4>

@@ -1,6 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { BRIDGES, bridgeDone, type Bridge, type BridgeKind } from './bridges';
-import { borderOf, isDone, keepJobLevel, MATERIALS, onlyRefusal, progressOf, WALL_TYPE_BY_ID, type Border, type MaterialDef, type Side, type Wall, type WallType } from './building';
+import { borderOf, isDone, keepJobLevel, materialSaid, onlyRefusal, progressOf, WALL_TYPE_BY_ID, type Border, type MaterialDef, type Side, type Wall, type WallType } from './building';
 import type { Game } from './game';
 import { isFounder } from './ranks';
 import type { Lockable } from './locks';
@@ -436,7 +436,7 @@ export function gateHoverLine(g: Game, x: number, y: number, side: Side, sideNam
   if (!w) return null;
   const seen = g.buildings.seenType(w);
   if (seen !== 'portcullis' && seen !== 'hidden_door') return null;
-  const mat = (MATERIALS.find((m) => m.id === w.material)?.name ?? w.material).toLowerCase();
+  const mat = materialSaid(w.material);
   const head = `${sideName} wall${upstairs ? ' on the ground floor' : ''}: ${WALL_TYPE_BY_ID.get(seen)?.name.toLowerCase()} ${mat}`;
   if (!isDone(w)) return `${head} · ${Math.round(progressOf(w) * 100)}% built`;
   if (seen === 'portcullis') return `${head} · ${portcullisState(w)}`;

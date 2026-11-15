@@ -99,6 +99,7 @@ import { ageDef, stageOf } from '../game/creatures';
 import { CRATE_DOOR, CREATURE_CRATE } from '../game/creaturecrate';
 import { FIRE_CAPACITY, fireCentre } from '../game/campfire';
 import { drawCampfireNight } from './kit/campfire';
+import { TRAP_WORN, trapTurn } from './kit/traps';
 import { smelterCentre, smelterSize } from '../game/smelter';
 import { stationCentreAt, stationFootprint, stationTurn } from '../game/stations';
 import { anvilBounds, anvilHit, anvilNight, anvilTone, anvilVariant, drawAnvil, drawAnvilLive, drawAnvilNight, drawKiln, drawKilnLive, drawKilnNight, drawSmelter, drawSmelterLive, drawSmelterNight, kilnBounds, kilnHit, smelterBounds, smelterHit } from './forge';
@@ -473,7 +474,7 @@ import { drawSpeech } from './bubble';
 import { SKILL_BY_ID } from '../game/skills';
 import { PUFFS, PUFF_DRIFT, PUFF_RISE, puffAge, puffOf } from './smoke';
 import { CROWD, DROWNS, hemOf, ruffle, strew, strewLook, WADES, WADE_DEPTH, type Lobe } from './meadow';
-import { SEAM_FROM, seam, seamWash } from './seams';
+import { prospectMark, SEAM_FROM, seam, seamWash, veinGlints, veinLit, VeinNight } from './seams/runecut';
 import { Timings } from './timings';
 import { ColourPages, MarkPages } from './pages';
 import { trailMask, trailShape, type TrailShape } from './trails';
@@ -1425,6 +1426,8 @@ export class Renderer {
   /** The lava drawn this frame, ten numbers a tile (its four corners on screen, then the tile), and how many (`glowLava`). */
   private lavaSeen: number[] = [];
   private lavaN = 0;
+  /** The seams in sight this frame that light the night (`VeinNight`). */
+  private veinNight = new VeinNight();
   /** Whether the day's lava can be in view this frame: you are within `LAVA_VIEW` tiles of its box. */
   private lavaNear = false;
   /** The mote swirls drawn this frame and where, for their light to be added over the night (`glowSwirl`). */
@@ -4350,15 +4353,10 @@ export class Renderer {
     // The squeezed pictures (`atSize`) and the trees' (`drawTree`) are no longer emptied when the zoom changes: each knows the zoom it was made at.
     const paved = zoom >= 0.75;
     /*
-     * A seam is shapes in the stone, and below this a band of it is a few
-     * pixels wide: the wash of the metal through the tile's own colour is what
-     * says there is ore in that hillside from further out than this.
-     *
-     * It is also where the ground pass is dearest. Every band is pixels filled
-     * two or three times over, and a hillside that is ore the whole way across
-     * -- which takes some doing, but a miner can make one -- costs twenty-odd
-     * milliseconds a frame at zoom one against one and a half for the rich
-     * hillside that actually occurs. Below here it costs nothing at all.
+     * A seam is a recess cut into its tile (`seams/runecut.ts`), and below
+     * this it is a few pixels across: the wash of the metal through the
+     * tile's own colour is what says there is ore in that hillside from
+     * further out than this. Above it a seam is one picture laid on its tile.
      */
     const seamed = zoom >= SEAM_FROM;
     // Grass is flat colour with things growing in it, and a clump of grass
@@ -4449,6 +4447,7 @@ export class Renderer {
     this.swirlsSeen.length = 0;
     // The lava drawn this frame, for its glow over the night (`glowLava`), and whether any can be in view at all.
     this.lavaN = 0;
+    this.veinNight.begin(this.game.darkness() > 0.02);
     {
       const b = this.game.lavaBox();
       const p = this.game.player;
@@ -4783,11 +4782,21 @@ export class Renderer {
         if (!wet && t0 === TileType.Steps) {
           drawSteps({ ctx, cam, world, zoom, season: this.season, light: this.stepsLight, dpr: this.canvas.dpr }, x, y);
         }
-        // And the metal in the stone, where there is any. Plain rock is plain.
-        // It keeps to its own tile without a clip: see `seams/paint.ts`.
-        if (seamed && !wet && !run && t0 === TileType.Rock) {
+        /*
+         * And the seam cut into the stone, where there is one; plain rock is
+         * plain. Laid from its block's picture with the rest of the run, or
+         * drawn now. What moves on it (its glints) and what lights the night
+         * (`VeinNight`) is drawn or gathered every frame, from a block or not.
+         */
+        if (seamed && !wet && t0 === TileType.Rock) {
           const kind = world.rockFace(x, y);
-          if (kind > 0) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
+          if (kind > 0) {
+            if (!run) seam(ctx, x, y, kind, pts, paveRot, zoom, this.canvas.dpr);
+            if (lit) {
+              veinGlints(ctx, x, y, kind, pts, zoom, this.canvas.dpr, this.anim);
+              this.veinNight.add(x, y, kind, pts);
+            }
+          }
         }
 
         // The day's lava on Volcano Isle (`./lava`), over its ground: crusted where it stops; glowing after dark (`glowLava`).
@@ -4890,9 +4899,8 @@ export class Renderer {
             this.take('swirl', x, y, cam.worldToScreenX(x + 0.5, y + 0.5), cam.worldToScreenY(x + 0.5, y + 0.5, h), null).swirl = swirl;
           }
         }
-        // A crop on a garden bed, on whatever storey the bed is: at the bed's soil, as a field's crop stands on its ground.
-        const bedCrop = this.game.crops.size && !cutHere ? this.game.cropAt(x, y) : undefined;
-        if (bedCrop && bedCrop.level !== undefined) this.takeBedCrop(bedCrop, x, y, cam.rotation);
+        // A crop on a garden bed, on whatever storey the bed is, each storey's its own: at the bed's soil, as a field's crop stands on its ground.
+        if (this.game.crops.size && !cutHere) for (const bedCrop of this.game.cropsAt(x, y)) if (bedCrop.level !== undefined) this.takeBedCrop(bedCrop, x, y, cam.rotation);
         if (t === TileType.Field && !aloft) {
           const fieldCrop = this.game.crops.size ? this.game.cropAt(x, y) : undefined;
           // Only the field's own: one on a bed over it is drawn up there.
@@ -7720,8 +7728,11 @@ export class Renderer {
       }
       if (ent.kind === 'trap' && ent.trap) {
         const trap = ent.trap;
-        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => drawTrap(g, px, py, zoom, trap.kind, !!trap.bait, trap.caught !== null));
-        this.trapHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx - 8 * zoom, top: ent.sy - 12 * zoom, w: 16 * zoom, h: 14 * zoom, trap: trap.id });
+        // Turned with the camera and a way of its own by where it stands; worn once most of its life is gone (`TRAP_WORN`).
+        const turn = this.camera.rotation + trapTurn(trap), worn = trap.dmg >= TRAP_WORN;
+        let box: [number, number, number, number] = [-8 * zoom, -12 * zoom, 8 * zoom, 2 * zoom];
+        this.paint(ctx, zoom, hovering ? 'hover' : 'none', 0, ent.sx, ent.sy, (g, px, py) => { box = drawTrap(g, px, py, zoom, trap.kind, !!trap.bait, trap.caught !== null, turn, worn); });
+        this.trapHits.push({ ...this.shaped(), x: ent.x, y: ent.y, left: ent.sx + box[0], top: ent.sy + box[1], w: box[2] - box[0], h: box[3] - box[1], trap: trap.id });
         continue;
       }
       if (ent.kind === 'campfire' && ent.fire) {
@@ -10725,31 +10736,39 @@ export class Renderer {
     [this.camera.worldToScreenX(x, y), this.camera.worldToScreenY(x, y, h)];
 
   /** The deed's boundary as a line that follows the ground. */
-  /** Ore a prospector has read, glowing until the marks fade. */
+  /**
+   * Ore a prospector has read, until the marks fade (`prospectMark`): four
+   * brackets at the tile's corners in the seam's light; on bare rock its own
+   * mark lit, on buried ground its mark in a ring.
+   */
   private drawProspected(ctx: CanvasRenderingContext2D): void {
     const p = this.game.prospected;
     if (!p || this.game.time >= p.until) return;
     const w = this.game.world;
+    const cam = this.camera;
+    const co = cam.view.corners;
+    const pts = this.prospectPts;
     // Fade out over the last few seconds rather than blinking off.
     const left = p.until - this.game.time;
-    const pulse = this.calm ? 0.85 : 0.72 + Math.sin(this.anim * 3) * 0.22;
+    const pulse = this.calm ? 0.85 : 0.8 + Math.sin(this.anim * 3) * 0.15;
     ctx.save();
-    ctx.globalAlpha = Math.min(1, left / 8) * pulse;
+    ctx.globalAlpha = Math.min(1, left / 8);
     for (const key of p.tiles) {
       const x = key % w.w;
       const y = (key - x) / w.w;
-      this.tilePath(ctx, x, y);
-      ctx.fillStyle = '#ffcf3d';
-      ctx.fill();
-      ctx.lineWidth = 4;
-      ctx.strokeStyle = '#5a3c00';
-      ctx.stroke();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#fff3c0';
-      ctx.stroke();
+      for (let k = 0; k < 4; k++) {
+        const cx = x + co[k][0], cy = y + co[k][1];
+        pts[k * 2] = cam.worldToScreenX(cx, cy);
+        pts[k * 2 + 1] = cam.worldToScreenY(cx, cy, w.getHeight(cx, cy));
+      }
+      const bare = w.getTile(x, y) === TileType.Rock;
+      const kind = w.rockFace(x, y);
+      if (bare) veinLit(ctx, x, y, kind, pts, cam.zoom, this.canvas.dpr);
+      prospectMark(ctx, pts, cam.zoom, kind, bare, pulse);
     }
     ctx.restore();
   }
+  private readonly prospectPts = new Float64Array(8);
 
   /**
    * Your border, and your neighbours'.
@@ -11446,6 +11465,8 @@ export class Renderer {
     if (dark > 0.02) for (const w of this.swirlsSeen) glowSwirl(ctx, w.x, w.y, zoom, w.s.element, this.anim, w.s.id, dark);
     // And the lava, burning through the night (`glowLava`).
     if (dark > 0.02 && this.lavaN) glowLava(ctx, this.lavaSeen, this.lavaN, dark, this.anim, this.calm);
+    // And what of the seams lights, over the night (`VeinNight`).
+    if (dark > 0.02) this.veinNight.glow(ctx, zoom, this.canvas.dpr, dark);
     // And the spells' light, over the night too, and the screen's tint for a great one of your own over that.
     this.spells.glowPass(ctx);
     this.spells.screenPass(ctx, this.canvas.width, this.canvas.height);

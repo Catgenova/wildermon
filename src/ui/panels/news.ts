@@ -31,7 +31,7 @@ import { BOOT_PHASES, NEAR_REACH, TREE_WAIT_MS } from '../bootsteps';
 import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
-import { CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
+import { CRATE_DEFS, CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
 import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
@@ -64,12 +64,12 @@ import { FIGHT_QUIET, ARM_SLOW_MOST, ARMOUR_VS, armourSays, BLINDSIDE, blowSays,
 import {
   CELLAR_DECAY, CELLAR_DEPTH, CELLAR_SOIL, COLUMN_SHARE, SINGLE_STAIRS_NAME, SINGLE_STAIRS_SHARE, SPIRAL_STAIRS_NAME, STAIRS_SHARE, columnBill, floorBill, GLASS_ROOF, heftWord, OBSIDIAN_GLASS, OBSIDIAN_GLASS_OPACITY, onlySaid, takesAs, INDOORS_DECAY, INDOORS_REST, JETTY_REACH, MATERIAL_BY_ID, MATERIALS as WALL_MATERIALS, RAILING_HEIGHT,
   NO_PLAN_FROM, OUTSIDE_STAIR_LEVEL, roofShapeDef, roofShapeOf, WALL_HEIGHT, WALL_TYPE_BY_ID, wallBill as typeBill,
-  STOREY_JOBS, describeNeeds, GARDEN_BED,
+  STOREY_JOBS, describeNeeds, GARDEN_BED, floorSaid,
 } from '../../game/building';
 import { CELLAR_DAYLIGHT } from '../../game/cellar';
 import { wayUpSaid } from '../../game/game';
 import { materialName } from '../../game/buildActions';
-import { BED_COVERED } from '../../game/gardenbed';
+import { BED, BED_COVERED, bedStoreySaid } from '../../game/gardenbed';
 import { LIFE_MOTES_EACH, MOTE_ELEMENTS, POULTICE_HEAL, STATUE_MOTES, WATER_MOTE_NEED, WATER_MOTES_EACH } from '../../game/motes';
 import { COUNTER_HOLDS, COUNTER_REACH, COUNTER_WALL } from '../../game/counters';
 import { candleBurn, lanternReach, PLINTH_BUSY_REACH, PLINTH_REACH, torchBurn } from '../../game/light';
@@ -266,6 +266,7 @@ import { STEPS_BACK, stepsBack, STONE_STEPS_BILL, TIMBER_STEPS_BILL } from '../.
 import { LAVENDER_RULE, ROSE_BUD, ROSE_FLOWER, ROSE_LEAFY, ROSES_RULE } from '../../game/roses';
 import { DEVICE_COUNT, WHEELS } from '../../render/furniture';
 import { TRAPS } from '../../game/trapdefs';
+import { TRAP_WORN } from '../../render/kit/traps';
 import {
   BELL_HEARD_BASE, BELL_HEARD_PER_QL, bellHeard, HAMMOCK_REST, LAY_UP_EVERY, LAY_UP_FAIL_SHARE, LAY_UP_SPARE_ABOVE, LEAD_PACE,
   ROPE_SHARE_BOAT, ROPE_SHARE_TRAP, ROPE_TIME_PER_LEVEL, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ropePerLayUp, ropeTime, TWINE_MADE,
@@ -334,6 +335,7 @@ import {
 } from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
 import { PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
+import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
 const GARDEN_MOUNT = (m: Mount): string => MOUNT_SAID[m];
@@ -412,6 +414,9 @@ const WAS_DYE = { boil: 3, garment: 1, banner: 2, sail: 3, ship: 5, wall: 1, flo
 const FAIL_EXAMPLE = failFactorSaid(failFactor({ ...FAIL_EXAMPLE_AT, difficulty: ACTION_BY_ID.get('cut_down')?.difficulty ?? 0 }));
 /** The jobs that scrub paint off with a brush (423), which came after the storey jobs were named (332). */
 const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
+/** The seams as they are cut into the rock (`seams/runecut.ts`), named as a list says them. */
+const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
+const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
   // The vehicles and the hulls redrawn in the kit (`kit/vehicles.ts`, `MODELS` in render/furniture.ts), a team at its yokes (`YOKE_SPOTS`).
@@ -431,6 +436,66 @@ export const NEWS: News[] = [
         `New: ${name('sailing_boat')}: peak halyard, masthead pennant. ${name('rowing_boat')}: dye on the hull.`,
       ];
     },
+  },
+  // Every seam a recess cut into its own tile, one model a tile (`seams/runecut.ts`), and the prospector's mark (`prospectMark`).
+  {
+    n: 633,
+    day: '2026-11-15',
+    lines: () => [
+      'Changed: veins and seams: a recess cut into each tile, one per tile (was: bands running across tiles).',
+      `Changed: recess by kind. ${capital(veinsOf('stone'))}: stepped square cut. ${capital(veinsOf('fuel'))}: stepped cut, ember cracks. ${capital(veinsOf('base'))}: rounded pocket, ore chips, band of the ore's colour round the lip. ${capital(veinsOf('precious'))}: wider, deeper pocket lined with ore, glints. ${capital(veinsOf('rare'))}: the mark cut as a lit fissure, crystals at its ends, glints.`,
+      `New: marks: ${listed(VEINS.map((l) => `${l.name.toLowerCase()} ${l.markName}`))}.`,
+      `New: lit at night: ${listed(VEINS.filter((l) => l.emit > 0).map((l) => `${l.name.toLowerCase()} ${percent(l.emit)}`))}.`,
+      `Changed: below zoom ${SEAM_FROM}: tile colour only, as before.`,
+      'Changed: prospected veins: four corner marks in the vein\'s light; bare: its mark lit, with a glow; buried: its mark in a ring on the ground (was: yellow tile).',
+    ],
+  },
+  // The job in hand's × in the queue list (`QueueView`, `Game.skipAction`, `rpc_skip`).
+  {
+    n: 636,
+    day: '2026-11-15',
+    lines: () => [
+      'New: Action queue: × on the running action: stops it and its remaining repeats, starts the next in queue. Rest of the queue kept. Queue empty: stop only.',
+    ],
+  },
+  // A floor named by its material's name, and a garden bed up a storey sown, tended and harvested (`floorSaid`, `gardenbed.ts`, `crop.storey`).
+  {
+    n: 632,
+    day: '2026-11-15',
+    lines: () => [
+      `Fixed: tile tooltip floor line: material id, e.g. "${BED} floor". Now: its name, "${floorSaid({ building: 0, level: 0, x: 0, y: 0, material: BED, needed: {}, total: {} })}".`,
+      'Fixed: garden bed on storey 2 and up over a crop on the storey under it: no Sow; "one crop per tile". Now: one crop per storey of a tile.',
+      `Fixed: garden bed on a pinned storey, picked from another storey: no Sow, Tend or Harvest. Now: offered; walks you to that storey first. Asked from another storey: "${bedStoreySaid(1)}"`,
+      'Fixed: tile tooltip over a garden bed on a pinned storey: no crop line. Now: its crop, stage and time.',
+      `Fixed: Examine on a building tile: no floor names. Now: each storey's finished floor, e.g. "Storey 2: ${floorSaid({ building: 0, level: 1, x: 0, y: 0, material: BED, needed: {}, total: {} })}."`,
+    ],
+  },
+  // The traps redrawn in the kit (`kit/traps.ts`).
+  {
+    n: 637,
+    day: '2026-11-15',
+    lines: () => [
+      `Changed: traps: ${listed(Object.values(TRAPS).map((t) => t.name.toLowerCase()))}: new look, 8 facings.`,
+      `New: trap look: worn at ${TRAP_WORN}% of its life gone.`,
+      'Changed: Crafting preview: traps: set, baited, sprung, worn.',
+    ],
+  },
+  // A crate in the crafting preview, drawn as the island draws it set down (`craftpreview.ts`, `sprited`).
+  {
+    n: 638,
+    day: '2026-11-15',
+    lines: () => [`Fixed: Crafting preview: ${listed(Object.values(CRATE_DEFS).map((c) => c.name.toLowerCase()))}: no picture. Now: drawn as set down.`],
+  },
+  // A roof over a storey with floor tiles taken up (`levelGaps`, `level_gap`), and Plan roof on the top storey pinned (`roofEntries`).
+  {
+    n: 634,
+    day: '2026-11-15',
+    lines: () => [
+      'Fixed: Plan roof after a floor tile of the top storey was removed on the building\'s edge: "N sides with no wall or columns", no wall plannable on them. Now: allowed once every other outside side and every planned wall is finished.',
+      'Changed: tile of storey 2 and up with no floor: open well, no walls asked on its sides. Roof: any tile of the footprint, floor or not. Storey with no floor at all: every side asked.',
+      'Changed: "not enclosed" refusal: nearest wall still going up named inside the storey too, e.g. walls planned round a well.',
+      'Fixed: top storey pinned: no Plan roof. Now: Plan roof on a tile with none; refused: greyed, with the reason.',
+    ],
   },
   // A Decor tab in the crafting window (`craftTabOf`, `isDecor`).
   {

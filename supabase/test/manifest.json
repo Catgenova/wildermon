@@ -240,6 +240,19 @@
     "why": "Reported: \"cant plan roof on when conditions are met. make sure that doors and window walls etc count as elligible walls if completed.\" They do; what was wrong was a refusal that named neither the storey it meant nor the side that was short."
   },
   {
+    "file": "supabase/test/roofwell.ts",
+    "title": "A roof over an open well",
+    "shard": 1,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported: \"if previously removing a floor, the option to make a roof disappears. fix\". A storey-2 tile with no floor takes no wall, and its outside sides were asked one before a roof; pinned on the top storey, the menu had no Plan roof."
+  },
+  {
     "file": "supabase/test/thick.ts",
     "title": "A wall is a box, and the face you see is the one you are standing on",
     "shard": 1,
@@ -832,7 +845,20 @@
     "file": "supabase/test/gardenbed.ts",
     "title": "A garden bed is a field on any storey, open to the sky or under glass",
     "shard": 6,
-    "why": "A floor of garden bed, laid as a floor and nothing else, at its bill through `floorBill` and with iron ribbons only; finished, sown, tended and harvested on the ground and on storey 2 from the storey stood on, on the glass clock in a winter, open to the sky or under glass; covered by a floor or a roof not of glass, refused a sowing, its crop held on the still clock and grown on from there when uncovered; one crop a tile; taken up with its bed; worked by a farm worker up the stairs; a glasshouse field and a planter as they were."
+    "why": "A floor of garden bed, laid as a floor and nothing else, at its bill through `floorBill` and with iron ribbons only; finished, sown, tended and harvested on the ground and on storey 2 from the storey stood on, on the glass clock in a winter, open to the sky or under glass; covered by a floor or a roof not of glass, refused a sowing, its crop held on the still clock and grown on from there when uncovered; a crop to each storey of a tile; taken up with its bed; worked by a farm worker up the stairs; a glasshouse field and a planter as they were."
+  },
+  {
+    "file": "supabase/test/upperbed.ts",
+    "title": "A garden bed up a storey: named, sown, tended and harvested over a crop under it",
+    "shard": 6,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported from the island: a storey-2 garden bed floor named \"garden_bed floor\" and not sown. Its floor named \"Garden bed floor\" over the tile and in Examine on both sides; a storey-2 bed sown, tended, grown on the glass clock under a glass roof and harvested from storey 2 over a still crop on the storey-1 bed under it, which stays its own; a job naming storey 2 refused from the ground on the island and walked up to by the browser; the ground read carrying both crops by storey; and drawn in Chromium: the tooltip and the menu of a storey-2 bed."
   },
   {
     "file": "supabase/test/changewall.ts",
@@ -1596,6 +1622,19 @@
     "title": "A queue put in order",
     "shard": 3,
     "why": "Asked for: the jobs queued listed in the crafting window, dragged into another order and taken out with a cross. The jobs waiting go into the order asked and the job in hand stays in hand; a job left out is put out of mind and said so; a list that changed since it was seen, or an order that is not one, is refused and nothing moves; a job put down by a walk moves like any other. Both sides, in the same words."
+  },
+  {
+    "file": "supabase/test/queuestop.ts",
+    "title": "The job in hand's × in the queue list",
+    "shard": 3,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "QUEUESTOP_STRICT": "1"
+    },
+    "why": "Asked for: \"add an x to stop the current process and begin next in queue\". Stop empties the queue; the × on the job in hand stops it, every go left of it, and starts the next job waiting at once, the rest kept, as a job ending would start it: a job that cannot be done told and put out, the one behind it started. With nothing waiting it only stops. Both sides, in the same words; and the window in Runecut and Classic, the × pressed by mouse, Enter, Space and a tap."
   },
   {
     "file": "supabase/test/market.ts",
