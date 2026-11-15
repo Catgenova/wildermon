@@ -8,9 +8,9 @@ import type { Side } from './building';
 import { madeBy } from './signing';
 import { pressStamp } from './relicuse';
 import { itemDef, makersMark, rareInputSaid, rarityOf, rarityTally, rollRarityFrom, RARITY_ODDS, RARITY_WORD } from './items';
-import { matOf, matOfItem, workingQl } from './materials';
+import { matOf, workingQl } from './materials';
 import { metalOfItem } from './melt';
-import { COIN_DIFFICULTY, COIN_METALS, COIN_REFUSAL, coinPurity, COINS_PER_LUMP, DIE_WEAR, isCasting, isMetalStock, METAL_BY_ID, METAL_BY_LUMP, metalOfBar, MOULD_BY_MAKES, SMITH_TOOL, type MouldDef } from './metal';
+import { isCasting, METAL_BY_ID, MOULD_BY_MAKES, SMITH_TOOL, type MouldDef } from './metal';
 import type { CraftStock } from './recipes';
 
 /**
@@ -81,17 +81,6 @@ function castingFor(g: Game, uid?: number): CraftStock | undefined {
   if (uid === undefined) return g.stockOf(isCasting, g.forgeReach())[0];
   const s = g.stockEntry(uid, g.forgeReach());
   return s && isCasting(s.item) ? s : undefined;
-}
-
-/**
- * The metal to strike: whichever lump the player chose, from the same stock,
- * or an ingot, which counts as its lumps (a Smith's Ingots) and is broken into
- * on the island for the one it takes.
- */
-function lumpFor(g: Game, uid?: number): CraftStock | undefined {
-  if (uid === undefined) return g.stockOf((it) => isMetalStock(it.id), g.forgeReach())[0];
-  const s = g.stockEntry(uid, g.forgeReach());
-  return s && isMetalStock(s.item.id) ? s : undefined;
 }
 
 /** What else a casting's piece takes at the anvil (`MouldDef.also`) at hand, from the same stock as the casting. */
@@ -172,82 +161,6 @@ export const ANVIL_ACTIONS: ActionDef[] = [
       if (a.dmg) back.dmg = a.dmg;
       g.logMsg(`Picked up: ${anvilName(a).toLowerCase()}.`, 'event');
       g.events.emit('world', a.x, a.y);
-    },
-  },
-  {
-    id: 'strike_coins',
-    label: 'Strike coins',
-    verb: 'striking coins',
-    hidden: true,
-    tool: SMITH_TOOL,
-    stamina: 0.05,
-    baseTime: 8,
-    applies: (t, g) => anvilOf(g, t) !== undefined,
-    check: (t, g) => {
-      const a = anvilOf(g, t);
-      if (!a) return 'It is gone.';
-      const [cx, cy] = anvilCentre(a);
-      if (Math.hypot(cx - g.player.x, cy - g.player.y) > 2.4) return 'Stand at the anvil.';
-      if (!g.inventory.has(SMITH_TOOL)) return `Need a ${itemDef(SMITH_TOOL).name.toLowerCase()}.`;
-      if (!g.inventory.has('coin_die')) return 'Need a coin die.';
-      const lump = lumpFor(g, t.kind === 'anvil' ? t.itemUid : undefined)?.item;
-      if (!lump) return 'Need metal.';
-      if (!COIN_METALS.includes(metalOfBar(lump.id)?.id ?? '')) return COIN_REFUSAL;
-      return null;
-    },
-    perform: (t, g) => {
-      const a = anvilOf(g, t);
-      if (!a || t.kind !== 'anvil') return;
-      const die = g.inventory.find('coin_die');
-      const stack = lumpFor(g, t.itemUid);
-      const lump = stack?.item;
-      const metal = lump && METAL_BY_LUMP.get(lump.id);
-      if (!die || !stack || !lump || !metal || !COIN_METALS.includes(metal.id)) return;
-      const lumpQl = lump.ql;
-      // The one lump a strike uses is all that goes into it, so a rare lump is
-      // the whole of it, for what it puts on the chance of rare coins (`rarityBands`).
-      const used = rarityTally();
-      used[lump.rare ?? 0] += 1;
-      // The die wears with every strike, good or bad, and no die can be mended.
-      const dieQl = Math.max(1, die.ql - die.dmg / 2);
-      die.dmg = Math.min(100, die.dmg + DIE_WEAR);
-      const broke = die.dmg >= 100;
-      if (broke) g.inventory.remove(die.uid, 1);
-      g.events.emit('inventory');
-      const hard = COIN_DIFFICULTY + matOfItem(lump).difficulty;
-      // The smith's hand, and then the gold itself: poor metal will not take the die however well it is struck.
-      const struck = g.skillCheck('blacksmithing', hard, anvilQl(a), g.mindEase());
-      const pure = g.rand() < coinPurity(lumpQl);
-      // A strike that does not come off uses no metal: the lump is damaged by its QL (`faildamage.ts`).
-      if (!sureHand(g, 'strike_coins', struck && pure)) {
-        const hurt = damageDrawn([stack], 1);
-        g.events.emit('inventory');
-        g.gainSkill('blacksmithing', tryGain(false, SMITH_GAIN));
-        g.logMsg(`${failDamagedSaid(`Failed: coins, ${struck ? 'gold too poor for the die' : 'skill check'}.`, hurt)}${broke ? ' Coin die worn out.' : ''}`, 'event');
-        return;
-      }
-      if (!stack.spend(1)) return;
-      // And higher for a Masterwork on the anvil (`enchanting.ts`).
-      const ql = Math.min(100, smithQl(g, { skill: 'blacksmithing' } as MouldDef, dieQl, lump.ql, a) + swingEnchant(a, 'master'));
-      g.gainSkill('blacksmithing', tryGain(true, SMITH_GAIN));
-      const made = g.inventory.add('coin', { ql, extra: metal.name, count: COINS_PER_LUMP });
-      const rare = rollRarityFrom(g.rand, used);
-      const rareIn = rareInputSaid(used);
-      if (rareIn) g.logMsg(rareIn, 'event');
-      if (rare) {
-        made.rare = rare;
-        made.maker = g.player.name;
-        g.note(['', 'rare', 'supreme', 'fantastic'][rare]);
-        g.logMsg(RARITY_WORD[rare], 'skill');
-      }
-      g.note('minted');
-      g.madeIt('coin', made.ql, COINS_PER_LUMP, rare);
-      g.logMsg(
-        `Struck: ${COINS_PER_LUMP} × ${metal.name.toLowerCase()} coin, QL ${made.ql.toFixed(1)}.${
-          broke ? ' Coin die worn out.' : ` Coin die: ${Math.ceil((100 - die.dmg) / DIE_WEAR)} strikes left.`
-        }`,
-        'event',
-      );
     },
   },
   {

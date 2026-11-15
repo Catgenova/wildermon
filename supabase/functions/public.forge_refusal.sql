@@ -78,15 +78,6 @@ begin
   -- Smithing.
   if not near_piece(p_world, p_uid, p) then return 'Stand at the anvil.'; end if;
   if need_tool(p_world, p_uid, smith_tool()) is not null then return need_tool(p_world, p_uid, smith_tool()); end if;
-  if p_action = 'strike_coins' then
-    -- Coins: a die in the pack, and a lump of a metal that coins, in the
-    -- words the browser uses.
-    if pack_count(p_world, p_uid, 'coin_die') < 1 then return 'Need a coin die.'; end if;
-    v_lump := smith_lump(p_world, p_uid, target_item(p_target));
-    if v_lump.id is null then return 'Need metal.'; end if;
-    if not coalesce((metal_by_bar(v_lump.def)).coins, false) then return 'Coins: gold only.'; end if;
-    return null;
-  end if;
   -- Smithing: a casting poured at the smelter, in the words the browser uses.
   v_cast := smith_casting(p_world, p_uid, target_item(p_target));
   if v_cast.id is null then

@@ -142,7 +142,7 @@ import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
 import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, RARITY_ROOM, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
-import { COIN_METALS, METALS, coinPurity, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
+import { METALS, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
 import { furnaceMadeSaid, meltingSaid, SMELTER_H, SMELTER_W } from '../../game/smelter';
 import { STATION_KINDS, STATIONS, stationDecayAt } from '../../game/stations';
@@ -244,6 +244,8 @@ import { FIRST_LAIRS } from '../../game/lairs';
 const FIRST_LAIR_KINDS = LAIR_KINDS.filter((k) => FIRST_LAIRS.includes(k.id));
 const MONSTERS_BEFORE_VOLCANO = MONSTER_KINDS.filter((id) => !VOLCANO_KINDS.includes(id));
 const METALS_BEFORE_VOLCANO = METALS.filter((m) => m.id !== FIRE_STEEL);
+/** The share of strikes QL 0 gold took the die (n 103), as it was before coins stopped being struck (n 646). */
+const COIN_PURITY_FLOOR_WAS = 0.5;
 import {
   CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
 } from '../../game/winter';
@@ -419,6 +421,16 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // No coinsmithing (`20261120000091_no_coinsmithing.sql`): a die held anywhere came back as its two lumps.
+  {
+    n: 646,
+    day: '2026-11-15',
+    lines: () => [
+      'Removed: Strike coins, coin die, coin die mould.',
+      'Removed: journal goal Strike coins.',
+      'Refunded: coin die as 2 lumps of its metal, same QL. Coin die mould: deleted.',
+    ],
+  },
   // The wildflowers and the crops painted in the rune pastel kit (`flowers.ts`, `crops.ts`, `cropFlatSprite`); a bed's crop inside its frame.
   {
     n: 642,
@@ -1878,9 +1890,10 @@ export const NEWS: News[] = [
     n: 103,
     day: '2026-10-08',
     lines: () => [
-      `Changed: new coins struck from ${COIN_METALS.join(' or ')} only. Silver coins still circulate and come back as change.`,
+      // As it was then; coins are no longer struck (n 646).
+      'Changed: new coins struck from gold only. Silver coins still circulate and come back as change.',
       `Changed: a failed coin strike loses its lump. Past the smith's check, gold purity decides: takes the die always at QL ${QL_TOP}, `
-        + `${percent(coinPurity(0))} at the bottom of the scale, linear between.`,
+        + `${percent(COIN_PURITY_FLOOR_WAS)} at the bottom of the scale, linear between.`,
       `Changed: gold only from under the mountain of the ${REGIONS.filter((R) => R.mountain?.includes('gold_ore')).map((R) => R.name.replace(/^The /, '')).join(' and ')}. `
         + 'Removed: gold from panning, hoards and chests. Gold seams elsewhere are now iron.',
       `Added: foraging finds a gold coin 1 action in ${num(COIN_FIND_ONE_IN)}, up to ${num(COIN_FINDS_A_DAY)} a day per person. `
@@ -6390,7 +6403,7 @@ export const NEWS: News[] = [
       // Cutting a vine took its sickle already (`CUTTING_TOOL`); it is newly worn, below.
       ...Object.entries(TOOL_JOBS).map(([tool, ids]) => `Changed: ${itemDef(tool).name.toLowerCase()} needed for ${listed([...new Set(ids.filter((id) => id !== CUT_VINE)
         .map((id) => ACTION_BY_ID.get(id)?.verb ?? id))])} (was: none).`),
-      `Changed: tool wear on every go of a job that needs one, success or failure; improving: each tool its material needs. Newly worn: ${listed([...new Set(['smith', 'strike_coins',
+      `Changed: tool wear on every go of a job that needs one, success or failure; improving: each tool its material needs. Newly worn: ${listed([...new Set(['smith', 'striking coins',
         'pour_mould', 'cast_anvil', 'fit_lock', 'shoe_creature', 'cut_vine', 'plan_building', 'add_to_building', 'plan_wall', 'plan_fence', 'build_wall', 'change_wall',
         'add_floor', 'plan_floor', 'build_floor', 'plan_column', 'build_column', 'improve_item'].map((id) => ACTION_BY_ID.get(id)?.verb ?? id))])} (was: no wear).`,
     ],

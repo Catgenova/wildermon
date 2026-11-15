@@ -610,7 +610,7 @@
     "file": "supabase/test/trade.ts",
     "title": "Coins that buy something, three ways",
     "shard": 1,
-    "why": "Coins have existed since there was an anvil to strike them on and have never bought anything, because there was nothing to buy them with and nobody to buy from. One number settles the money — a gold coin is worth ten silver — and three ways goods change hands, because they answer three different questions: a deal is two people standing together, a stall is for when you are not there, and a parcel is for when neither of you is. The arithmetic is checked on both sides, including that change comes back in the fewest coins and that a purse which cannot cover a price pays nothing at all rather than part of it. And that the two functions which mint and destroy coins are the island's alone: a door onto either would be a door onto making money."
+    "why": "Coins had never bought anything, because there was nothing to buy them with and nobody to buy from. One number settles the money — a gold coin is worth ten silver — and three ways goods change hands, because they answer three different questions: a deal is two people standing together, a stall is for when you are not there, and a parcel is for when neither of you is. The arithmetic is checked on both sides, including that change comes back in the fewest coins and that a purse which cannot cover a price pays nothing at all rather than part of it. And that the two functions which mint and destroy coins are the island's alone: a door onto either would be a door onto making money."
   },
   {
     "file": "supabase/test/tradewindow.ts",
@@ -1888,7 +1888,7 @@
     "file": "supabase/test/faildamage.ts",
     "title": "A failed craft damages what it would have used, by its QL, the same on both sides",
     "shard": 6,
-    "why": "The damage at QL 0 to 100; only the units a go would have used, the pile's damage up by that over its count; units taken to the most there is gone; a litre input losing that share of its litres; a smelting and a cooking recipe that used to lose everything damaging instead and handing nothing back; Nothing Wasted, Keep the Stone and Second Heat sparing it; the anvil's casting and lump, and a brew's ingredients and water. Every line in the same words."
+    "why": "The damage at QL 0 to 100; only the units a go would have used, the pile's damage up by that over its count; units taken to the most there is gone; a litre input losing that share of its litres; a smelting and a cooking recipe that used to lose everything damaging instead and handing nothing back; Nothing Wasted, Keep the Stone and Second Heat sparing it; the anvil's casting, and a brew's ingredients and water. Every line in the same words."
   },
   {
     "file": "supabase/test/telestone.ts",
@@ -2115,7 +2115,7 @@
     "external": [
       "typescript"
     ],
-    "why": "Asked for: a rare+ ingredient raises the chance a craft comes out that rare by its share of the ingredients: two, one supreme, is +50% supreme. The same chance of each step and the same words on both sides; many goes of mortar off a supreme clay come out supreme about half the time on both, and plain clay as ever; a full bucket is no ingredient; a rare lump or casting at the anvil is all of it."
+    "why": "Asked for: a rare+ ingredient raises the chance a craft comes out that rare by its share of the ingredients: two, one supreme, is +50% supreme. The same chance of each step and the same words on both sides; many goes of mortar off a supreme clay come out supreme about half the time on both, and plain clay as ever; a full bucket is no ingredient; a rare casting at the anvil is all of it."
   },
   {
     "file": "supabase/test/rackput.ts",
@@ -2346,7 +2346,7 @@
     "file": "supabase/test/hammer.ts",
     "title": "Every smithing job takes a hammer",
     "shard": 5,
-    "why": "The island's smith_tool() is the browser's SMITH_TOOL; every mould is fired with it on both sides; pouring, casting an anvil, smithing, striking coins and fitting a padlock each refuse without it, in the browser's words; no other blacksmithing job goes without it."
+    "why": "The island's smith_tool() is the browser's SMITH_TOOL; every mould is fired with it on both sides; pouring, casting an anvil, smithing and fitting a padlock each refuse without it, in the browser's words; no other blacksmithing job goes without it."
   },
   {
     "file": "supabase/test/jobtools.ts",
@@ -2848,7 +2848,7 @@
   },
   {
     "file": "supabase/test/goals-b.ts",
-    "title": "Thirty-six goals in the crafts, the land and the water",
+    "title": "Thirty-five goals in the crafts, the land and the water",
     "shard": 6,
     "external": [
       "typescript"

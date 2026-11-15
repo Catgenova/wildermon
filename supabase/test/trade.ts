@@ -1,10 +1,8 @@
 /**
  * Money that buys something: a deal, a stall, and a parcel in the post.
  *
- * Coins have existed on this island since there was an anvil to strike them
- * on. They are struck twenty to a lump from silver or gold, they go in a
- * pocket, they melt back into the lump they came from — and they have never
- * once bought anything, because there has never been anything to buy them
+ * Coins go in a pocket and melt down twenty to a lump — and before this
+ * they had never once bought anything, because there has never been anything to buy them
  * with or anybody to buy from. A currency nobody can spend is a metal with a
  * picture on it.
  *
@@ -86,7 +84,7 @@ check('there is a stall to sell from and a mailbox to post at',
 check('and both of them hold things, since neither is any use empty',
   (stall?.capacity ?? 0) > 0 && (box?.capacity ?? 0) > 0,
   `${stall?.capacity} and ${box?.capacity}`);
-check('and the change metal is one a coin is actually struck from',
+check('and the change metal is a coin metal',
   COIN_WORTH[CHANGE_METAL] === 1, CHANGE_METAL);
 
 /* A game played by yourself has no second person, and should say so plainly. */

@@ -7,5 +7,5 @@ CREATE OR REPLACE FUNCTION public.forge_action(p_action text)
 AS $function$
   select p_action in ('fuel_oven', 'light_oven', 'put_out_oven', 'take_ashes_oven',
                       'candle_lantern', 'light_lantern', 'douse_lantern',
-                      'place_anvil', 'pick_up_anvil', 'smith', 'strike_coins')
+                      'place_anvil', 'pick_up_anvil', 'smith')
 $function$
