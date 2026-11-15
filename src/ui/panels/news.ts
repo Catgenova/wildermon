@@ -4485,6 +4485,18 @@ export const NEWS: News[] = [
       'Without a graphics card: swimming strokes\' splashes, rings treading water, the float\'s strike and a catch only.',
     ],
   },
+  // Trade and class icons before players' names (`badges.ts`, `../../render/emblems.ts`).
+  {
+    n: 619,
+    day: '2026-11-14',
+    lines: () => {
+      const trades = CLASSES.filter((c) => c.kind === 'craft').length;
+      return [
+        `New: name icons: trade (round stone, ${trades}), class (shield, ${CLASSES.length - trades}), before player names: chat lines, names over players, Social lists. Hover: trade or class name.`,
+        'New: Settings, Interface: Name icons, On.',
+      ];
+    },
+  },
   // Trees and wildermon back on the Northeast Tundra (`regions.ts`, `tools/move-ground.ts`).
   {
     n: 614,

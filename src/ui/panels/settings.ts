@@ -28,6 +28,7 @@ import { QUALITY_STEPS } from '../../render/bodies';
 import { burnsFor, listed, percent } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
 import { RING_FADE_MS } from '../pointerring';
+import { COMBAT_CLASSES, CRAFT_CLASSES, MAGIC_CLASSES } from '../../game/classes';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { RING_REACH, THREAT_SHADE, THREAT_SHADE_HUNTING } from '../../render/renderer';
 import { FIRE_CAPACITY } from '../../game/campfire';
@@ -439,6 +440,17 @@ export class SettingsPanel {
         + 'The line in Social either way.',
       () => game.settings.presenceBanner,
       (v) => (game.settings.presenceBanner = v),
+    );
+    // Trade and class icons before players' names (`src/game/badges.ts`): every window's put right at once, the world's next frame.
+    add(
+      'Name icons',
+      `Before player names: trade (round, ${CRAFT_CLASSES.length}) and class (shield, ${COMBAT_CLASSES.length + MAGIC_CLASSES.length}). `
+        + 'Chat lines, names over players, Social lists. Hover: name.',
+      () => game.settings.nameIcons,
+      (v) => {
+        game.settings.nameIcons = v;
+        game.events.emit('badges', null);
+      },
     );
     // Less motion, which the stylesheet and the canvas both read (`src/engine/motion.ts`).
     choose<Motion>(

@@ -3825,6 +3825,31 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   line-height: 1.35;
 }
 
+/* Classic's trade and class icons before a name (`src/ui/nameicons.ts`); Runecut's are the kit's `.rc-emblem`. */
+:root:not([data-ui='runecut']) .name-icons {
+  display: inline-flex;
+  gap: 2px;
+  margin-right: 3px;
+  vertical-align: -0.22em;
+}
+
+:root:not([data-ui='runecut']) .name-icons:empty {
+  display: none;
+}
+
+:root:not([data-ui='runecut']) .name-icon {
+  display: inline-flex;
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+}
+
+:root:not([data-ui='runecut']) .name-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 .log-time {
   color: var(--t-dim, #6f6759);
   font-size: 11px;

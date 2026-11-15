@@ -4,6 +4,7 @@ import type { Game } from '../../game/game';
 import type { UIWindow } from '../windows';
 import { keepControlKeys } from '../controlkeys';
 import { kitBody } from '../kit';
+import { nameIcons, refillNameIcons } from '../nameicons';
 
 /**
  * When a line was said.
@@ -114,6 +115,8 @@ export class EventLogPanel {
     win.body.append(bar, this.list, this.input);
     this.render();
     game.events.on('log', (entry) => this.arrived(entry));
+    // A speaker's trade and class learned or changed, or Name icons turned on or off: their lines' icons put right.
+    game.events.on('badges', (uids) => refillNameIcons(this.list, uids, (u) => game.badges.get(u), game.settings.nameIcons));
   }
 
   /** Whether a line belongs on the tab being looked at, and answers the search. */
@@ -208,7 +211,13 @@ export class EventLogPanel {
     const time = document.createElement('span');
     time.className = 'log-time';
     time.textContent = `[${stamp(entry.time)}] `;
-    line.append(time, document.createTextNode(entry.text));
+    line.append(time);
+    // A line of talk: the speaker's trade and class before their name (`src/game/badges.ts`).
+    if (entry.by) {
+      line.append(nameIcons(entry.by, this.game.badges.get(entry.by), this.game.settings.nameIcons));
+      this.game.badges.want(entry.by);
+    }
+    line.append(document.createTextNode(entry.text));
     return line;
   }
 

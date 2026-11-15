@@ -116,9 +116,9 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    */
   const charting = loadAtlas();
   charting.catch(() => undefined);
-  const log: Array<[string, string, number | undefined]> = [];
+  const log: Array<[string, string, number | undefined, string | undefined]> = [];
   const island = new Island({
-    say: (text, kind, at) => log.push([text, kind, at]),
+    say: (text, kind, at, by) => log.push([text, kind, at, by]),
     ground: () => {},
     people: () => {},
     pack: () => {},
@@ -682,7 +682,10 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
 
   // Everything the island says, said here. The lines that arrived while the
   // land was still coming down go up first, in the order they were said.
-  island.hooks.say = (text, kind) => game.write(text, kind as Parameters<Game['write']>[1]);
+  island.hooks.say = (text, kind, _at, by) => game.write(text, kind as Parameters<Game['write']>[1], undefined, by);
+  // Everybody's trade and class, off the island's rows: those ashore with the roster, anybody else as they are wanted.
+  island.hooks.badges = (rows) => game.badges.saw(rows);
+  game.badges.ask = (uids) => island.badgeRows(uids);
 
   /*
    * Talking, which the island keeps for everybody.
@@ -711,7 +714,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     // With the hour each was said at, which the island has always sent and
     // this line used to drop: sixty lines stamped with the second you opened
     // the page is not a chat you can scroll back through.
-    for (const line of lines) game.write(line.text, 'chat', line.at);
+    for (const line of lines) game.write(line.text, 'chat', line.at, line.by);
   });
   island.hooks.ground = (x, y) => game.events.emit('world', x, y);
   island.hooks.pack = (items: ItemRow[]) => {
@@ -884,7 +887,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     if (fell && fell.at !== game.player.fell?.at) game.player.fellAt = performance.now() / 1000 - island.since(new Date(fell.at).toISOString());
     game.player.fell = fell;
   };
-  for (const [text, kind, at] of log) game.write(text, kind as Parameters<Game['write']>[1], at);
+  for (const [text, kind, at, by] of log) game.write(text, kind as Parameters<Game['write']>[1], at, by);
   game.write(`You are on ${info.name}. Send somebody this page's address and they can join you.`, 'system');
   game.write(
     account

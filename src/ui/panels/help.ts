@@ -1421,6 +1421,12 @@ export function helpText(): string {
       <li>Social, either way: <i>Logged on: name</i> or <i>Logged off: name</i>.</li>
       <li>Logged off: ${awayAfter()} after their browser was last heard from.</li>
     </ul>
+    <h4>Name icons</h4>
+    <ul>
+      <li>Before a player's name: trade on a round stone (${CLASSES.filter((c) => c.kind === 'craft').length}), class on a shield (${CLASSES.filter((c) => c.kind !== 'craft').length}). None taken: none shown.</li>
+      <li>Where: chat lines, names over players, Social lists. Hover: trade or class name.</li>
+      <li>Off switch: Settings, Interface, <b>Name icons</b>.</li>
+    </ul>
     <h3>What a tool is worth</h3>
     <ul>
       <li>A tool's working value is its quality (QL) changed by damage (down), its head metal (up or down), rarity and blessing (up).</li>
