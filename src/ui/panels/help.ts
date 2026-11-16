@@ -2060,7 +2060,7 @@ export function helpText(): string {
       (next storey, glasshouse). <b>Mark out</b>: the model back. Cleared by a wall planned on it, or the storey or building removed.</li>
       <li>A finished full-height wall with a wall of the storey above on the same side (once any of that wall's materials are in) cannot come down until that upper
       wall does, or a finished column stands at each end; likewise the last wall a jetty rests on. To turn one into a door: <b>Change wall</b>.</li>
-      <li><b>Change wall</b> on a wall of a building: wall type, then material, at its bill; mallet. Finished wall: stands, shut and carrying, until the change is
+      <li><b>Change wall</b> on a wall of a building: wall type, then material, at its bill; mallet. Offered for the side's wall on every storey, whichever is being worked on; a building of more than one storey: each row named by its storey. Finished wall: stands, shut and carrying, until the change is
       built (<b>Build change</b>, as Build wall, or a hod carrier); with the last material, the new wall. Still going up: replanned in place, new bill. Refused: fence, half wall or
       railing on a wall something rests on; a material lighter than the heaviest wall above, glass excepted; a counter with goods or takings; a padlocked portcullis. The standing
       type and material again: change dropped.</li>

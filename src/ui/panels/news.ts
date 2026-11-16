@@ -53,6 +53,7 @@ import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
 import { CRAFT_TABS, craftTabOf, MAKES_SECTION, RECENT } from './craft';
 import { PREVIEW_FPS, PREVIEW_H, PREVIEW_W, STAGE_SECS } from '../craftpreview';
 import { CAMPFIRE_LOGS } from '../../render/kit/campfire';
+import { BAKE_STEPS } from '../../render/runestone';
 import { SACK_FULL } from '../../render/kit/sack';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
 import { LEVEL_REACH } from '../../render/levelmarks';
@@ -294,7 +295,7 @@ import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } f
 import { BAY_PAST_HEFT, BRIDGE_BILL_TIMES, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
 import { AQUEDUCT, AQUEDUCT_MOTE_USE, aqMoteFed } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
-import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
+import { changeDropped, changeLine, gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
 import { CROP_LIST, CROP_STAGES, CROPS, growthWords } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS } from '../../game/growth';
 import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
@@ -440,6 +441,24 @@ export const NEWS: News[] = [
         'Unchanged: settlement workers, ladders: not climbed.',
       ];
     },
+  },
+  // A bridge's pictures on the screen kept past the budget (`bridgekit.ts`, `keep`): at the largest bake scale they were more than it.
+  {
+    n: 652,
+    day: '2026-11-16',
+    lines: () => [
+      `Fixed: bridges past zoom ${mult(BAKE_STEPS[BAKE_STEPS.length - 2])}: deck and parapet pieces missing, flickering.`,
+    ],
+  },
+  // Change wall on every storey's wall of a side, named by storey (`changeWallRows`, `20261120000111_change_wall_storey.sql`).
+  {
+    n: 654,
+    day: '2026-11-16',
+    lines: () => [
+      'Fixed: Change wall: offered for the side\'s wall on every storey (was: the storey being worked on only; with a storey over it, the ground floor\'s wall could not be changed, and Change wall changed the wall above).',
+      'Changed: Change wall, Build change: each row named by its storey, on a building of more than one storey.',
+      `Changed: log: "${changeLine('door', 'Plank', 'north', 1)}", "${changeDropped('north', 1)}", on a building of more than one storey.`,
+    ],
   },
   // Every container named for an item read, not only crates and stores (`20261120000108_named_containers_every_item.sql`, `hoard.ts`).
   {

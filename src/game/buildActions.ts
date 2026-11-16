@@ -42,7 +42,7 @@ import { dyeChoice, dyeEnough, dyeReason, litresWord, NO_COLOUR, paneTint, pickD
 import { capital } from './words';
 import { colourWord, DYE_LITRES } from './dyestuffs';
 import type { Game } from './game';
-import { changeLine, gatePlanRefusal, gateRemoveRefusal, planGate, planLine } from './gates';
+import { changeDropped, changeLine, gatePlanRefusal, gateRemoveRefusal, planGate, planLine } from './gates';
 import { greenNow } from './greening';
 import { glassPlanRefusal, glassResync } from './glasshouse';
 import { counterGone, counterPlanRefusal, counterRemoveRefusal, counterStreetRefusal } from './counters';
@@ -950,10 +950,13 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const wall = wallAt(g, t);
       if (!wall) return;
       const side = SIDE_NAMES[t.side];
+      // Its storey named in a building of more than one (`changeSide`).
+      const levels = storeyOf(g, t)?.levels ?? 1;
+      const storey = levels > 1 ? wall.level + 1 : undefined;
       if (standsAs(g, wall, t.wallType, t.material)) {
         delete wall.change;
         g.buildings.changed();
-        g.logMsg(`Change dropped: ${side} side.`, 'event');
+        g.logMsg(changeDropped(side, storey), 'event');
         g.events.emit('world', t.x, t.y);
         return;
       }
@@ -961,7 +964,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const name = material(t.material)?.name ?? t.material;
       if (isDone(wall)) {
         wall.change = { type: t.wallType, material: t.material, needed: { ...bill.needed }, total: { ...bill.total } };
-        g.logMsg(`${changeLine(t.wallType, name, side)} Needs ${needsText(bill)}.`, 'event');
+        g.logMsg(`${changeLine(t.wallType, name, side, storey)} Needs ${needsText(bill)}.`, 'event');
       } else {
         // Nothing stands yet: the plan is the new one, from nothing in.
         wall.type = t.wallType;
