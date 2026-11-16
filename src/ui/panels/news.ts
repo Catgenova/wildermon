@@ -90,7 +90,7 @@ import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sa
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_PATHS, LAVA_RADIUS, SERYLL_HEART } from '../../game/lava';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
-import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
+import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, PRUNE_LOGS, pruneLogs, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { SEAM_GATE } from '../../game/skillgates';
 import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
@@ -440,6 +440,42 @@ export const NEWS: News[] = [
         `Changed: ${trash.toLowerCase()} named for an item, a ${SPECIES.magga.name} target: contents destroyed the same (was: kept).`,
         `Changed: what was in a ${trash.toLowerCase()} before this update: timed from the update.`,
         `New: Examine on a ${trash.toLowerCase()}: "${TRASH_RULE}" and this one's time by its QL.`,
+      ];
+    },
+  },
+  // A hod carrier's reach of its whole range: a tile nothing is stood on, from the floor beside it (`20261120000119_whole_range_reach_beside.sql`).
+  {
+    n: 660,
+    day: '2026-11-16',
+    lines: () => {
+      const stairs = idleSays({ why: 'stairs', n: 4 }, 'hod');
+      return [
+        `Fixed: hod carriers, walls a storey up along an unfinished bridge's deck: in reach, fitted from the floor beside it (was: "${stairs}" every round).`,
+      ];
+    },
+  },
+  // Lying on ground a worker cannot stand on, picked up from beside it (`20261120000120_fetch_from_beside.sql`, `Creatures.worksBeside`).
+  {
+    n: 659,
+    day: '2026-11-16',
+    lines: () => {
+      const line = [SPECIES.magga.name, ...(SPECIES.magga.stages ?? []).map((s) => s.name)].join(', ');
+      return [
+        `Fixed: ${line} and composting workers: items lying on a tile over ${metres(MAX_STAND)} m slope or under water picked up from a standable tile beside it (was: never picked up; dropped dirt on dug ground left lying).`,
+      ];
+    },
+  },
+  // A prune gives a log of the tree's kind, and a pruner carries it home (`PRUNE_LOGS`, `20261120000117_prune_gives_a_log.sql`).
+  {
+    n: 658,
+    day: '2026-11-16',
+    lines: () => {
+      const logs = (n: number): string => `${n} ${n === 1 ? 'log' : 'logs'}`;
+      const none = TREE_AGES.filter((a) => a.pruned !== null && pruneLogs(a) === 0).map((a) => a.name.toLowerCase());
+      return [
+        `New: Prune: +${logs(PRUNE_LOGS)} of the tree's kind, QL from forestry and sickle${none.length ? `; none off a ${listed(none)}` : ''}.`,
+        `New: ${SPECIES.snedda.name}: +${logs(PRUNE_LOGS)} of its kind a tree pruned, to your settlement stores; ${STAGE_LOADS[1]} loads a trip at evolution stage 2, ${STAGE_LOADS[2]} at 3.`,
+        `Changed: Examine on a tree to prune: "Prune to keep it alive: +${logs(PRUNE_LOGS)}."`,
       ];
     },
   },

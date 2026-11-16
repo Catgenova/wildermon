@@ -2282,6 +2282,15 @@
     "why": "Asked: \"If a player names an eligible container on their settlement, the wildermon will transport items to that container from any unmatched or unnamed containers.\" A name matches by the item's name, plural or id, any case; naming is refused to whoever may not use the piece; the moves split a stack to the room, fill one target then the next, never take out of a target or a padlocked chest, and are the same loads in the same order on both sides; idle, it says which of no named container, nothing to move or every target full."
   },
   {
+    "file": "supabase/test/fetchdirt.ts",
+    "title": "A Hoardback picks up dirt dropped on dug ground",
+    "shard": 4,
+    "external": [
+      "typescript"
+    ],
+    "why": "Reported: \"Hoardback will not pick up dirt on the settlement ground to bring to raw material bin named Dirt.\" Dirt lies where it was dug, on ground steeper than a worker stands on or under the water; it is picked up from a standable tile beside it, into a bin named Dirt or an unnamed raw material bin, the same loads on both sides, and dirt with nowhere beside it to stand is left lying."
+  },
+  {
     "file": "supabase/test/hoardmixed.ts",
     "title": "A Chestkit moves every item named for, not only mortar",
     "shard": 4,
@@ -3513,5 +3522,11 @@
       "BRIDGEZOOM_STRICT": "1"
     },
     "why": "Reported: \"bridges flicker and glitch at any further zoom than 5x\". Past zoom 5 a bridge's pictures are baked at the largest scale, and those on the screen came to more than the bridge kit's budget, so each bake let go of one still on the screen: deck and parapet pieces left out and made again every frame. Drawn in Chrome: a marble bridge three lanes wide and a stone brick ramp, each meeting two buildings' storey floors, at zoom 4, 6 and the most on four turns, and wheeled in from 5 while dragged: settled, every still frame draws every piece from its own picture, the same pictures in the same places as the last, with the kept pictures past the budget."
+  },
+  {
+    "file": "supabase/test/prunelog.ts",
+    "title": "A prune gives a log of the tree's kind, and a pruner carries it home",
+    "shard": 6,
+    "why": "Asked for: pruning a tree gives 1 log of its kind, and a pruning wildermon brings it to the settlement stores. A player's prune of an old oak, a sapling's none, and a Saplingreach's log walked into the settlement's crate."
   }
 ]

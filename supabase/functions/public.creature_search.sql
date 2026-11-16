@@ -255,8 +255,21 @@ begin
   end loop;
 
   if flood then
+    -- A tile with nothing to stand on: reached from a floor beside it reached, no wall between (the goal above).
     for k in wh + 1 .. n loop
-      continue when not (sp[k] or (par[k] <> 0 and st[k] in (1, 2, 3, 6)));
+      continue when st[k] in (1, 2, 3, 6);
+      l := (k - 1) / wh; x := bx0 + (k - 1) % w; y := by0 + ((k - 1) / w) % h;
+      for d in 1..4 loop
+        nx := x + dxs[d]; ny := y + dys[d];
+        continue when nx < bx0 or nx > bx1 or ny < by0 or ny > by1;
+        kn := (l * h + (ny - by0)) * w + (nx - bx0) + 1;
+        continue when st[kn] not in (1, 3) or not (sp[kn] or par[kn] <> 0);
+        blk := case d when 1 then bv[kn] when 2 then bv[k] when 3 then bh[kn] else bh[k] end;
+        if not blk then goal[k] := true; exit; end if;
+      end loop;
+    end loop;
+    for k in wh + 1 .. n loop
+      continue when not (sp[k] or goal[k] or (par[k] <> 0 and st[k] in (1, 2, 3, 6)));
       qn := cardinality(v_out);
       v_out[qn + 1] := bx0 + (k - 1) % w; v_out[qn + 2] := by0 + ((k - 1) / w) % h; v_out[qn + 3] := (k - 1) / wh;
     end loop;
