@@ -198,7 +198,7 @@ const FRESH: Viewer = { skills: { get: () => 1 } };
 const SEED_SHOWN = cropSeed(Object.entries(CROP_GATE).filter(([, lv]) => lv > 1).sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : 1))[0][0]);
 import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
 import {
-  bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
+  bossSays, garrisonSays, HOARD_SCALE, HOARD_SCALE_CAP, LAIR_CHEST_NAME, HOARD_SHARE, hoardBook, hoardSays, LAIR_ANNOUNCE, LAIR_KINDS, LAIR_LEASH, LAIR_MOVE_CLEARS, LAIR_MOVE_DAYS,
   LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingUsual, lairRingWant, restockSays, SITE_SAYS,
 } from '../../game/lairs';
 import { lairOfKind } from '../../game/lairs';
@@ -3844,10 +3844,14 @@ export function helpText(): string {
       <li><b>Hoard</b> (the boss's kill): a share for everybody who dealt <b>${percent(HOARD_SHARE)}</b> of its health or more, their companions' blows counted.
       Each share: ${listed(LAIR_KINDS.map((k) => `${k.name.toLowerCase()}: ${hoardSays(k, itemDef(k.trophy).name, itemDef(BOOKS[hoardBook(k)].item).name)}`))}.
       No silver, never rare. The boss's carcass butchers as usual.</li>
+      <li><b>${LAIR_CHEST_NAME}</b>: on the lair's tile in its place at the boss's kill, holding every share. Take: anybody, one thing or everything.
+      Gone: once emptied, or at the restock with what is left. No shares: no chest.</li>
+      <li>Lair and ${LAIR_CHEST_NAME.toLowerCase()}: no picking up, naming, moving, turning, dyeing, repairing, padlocking or putting in. Menu: a lair's, Examine;
+      a ${LAIR_CHEST_NAME.toLowerCase()}'s, Open, ${ACTION_BY_ID.get('furniture_take_all')?.label} and Examine.</li>
       <li>Hoard book: the one its boss's kind carries when butchered (${listed(LAIR_KINDS.map((k) => `${SPECIES[k.species].name.toLowerCase()} ${itemDef(BOOKS[hoardBook(k)].item).name}`))}), a shut one you have not read first.</li>
       <li>Hoard dragon scales (<b>Dragon scale (${HOARD_SCALE})</b>): scale armour made of them alone, QL cap <b>${mul(HOARD_SCALE_CAP)}</b> your skill.</li>
       <li>Trophies (${listed(LAIR_KINDS.map((k) => itemDef(k.trophy).name.toLowerCase()))}): set down anywhere as decoration; do not decay.</li>
-      <li>Cleared: empty until its restock. Its <b>${LAIR_RING}</b>-tile ring counts as the safe ring and holds ${lairRingWant(PER_REGION, WILD_SQUARE)} wildermon
+      <li>Cleared: the lair gone from its tile until its restock, then back (at its new site, if it moves). Its <b>${LAIR_RING}</b>-tile ring counts as the safe ring and holds ${lairRingWant(PER_REGION, WILD_SQUARE)} wildermon
       (${mul(LAIR_RING_WILD)} the usual ${lairRingUsual(PER_REGION, WILD_SQUARE).toFixed(1)}).</li>
       <li>Moves: cleared ${LAIR_MOVE_CLEARS} times in ${LAIR_MOVE_DAYS} days, it restocks at a new site.</li>
       <li>Seen (within ${LAIR_SIGHT} tiles): pinned on your map; "Lair: found" on its kind's field guide page.</li>

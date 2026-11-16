@@ -204,6 +204,8 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   orc_camp: ORC_CAMP,
   ogre_cave: OGRE_CAVE,
   dragon_roost: DRAGON_ROOST,
+  // A cleared lair's hoard chest (`lairs.ts`): the chest, drawn standing open (`Renderer.pieceTrim`).
+  lair_chest: CHEST,
   chief_ear: CHIEF_EAR,
   warlord_tusk: WARLORD_TUSK,
   ogre_king_jaw: OGRE_KING_JAW,

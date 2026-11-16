@@ -132,6 +132,8 @@ begin
     -- `move_part` splits the stack, merges into one you already carry, and
     -- clears whichever of `crate` and `placed` was holding it.
     if move_part(v_it.id, v_want, 'player', p_uid, null, null) is null then return; end if;
+    -- A lair's hoard chest, gone once emptied (`lair_chest_emptied`).
+    if v_it.holder = 'furniture' then perform lair_chest_emptied(p_world, v_pl.id); end if;
     -- Honey out of a hive, for the journal.
     if v_it.def = 'honey' and v_it.holder = 'furniture' and v_pl.sub = 'hive' then
       perform journal_note(p_world, p_uid, 'honey');

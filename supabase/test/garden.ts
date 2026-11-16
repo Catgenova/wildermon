@@ -387,10 +387,12 @@ begin
     || '|' || coalesce(jsonb_array_length(pl.garden->'held'), 0) from placed pl where pl.id = v_plq;
   -- A lair's trophy, out of its hoard, carries the name of the body whose share it is.
   insert into lair (world_id, id, kind, x, y) values (w, 9900, (select k.id from lair_kinds() k order by k.id limit 1), 30, 30);
-  perform lair_hoard_give(w, u, 9900, hoard_roll((select l.kind from lair l where l.world_id = w and l.id = 9900), 1, 1), 50);
+  perform lair_hoard_give(w, u, 9900, hoard_roll((select l.kind from lair l where l.world_id = w and l.id = 9900), 1, 1), 50, lair_chest_stand(w, 9900));
+  -- In the lair's hoard chest (\`lair_chest\`).
   insert into said select 'LAIR:trophy', it.def || '|' || coalesce(it.maker, '-') || '|' || (select py.name from player py where py.world_id = w and py.uid = u)
     || '|' || (select d.trophy::text from item_def d where d.id = it.def)
-    from item it where it.world_id = w and it.holder_uid = u and it.def = (select k.trophy from lair_kinds() k join lair l on l.kind = k.id where l.world_id = w and l.id = 9900);
+    from item it where it.world_id = w and it.holder = 'furniture' and it.placed = (select l.chest from lair l where l.world_id = w and l.id = 9900)
+      and it.def = (select k.trophy from lair_kinds() k join lair l on l.kind = k.id where l.world_id = w and l.id = 9900);
 
   -- 10. A plant stand: potted plants only, three of them.
   ${at(9, 7)}

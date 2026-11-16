@@ -206,11 +206,11 @@ export const CARTS = (): string[] => FURNITURE.filter((f) => !f.boat && (f.vehic
 /**
  * What Bag of Holding goes on: everything that holds things -- every piece
  * that keeps things, kilos or litres (`furnitureCapacity`, `furnitureHeft`,
- * `liquidCapacity`) but a hive and a pond, which fill themselves; the crates;
+ * `liquidCapacity`) but a hive and a pond, which fill themselves, and a lair's hoard chest; the crates;
  * and every bag (`bagRoom`).
  */
 export const STORES = (): string[] => [
-  ...FURNITURE.filter((f) => (f.capacity || f.heft || f.liquid) && !f.hive && !f.pond && !f.well).map((f) => f.id),
+  ...FURNITURE.filter((f) => (f.capacity || f.heft || f.liquid) && !f.hive && !f.pond && !f.well && !f.lairChest).map((f) => f.id),
   ...Object.values(CRATE_DEFS).map((c) => c.item),
   ...Object.entries(ITEM_DEFS).filter(([, d]) => d.holds).map(([id]) => id),
 ];

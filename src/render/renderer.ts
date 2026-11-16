@@ -150,6 +150,7 @@ import { drawLava, glowLava } from './lava';
 /** How far from the lava's box it can still be in view, in tiles. */
 const LAVA_VIEW = 160;
 import { isOutcropKind, outcropStage } from '../game/outcrops';
+import { LAIR_CHEST } from '../game/lairs';
 import { OUTCROP_VARIANTS, outcropTrim } from './kit/outcropping';
 import { activeInfusion } from '../game/infusion';
 import { isRigged } from '../game/sailing';
@@ -11547,6 +11548,8 @@ export class Renderer {
   }
 
   private pieceTrim(f: PlacedFurniture): number | undefined {
+    // A cleared lair's hoard chest stands open, its lining and coins seen (`kit/chest.ts`).
+    if (f.kind === LAIR_CHEST) return 1;
     // An outcropping: how far it is mined down, and its shape off its tile (`outcrops.ts`).
     if (isOutcropKind(f.kind)) return outcropTrim(outcropStage(f.uses), Math.floor(hash2(f.x, f.y, 89) * OUTCROP_VARIANTS));
     // A cart's or a wagon's wheels, as far round as she has rolled.

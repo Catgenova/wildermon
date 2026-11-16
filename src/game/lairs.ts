@@ -182,6 +182,23 @@ export function hoardSays(k: LairKind, trophyName: string, bookName: string): st
   return parts.join(', ');
 }
 
+/**
+ * The chest a cleared lair's hoard is left in: set down on the lair's tile in its place when its boss dies, holding a
+ * share for each who dealt `HOARD_SHARE` of the boss's health. Anybody takes from it; nobody moves, names, fills or
+ * works it. It goes once emptied, and at the lair's restock with whatever is left in it, when the lair stands again.
+ * The island's `lair_chest`, `lair_cleared`, `lair_turn` and `lair_refusal`.
+ */
+export const LAIR_CHEST = 'lair_chest';
+export const LAIR_CHEST_NAME = 'Hoard chest';
+/** The things it holds at most, its share counted by the unit: the window's room. */
+export const LAIR_CHEST_HOLDS = 100;
+/** What may be asked of it: taking out, one thing or all. */
+export const LAIR_CHEST_OPENS: ReadonlySet<string> = new Set(['furniture_take_all', 'take_from_store']);
+/** Why anything else is refused of it. The island says the same (`lair_chest_shut`). */
+export const LAIR_CHEST_SHUT = `${LAIR_CHEST_NAME}: take only; cannot be moved, named, filled or worked.`;
+/** Why anything is refused of a lair. The island says the same (`lair_refusal`). */
+export const lairShutSaid = (name: string): string => `${name}: cannot be moved, taken, used or worked.`;
+
 /** Where a lair is, as a browser knows it: what the island hands it of the lairs a body has seen (`rpc_ground`'s `lairs`). */
 export interface LairSeen {
   id: number;

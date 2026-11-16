@@ -10,14 +10,16 @@ begin
   if l.id is null then return; end if;
   select * into k from lair_kinds() lk where lk.id = l.kind;
   if l.state = 'cleared' then
+    -- Its hoard chest, gone once emptied.
+    perform lair_chest_emptied(p_world, l.chest);
     if now() < l.cleared_at + make_interval(secs => k.restock) then
       perform lair_ring_stock(p_world, p_lair);
       return;
     end if;
     update lair set state = 'held', size = lair_size_roll(l.kind), stocked_at = now(), cleared_at = null
       where world_id = p_world and id = p_lair;
-    -- And an orc camp's fire lit again.
-    perform lair_fire(p_world, p_lair, true);
+    -- The chest gone, with whatever is left in it.
+    if l.chest is not null then delete from placed where world_id = p_world and id = l.chest; end if;
     if l.moving then
       select * into s from lair_site(p_world, l.kind, p_lair);
       if s.x is not null then
@@ -27,6 +29,11 @@ begin
       end if;
       update lair set moving = false, clears = '{}' where world_id = p_world and id = p_lair;
     end if;
+    -- And its piece standing again on its tile, where it went with the clearing.
+    update lair lr set placed = lair_piece(p_world, lr.kind, lr.x, lr.y)
+      where lr.world_id = p_world and lr.id = p_lair and lr.placed is null;
+    -- And an orc camp's fire lit again.
+    perform lair_fire(p_world, p_lair, true);
     perform lair_restock(p_world, p_lair, 1);
     if lair_garrison_up(p_world, p_lair) = 0 then perform lair_boss_out(p_world, p_lair); end if;
     return;

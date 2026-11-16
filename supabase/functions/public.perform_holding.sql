@@ -37,6 +37,8 @@ begin
       where placed = p.id and holder = 'furniture';
     perform pack_fold(p_world, p_uid);
     perform tell(p_world, p_uid, 'Taken from ' || lower(placed_name(p)) || ': ' || v_names || '.', 'event');
+    -- A lair's hoard chest, gone once emptied (`lair_chest_emptied`).
+    perform lair_chest_emptied(p_world, p.id);
     return;
   end if;
 

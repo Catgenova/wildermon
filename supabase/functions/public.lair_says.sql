@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.lair_says(p_world uuid, p_x integer, p_y integ
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare l lair; k record; v_d double precision;
+declare l lair; k record; v_d double precision; v_n bigint;
 begin
   select lr.* into l from lair lr where lr.world_id = p_world
      and (p_x - lr.x) ^ 2 + (p_y - lr.y) ^ 2 <= lair_leash() ^ 2
@@ -13,11 +13,17 @@ begin
   if l.id is null then return ''; end if;
   select * into k from lair_kinds() lk where lk.id = l.kind;
   v_d := sqrt((p_x - l.x) ^ 2 + (p_y - l.y) ^ 2);
+  if l.chest is not null then
+    select coalesce(sum(i.count), 0) into v_n from item i where i.placed = l.chest and i.holder = 'furniture';
+  end if;
   return ' Lair: ' || k.name || case when v_d >= 1 then ' (' || floor(v_d)::int || ' tiles)' else '' end || ': '
     || case l.state
          when 'held' then 'garrison ' || lair_garrison_up(p_world, l.id) || '/' || l.size
          when 'boss' then coalesce(k.boss, (select sd.name from species_def sd where sd.id = k.species)) || ' out'
          else 'cleared, safe ring ' || lair_ring()::int || ' tiles, restock in '
-              || wait_words(greatest(1, extract(epoch from (l.cleared_at + make_interval(secs => k.restock) - now())))) end
+              || wait_words(greatest(1, extract(epoch from (l.cleared_at + make_interval(secs => k.restock) - now()))))
+              || case when v_n is null then ''
+                      else '; ' || lower((select f.name from furniture_def f where f.id = lair_chest())) || ' ' || v_n
+                           || case when v_n = 1 then ' thing' else ' things' end || ', gone at the restock or once emptied' end end
     || '.';
 end $function$

@@ -41,7 +41,7 @@ import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK } from
 import { SPECIES, WILD_SPECIES, AGES,
          GATHER_SKILL, GATHER_VERB, GATHER_DO, SMITH_TRADES, smithLumps, STOKE_FIRST, STOKE_SMELTS_AT, BUSH_VINES_AT, type GatherKind } from '../src/game/creatures';
 import {
-  EDGE_TREES, HILL_SLOPE, HOARD_BOOK, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, LAIR_ANNOUNCE, LAIR_APART, LAIR_KINDS, LAIR_LEASH, LAIR_LOOK_EVERY, LAIR_MOVE_CLEARS,
+  EDGE_TREES, HILL_SLOPE, HOARD_BOOK, LAIR_CHEST, LAIR_CHEST_SHUT, HOARD_SCALE, HOARD_SCALE_CAP, HOARD_SHARE, LAIR_ANNOUNCE, LAIR_APART, LAIR_KINDS, LAIR_LEASH, LAIR_LOOK_EVERY, LAIR_MOVE_CLEARS,
   LAIR_MOVE_DAYS, LAIR_RING, LAIR_RING_WILD, LAIR_SIGHT, LAIR_TRACK, lairRingWant, OPEN_CLEAR, OPEN_SLOPE, VENT_CLEAR,
 } from '../src/game/lairs';
 import {
@@ -1314,7 +1314,7 @@ for (const r of RECIPES) {
   for (const i of r.inputs) if (i.item && !NAMED.has(i.item)) unnamed.add(i.item);
 }
 // A piece of furniture with no row was called by its id and weighed a kilo in a pack: "altar needs a capital".
-const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave && !f.lair && !f.outcrop).map((f) => f.id);
+const unnamedPieces = FURNITURE.filter((f) => !NAMED.has(f.id) && !f.grave && !f.lair && !f.lairChest && !f.outcrop).map((f) => f.id);
 if (unnamedPieces.length) throw new Error(`furniture with no item definition: ${unnamedPieces.join(', ')}`);
 for (const [id, d] of Object.entries(ITEM_DEFS)) {
   out.push(`insert into item_def values (${q(id)}, ${q(d.name)}, ${q(d.category)}, ${q(d.weight)}, ${q(!!d.stackable)}, ${q(d.decay)}, ${q(d.charges)});`);
@@ -3313,6 +3313,9 @@ for (const [fn, v] of [
 }
 out.push(`create or replace function lair_ring_want() returns int language sql immutable as $fn$ select ${lairRingWant(PER_REGION, WILD_SQUARE)} $fn$;`);
 out.push(`create or replace function hoard_scale() returns text language sql immutable as $fn$ select ${q(HOARD_SCALE)} $fn$;`);
+// A cleared lair's hoard chest (`LAIR_CHEST`): its kind, and why anything but taking from it is refused.
+out.push(`create or replace function lair_chest() returns text language sql immutable as $fn$ select ${q(LAIR_CHEST)} $fn$;`);
+out.push(`create or replace function lair_chest_shut() returns text language sql immutable as $fn$ select ${q(LAIR_CHEST_SHUT)} $fn$;`);
 out.push(`create or replace function vent_clear() returns double precision language sql immutable as $fn$ select ${q(VENT_CLEAR)}::double precision $fn$;`);
 /*
  * Volcano Isle (`volcano.ts`): the island, its kinds, obsidian off a monster killed there, a seryll vein's summons,

@@ -40,6 +40,7 @@ import { WELL_TRICKLE, WELL_TRICKLE_AT, WELL_TRICKLE_QL, ACROSS_OF, DEED_PLACE, 
 import { hiveTakes } from './bees';
 import { crateTheRest, CREATURE_CRATE, emptyCrate, occupiedRefusal, shutIn, teamOut, teamOutRefusal } from './creaturecrate';
 import { bury, crumble, graveAt, graveRefusal, graveSays, GRAVE_MARK } from './graves';
+import { lairPieceAt, lairPieceRefusal, lairPieceSays } from './lairpiece';
 import { cropStageSeconds, FARM_ACTION_BY_ID, RIPE, settleCrop, type Crop } from './farming';
 import { fieldClock, fieldRate, GLASSHOUSE_GROWTH, handClock, handRate, PLANTER_GROWTH, STILL_CLOCK } from './growth';
 import { glassResync, underGlass } from './glasshouse';
@@ -5508,12 +5509,15 @@ export class Game {
   actionsFor(target: Target): Array<{ def: ActionDef; reason: string | null }> {
     const out: Array<{ def: ActionDef; reason: string | null }> = [];
     const grave = graveAt(this, target);
+    const lair = lairPieceAt(this, target);
     for (const def of ACTIONS) {
       if (def.hidden || !def.applies(target, this)) continue;
       // Nothing is offered for a crate with a wildermon in it that would be refused.
       if (occupiedRefusal(this, def.id, target)) continue;
       // Nor at a grave, where there is only taking out and only for its owner.
       if (grave && graveSays(this, grave, def.id)) continue;
+      // Nor at a lair, where there is nothing, or its hoard chest, where there is only taking out (`lairpiece.ts`).
+      if (lair && lairPieceSays(lair, def.id)) continue;
       // A thing down in a cellar is done from down there, and a thing up top from up top (`cellarGate`).
       out.push({ def, reason: cellarGate(this, def.id, target) ?? def.check?.(target, this) ?? null });
     }
@@ -5731,6 +5735,13 @@ export class Game {
     const buried = graveRefusal(this, def.id, target);
     if (buried) {
       this.logMsg(buried, 'error');
+      return;
+    }
+    // A lair is nobody's to do anything with, and its hoard chest is only taken from. The island asks the same of
+    // the same, in `lair_refusal`.
+    const lairs = lairPieceRefusal(this, def.id, target);
+    if (lairs) {
+      this.logMsg(lairs, 'error');
       return;
     }
     /*

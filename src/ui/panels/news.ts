@@ -242,7 +242,7 @@ const recipeInputsSaid = (id: string): string => {
   const r = RECIPE_BY_ID.get(id)!;
   return `${r.inputs.map((i) => `${i.count ?? 1} ${itemDef(i.item).name.toLowerCase()}`).join(', ')} → ${r.count ?? 1} ${itemDef(r.result).name.toLowerCase()}`;
 };
-import { FIRST_LAIRS } from '../../game/lairs';
+import { FIRST_LAIRS, LAIR_CHEST_NAME } from '../../game/lairs';
 /** As they were before Volcano Isle's kinds, vents and fire-tempered steel (n 615), for what was said of them then. */
 const FIRST_LAIR_KINDS = LAIR_KINDS.filter((k) => FIRST_LAIRS.includes(k.id));
 const MONSTERS_BEFORE_VOLCANO = MONSTER_KINDS.filter((id) => !VOLCANO_KINDS.includes(id));
@@ -424,6 +424,21 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // A cleared lair's hoard chest, and a lair nobody picks up or names (`20261120000113_hoard_chest_in_a_cleared_lair.sql`, `lairpiece.ts`).
+  {
+    n: 653,
+    day: '2026-11-16',
+    lines: () => {
+      const chest = LAIR_CHEST_NAME.toLowerCase();
+      return [
+        `New: lair cleared (boss killed): the lair gone from its tile, a ${chest} in its place holding every hoard share (was: each share straight into its holder's pack).`,
+        `New: ${chest}: take, anybody, one thing or everything; gone once emptied, or at the restock with what is left; the lair back at its restock.`,
+        `New: Examine on a cleared lair's tile: ${chest}, things in it.`,
+        `Fixed: lairs (${listed(LAIR_KINDS.map((k) => k.name.toLowerCase()))}): menu Examine only (was: Pick it up, Give it a name and every furniture job). ${LAIR_CHEST_NAME}: Open, ${ACTION_BY_ID.get('furniture_take_all')?.label}, Examine.`,
+        `Changed: names, dyes and padlocks on lairs taken off.`,
+      ];
+    },
+  },
   // The home pieces' jobs in their menus (`decorMenu.ts`).
   {
     n: 650,

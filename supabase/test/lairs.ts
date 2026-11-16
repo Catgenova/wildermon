@@ -245,17 +245,21 @@ begin
   perform wound_beast(w, c.id, v_top * ${HOARD_SHARE} - 0.5, null, null, '${U.r}', null);
   insert into said select 'DEALT', string_agg(uid || ':' || round((dealt / v_top)::numeric, 4), ',' order by uid) from lair_blow where world_id = w and lair = v_war;
   perform wound_beast(w, c.id, 1e9, null, null, '${U.p}', null);
-  insert into said select 'HOARD', u.uid || '|' || coalesce((select string_agg(i2.def || ':' || coalesce(i2.extra, '-') || ':' || i2.count || ':' || coalesce(i2.rare, '-'), ',' order by i2.def)
-      from item i2 where i2.id > v_max and i2.holder = 'player' and i2.holder_uid = u.uid::uuid), '-')
-    from (values ('${U.p}'), ('${U.q}'), ('${U.r}')) u (uid);
+  -- In the warren's hoard chest, on its tile in its place (\`lair_chest\`), and nothing in anybody's pack.
+  insert into said select 'HOARD', coalesce((select string_agg(i2.def || ':' || coalesce(i2.extra, '-') || ':' || i2.count || ':' || coalesce(i2.rare, '-')
+      || ':' || coalesce(i2.maker, '-'), ',' order by i2.def, i2.maker)
+      from item i2 join lair l2 on l2.world_id = w and l2.id = v_war where i2.holder = 'furniture' and i2.placed = l2.chest), '-')
+    || '|' || (select count(*) from item i2 where i2.id > v_max and i2.holder = 'player')
+    || '|' || (select count(*) from placed pl join lair l2 on l2.world_id = w and l2.id = v_war where pl.id = l2.chest and pl.sub = lair_chest() and pl.x = l2.x and pl.y = l2.y)
+    || '|' || coalesce((select l2.placed::text from lair l2 where l2.world_id = w and l2.id = v_war), 'gone');
   insert into said select 'CORPSE', count(*)::text from item where id > v_max and holder = 'ground' and def = 'corpse';
   insert into said select 'CLEARED', state || '|' || cardinality(clears) || '|' || moving || '|' || (select count(*) from lair_blow b where b.world_id = w and b.lair = v_war)
     from lair where world_id = w and id = v_war;
   -- A share given whole, a map and a book in it: the dragon's, with its hoard scales.
   select coalesce(max(id), 0) into v_max from item;
-  v_r := lair_hoard_give(w, '${U.q}', v_roost, hoard_roll('dragon_roost', 0, 0), 60);
+  v_r := lair_hoard_give(w, '${U.q}', v_roost, hoard_roll('dragon_roost', 0, 0), 60, lair_chest_stand(w, v_roost));
   insert into said select 'FULL', v_r::text || '#' || coalesce((select string_agg(i2.def || ':' || coalesce(i2.extra, '-') || ':' || i2.count || ':' || coalesce(i2.rare, '-'), ',' order by i2.def)
-      from item i2 where i2.id > v_max and i2.holder = 'player' and i2.holder_uid = '${U.q}'), '-');
+      from item i2 where i2.id > v_max and i2.holder = 'furniture' and i2.placed = (v_r->>'chest')::bigint), '-');
   -- The rolls at either side of their lines, every kind.
   insert into said select 'ROLLS', string_agg(id || ':' || (hoard_roll(id, map - 1e-9, ${HOARD_BOOK} - 1e-9)->>'map') || (hoard_roll(id, map, ${HOARD_BOOK})->>'map')
     || (hoard_roll(id, 0.5, ${HOARD_BOOK} - 1e-9)->>'book') || (hoard_roll(id, 0.5, ${HOARD_BOOK})->>'book') || ':' || (hoard_roll(id, 0, 0) - 'map' - 'book')::text, '|' order by id) from lair_kinds();
@@ -314,10 +318,12 @@ begin
     v_id := lair_spawn(w, l.id, 'orc', true);
     insert into said select 'FIRE', i || '|held|' || placed_lit(pl) from placed pl where pl.id = l.placed;
     perform wound_beast(w, v_id, 1e9, null, null, '${U.q}', null);
-    insert into said select 'FIRE', i || '|cleared|' || placed_lit(pl) from placed pl where pl.id = l.placed;
+    -- Cleared: its piece gone, its hoard chest in its place; back at its restock, lit.
+    insert into said select 'FIRE', i || '|cleared|' || coalesce((select placed_lit(pl)::text from placed pl where pl.id = l3.placed), 'gone')
+      from lair l3 where l3.world_id = w and l3.id = l.id;
     update lair set cleared_at = now() - interval '2 hours' where world_id = w and id = l.id;
     perform lair_turn(w, l.id);
-    insert into said select 'FIRE', i || '|back|' || placed_lit(pl) from placed pl where pl.id = l.placed;
+    insert into said select 'FIRE', i || '|back|' || placed_lit(pl) from lair l3 join placed pl on pl.id = l3.placed where l3.world_id = w and l3.id = l.id;
     insert into said select 'MOVED', i || '|' || l.x || ',' || l.y || '|' || l2.x || ',' || l2.y || '|' || l2.moving || '|' || cardinality(l2.clears) || '|'
       || (select pl.x || ',' || pl.y from placed pl where pl.id = l2.placed) || '|' || (select count(*) from lair_seen s2 where s2.world_id = w and s2.lair = l.id) || '|'
       || lair_site_ok(w, l2.kind, l2.x, l2.y, l2.id) || '|' || v_before
@@ -467,14 +473,17 @@ void bAttack;
 
 const dealt = Object.fromEntries(one('DEALT').split(',').map((d) => d.split(':')));
 check(`what each dealt the boss is kept: half, just over a tenth, just under`, Number(dealt[U.p]) === 0.5 && Number(dealt[U.q]) > HOARD_SHARE && Number(dealt[U.r]) < HOARD_SHARE, one('DEALT'));
-const hoard = Object.fromEntries(said('HOARD').map((h) => h.split('|')));
+const [chestHolds, packed, chestThere, piece] = one('HOARD').split('|');
 const parts = (s: string): string[] => (s === '-' ? [] : s.split(','));
 const allowed = new Set(['treasure_map', 'chief_ear', 'cooking_recipe']);
-check(`a share for the one who dealt half and the one who dealt over a tenth: the goblin chief's ear each`,
-  parts(hoard[U.p]).some((i) => i.startsWith('chief_ear:-:1:')) && parts(hoard[U.q]).some((i) => i.startsWith('chief_ear:-:1:')), JSON.stringify(hoard));
-check('none for the one who dealt under a tenth', hoard[U.r] === '-', hoard[U.r]);
+const ears = parts(chestHolds).filter((i) => i.startsWith('chief_ear:-:1:'));
+check('the warren gone from its tile and its hoard chest in its place, nothing in anybody\'s pack',
+  chestThere === '1' && piece === 'gone' && packed === '0', one('HOARD'));
+check(`a share in it for the one who dealt half and the one who dealt over a tenth: the goblin chief's ear each, with their names`,
+  ears.length === 2 && ears.some((i) => i.endsWith(':Hunter')) && ears.some((i) => i.endsWith(':Helper')), chestHolds);
+check('none for the one who dealt under a tenth', !parts(chestHolds).some((i) => i.endsWith(':Watcher')), chestHolds);
 check('nothing in a share but a map, the trophy and a Recipe; no silver, nothing rare',
-  [hoard[U.p], hoard[U.q]].flatMap(parts).every((i) => allowed.has(i.split(':')[0]) && i.endsWith(':-')), JSON.stringify(hoard));
+  parts(chestHolds).every((i) => allowed.has(i.split(':')[0]) && i.split(':')[3] === '-'), chestHolds);
 check('the carcass is dropped to be butchered as usual', Number(one('CORPSE')) >= 1, one('CORPSE'));
 check('the lair is cleared, its first clear counted, the blows put away', one('CLEARED') === 'cleared|1|false|0', one('CLEARED'));
 const [fullRoll, fullItems] = one('FULL').split('#');
@@ -529,8 +538,8 @@ check(`cleared ${LAIR_MOVE_CLEARS} times in ${LAIR_MOVE_DAYS} days, a camp resto
 check(`cleared once with two clears older than ${LAIR_MOVE_DAYS} days, the other stays where it was, still seen by whoever had seen it`,
   !!m2 && m2[1] === m2[2] && m2[4] === '1' && m2[6] === m2[8], m2?.join('|'));
 
-check('an orc camp\'s fire burns while it is held, is out once it is cleared, and burns again when it restocks',
-  said('FIRE').join(',') === '1|held|true,1|cleared|false,1|back|true,2|held|true,2|cleared|false,2|back|true', said('FIRE').join(','));
+check('an orc camp\'s fire burns while it is held, is gone with it once it is cleared, and burns again when it restocks',
+  said('FIRE').join(',') === '1|held|true,1|cleared|gone,1|back|true,2|held|true,2|cleared|gone,2|back|true', said('FIRE').join(','));
 
 /* ---- Track ------------------------------------------------------------------------------------------------------------ */
 

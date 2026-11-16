@@ -5,15 +5,22 @@ CREATE OR REPLACE FUNCTION public.lair_refusal(p_world uuid, p_uid uuid, p_actio
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare v_kind text;
+declare v_piece bigint; v_kind text; v_name text;
 begin
   if p_target->>'kind' = 'furniture' then
-    select l.kind into v_kind from lair l
-     where l.world_id = p_world and l.placed = nullif(p_target->>'id', '')::bigint;
-  elsif p_target ? 'into' then
-    select l.kind into v_kind from lair l
-     where l.world_id = p_world and l.placed = nullif(p_target->>'into', '')::bigint;
+    v_piece := nullif(p_target->>'id', '')::bigint;
+  elsif p_target->>'kind' = 'item' then
+    select i.placed into v_piece from item i
+     where i.world_id = p_world and i.id = target_item(p_target) and i.holder = 'furniture';
   end if;
+  if v_piece is null and p_target ? 'into' then v_piece := nullif(p_target->>'into', '')::bigint; end if;
+  if v_piece is null then return null; end if;
+  select pl.sub into v_kind from placed pl where pl.world_id = p_world and pl.id = v_piece and pl.kind = 'furniture';
   if v_kind is null then return null; end if;
-  return (select k.name from lair_kinds() k where k.id = v_kind) || ': cannot be moved, taken, used or worked.';
+  if v_kind = lair_chest() then
+    return case when p_action in ('furniture_take_all', 'take_from_store') then null else lair_chest_shut() end;
+  end if;
+  select k.name into v_name from lair_kinds() k where k.id = v_kind;
+  if v_name is null then return null; end if;
+  return v_name || ': cannot be moved, taken, used or worked.';
 end $function$

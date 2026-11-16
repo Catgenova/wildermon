@@ -2,6 +2,7 @@ import { capital } from '../../game/words';
 import { crateCentre, crateName, crateCapacity, crateKindOfItem, crateShut, crateSpare, rackStock, rackTakes, STORE_REACH } from '../../game/crates';
 import { furnitureCapacity, furnitureCentre, furnitureDef, furnitureHeft, furnitureName, furnitureRefuses, furnitureRoom, furnitureUnits, rackSpots, type PlacedFurniture } from '../../game/furniture';
 import { graveLine, graveName, graveSays, isGrave } from '../../game/graves';
+import { chestLair, isLairChest, lairPieceSays } from '../../game/lairpiece';
 import { pannierAdd, pannierCap, pannierFullSaid, pannierName, panniersOffered, pannierSpare, pannierTake } from '../../game/panniers';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../game/actions';
 import type { Game } from '../../game/game';
@@ -93,7 +94,8 @@ export interface Store {
   add: (item: Item) => boolean;
   /**
    * For a grave, what it says under its contents: how much is in it and when
-   * it crumbles. Nothing is put into a grave, so its window offers no way in.
+   * it crumbles. Nothing is put into a grave, so its window offers no way in;
+   * nor into a lair's hoard chest, which says what is in it here.
    */
   grave?: string;
   /**
@@ -329,6 +331,24 @@ export class CratePanel {
         fits: () => 0,
         add: () => false,
         grave: graveLine(this.game, piece),
+      };
+    }
+    if (piece && isLairChest(piece)) {
+      // A lair's hoard chest is emptied through this window by anybody, and nothing goes in (`lairpiece.ts`).
+      const lair = chestLair(piece, this.game.lairsSeen);
+      return {
+        title: `${furnitureName(piece)}${lair ? ` (${lair.toLowerCase()})` : ''}`,
+        id: piece.id,
+        items: piece.items,
+        capacity: furnitureCapacity(piece),
+        centre: furnitureCentre(piece),
+        what: furnitureName(piece).toLowerCase(),
+        kind: 'furniture',
+        take: (uid) => this.game.furnitureTake(piece, uid),
+        refuses: () => lairPieceSays(piece, 'store_in_furniture'),
+        fits: () => 0,
+        add: () => false,
+        grave: `${furnitureUnits(piece)} things`,
       };
     }
     if (piece) {

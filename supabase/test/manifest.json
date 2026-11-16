@@ -3324,6 +3324,12 @@
     "why": "Asked for: monsters come only from lairs, with no wandering spawns and no raiding patrols. Every lair kind and number the same on both sides; each sited on its ground, kept from every token and every other lair, the dragon on Volcano Isle's highest ground, and no settlement founded that near one; its garrison up, no monster out of the wild, none past its leash however it is moved, none hunting past it; the boss out after the garrison and told round; a hoard share for each who dealt a tenth of its health, never silver or rare, the map and the book at their odds held at their lines and over a seeded draw; the cleared ring safe and stocked half again; every restock a second either side of its time, the dragon's day; three clears in seven days and it moves; Track to the nearest lair; hoard scales' raised cap. Every clock moved on the lair, never the wall's."
   },
   {
+    "file": "supabase/test/lairchest.ts",
+    "title": "A lair nobody picks up or names, and a cleared lair's hoard chest in its place",
+    "shard": 3,
+    "why": "Asked for: \"goblin warrens should not be able to be picked up or renamed\" and \"when all the mobs are cleared create the loot chest in place of the warren\". Every lair kind: no action of the island's let through at its piece, nothing put in, Pick it up and Give it a name refused through rpc_act in the browser's words, and the browser offering none; a warren cleared: gone from its tile, a hoard chest in its place holding a share for each who dealt a tenth of the boss's health and nothing in anybody's pack, Examine and the ground read saying it; the chest taken from by anybody, one thing and all, and nothing else asked of it, on both sides; emptied, gone; at the restock the warren back, a full chest gone with what was in it, a camp's fire lit; no shares, no chest."
+  },
+  {
     "file": "supabase/test/volcano.ts",
     "title": "Volcano Isle's monsters at their vents, obsidian killed there and nowhere else, a seryll vein's summons, sulfur and fire-tempered steel",
     "shard": 3,

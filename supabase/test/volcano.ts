@@ -114,8 +114,10 @@ begin
     select coalesce(max(id), 0) into v_max from item;
     perform wound_beast(w, (select c2.id from creature c2 where c2.world_id = w and c2.lair = l.id and c2.boss), 1e9, null, null, '${U.p}', null);
     insert into said select 'HOARD', k.id || '|' || (select state from lair where world_id = w and id = l.id) || '|'
-      || coalesce((select string_agg(i2.def || ':' || i2.count, ',' order by i2.def) from item i2 where i2.id > v_max and i2.holder = 'player'
-                     and i2.holder_uid = '${U.p}' and i2.def not in ('treasure_map', 'recipe_book', 'formula_book')), '-');
+      -- In its hoard chest, in the vent's place (\`lair_chest\`).
+      || coalesce((select string_agg(i2.def || ':' || i2.count, ',' order by i2.def) from item i2 where i2.id > v_max and i2.holder = 'furniture'
+                     and i2.placed = (select l2.chest from lair l2 where l2.world_id = w and l2.id = l.id)
+                     and i2.def not in ('treasure_map', 'recipe_book', 'formula_book')), '-');
     update lair set cleared_at = now() - make_interval(secs => k.restock - 1) where world_id = w and id = l.id;
     perform lair_turn(w, l.id);
     insert into said select 'RESTOCK', k.id || '|early|' || state || '|' || lair_garrison_up(w, l.id) from lair where world_id = w and id = l.id;

@@ -9174,6 +9174,7 @@ insert into furniture_def values ('dragon_roost', 'Dragon roost', 4, 4, null, fa
 insert into furniture_def values ('ash_vent', 'Ash vent', 4, 4, null, false, false);
 insert into furniture_def values ('magma_vent', 'Magma vent', 4, 4, null, false, false);
 insert into furniture_def values ('cinder_vent', 'Cinder vent', 4, 4, null, false, false);
+insert into furniture_def values ('lair_chest', 'Hoard chest', 2, 2, 100, false, false);
 insert into furniture_def values ('iron_outcrop', 'Iron outcropping', 4, 4, null, false, false);
 insert into furniture_def values ('rock_outcrop', 'Rock outcropping', 4, 4, null, false, false);
 insert into furniture_def values ('chief_ear', 'Goblin chief''s ear', 1, 1, null, false, false);
@@ -12319,6 +12320,8 @@ create or replace function open_slope() returns double precision language sql im
 create or replace function hill_slope() returns double precision language sql immutable as $fn$ select 24::double precision $fn$;
 create or replace function lair_ring_want() returns int language sql immutable as $fn$ select 4 $fn$;
 create or replace function hoard_scale() returns text language sql immutable as $fn$ select 'hoard' $fn$;
+create or replace function lair_chest() returns text language sql immutable as $fn$ select 'lair_chest' $fn$;
+create or replace function lair_chest_shut() returns text language sql immutable as $fn$ select 'Hoard chest: take only; cannot be moved, named, filled or worked.' $fn$;
 create or replace function vent_clear() returns double precision language sql immutable as $fn$ select 3::double precision $fn$;
 create or replace function isle_name(p_isle int) returns text language sql immutable as $fn$ select case p_isle when 0 then 'The Crescent' when 1 then 'Northwest Steppe' when 2 then 'Northeast Tundra' when 3 then 'Volcano Isle' when 4 then 'Middle Isle' when 5 then 'East Isle' when 6 then 'West Skerry' end $fn$;
 create or replace function volcano_isle() returns int language sql immutable as $fn$ select 3 $fn$;

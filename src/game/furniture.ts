@@ -44,7 +44,7 @@ import {
   THRONE_SEATS,
 } from './obsidiandefs';
 import { HAMMOCK_REST, ROPE_WALK, ROPE_WALK_QL, ROPE_WALK_TIME, ROPEMAKING } from './ropework';
-import { LAIR_KINDS } from './lairs';
+import { LAIR_CHEST, LAIR_CHEST_HOLDS, LAIR_CHEST_NAME, LAIR_KINDS } from './lairs';
 import { OUTCROP_KINDS, OUTCROP_USES, usesSaid } from './outcrops';
 
 /**
@@ -204,6 +204,11 @@ export interface FurnitureDef {
    * every action on it (`lair_refusal`).
    */
   lair?: boolean;
+  /**
+   * A cleared lair's hoard chest (`lairs.ts`, `LAIR_CHEST`): set down by the island in the lair's place, nobody's, never
+   * built, moved, named or filled; taken from by anybody, and gone once emptied or at the lair's restock (`lair_refusal`).
+   */
+  lairChest?: boolean;
   /** A trophy out of a lair's hoard (`lairs.ts`): set down anywhere as decoration, and never built. */
   trophy?: boolean;
   /**
@@ -790,6 +795,8 @@ export const FURNITURE: FurnitureDef[] = [
    * mouth for an ogre cave and a nest of bones for a dragon roost.
    */
   ...LAIR_KINDS.map((k) => piece(k.id, k.name, 4, 4, [], 0, 0, '', undefined, { lair: true })),
+  // And the chest a cleared one's hoard is left in, in its place, drawn as a chest standing open.
+  piece(LAIR_CHEST, LAIR_CHEST_NAME, 2, 2, [], 0, 0, '', LAIR_CHEST_HOLDS, { lairChest: true }),
   /* The outcroppings (`outcrops.ts`): a tile each, set down by the island at each daily reset. */
   ...OUTCROP_KINDS.map((k) => piece(k.id, k.name, 4, 4, [], 0, 0, '', undefined, { outcrop: true })),
   /* And the trophies their hoards hold, each on a stone plinth: set down as any piece is. */
@@ -817,7 +824,7 @@ export const fitsDen = (kind: string, cls: number): boolean => denStage(kind) ==
 export const isFurniture = (id: string): boolean => FURNITURE_BY_ID.has(id);
 export const furnitureDef = (id: string): FurnitureDef => FURNITURE_BY_ID.get(id) ?? FURNITURE[0];
 /** Pieces that hold things, largest first: the point of a larder. */
-export const STORES = FURNITURE.filter((f) => f.capacity).sort((a, b) => (b.capacity ?? 0) - (a.capacity ?? 0));
+export const STORES = FURNITURE.filter((f) => f.capacity && !f.lairChest).sort((a, b) => (b.capacity ?? 0) - (a.capacity ?? 0));
 
 export interface PlacedFurniture {
   id: number;
@@ -1097,13 +1104,14 @@ for (const d of FURNITURE) if (d.climber) describeFrom(d.id, { rule: climberRule
  * front of the lot.
  */
 export const furnitureName = (f: PlacedFurniture): string => {
-  if (f.name) return f.name;
+  // A lair and its hoard chest are the island's and go by their kind's name, whatever was written on one (`lairpiece.ts`).
+  if (f.name && !furnitureDef(f.kind).lair && !furnitureDef(f.kind).lairChest) return f.name;
   const plain = f.material ? `${furnitureDef(f.kind).name} (${f.material.toLowerCase()})` : furnitureDef(f.kind).name;
   const rare = rarityOf(f).name;
   return rare ? `${rare.charAt(0).toUpperCase()}${rare.slice(1)} ${plain.toLowerCase()}` : plain;
 };
 /** The name inside a line: a name its owner gave as written, the game's own in lower case. The island's `placed_name_in_line`. */
-export const furnitureNameInLine = (f: PlacedFurniture): string => f.name || furnitureName(f).toLowerCase();
+export const furnitureNameInLine = (f: PlacedFurniture): string => (f.name && furnitureName(f) === f.name ? f.name : furnitureName(f).toLowerCase());
 export const furnitureUnits = (f: PlacedFurniture): number => f.items.reduce((n, it) => n + it.count, 0);
 /** How much more a counting piece will take. `furnitureRoom` is the general one. */
 export const furnitureSpare = (f: PlacedFurniture): number => Math.max(0, furnitureCapacity(f) - furnitureUnits(f));
@@ -1400,6 +1408,9 @@ function stateOf(f: PlacedFurniture): string {
   const def = furnitureDef(f.kind);
   // An outcropping says its uses left and nothing else (`outcrops.ts`).
   if (def.outcrop) return usesSaid(f.uses ?? OUTCROP_USES);
+  // A lair says it is one, and its hoard chest what is in it (`lairpiece.ts`): neither has a quality to speak of.
+  if (def.lair) return 'lair';
+  if (def.lairChest) return `${furnitureUnits(f)} things`;
   const ql = `QL ${f.ql.toFixed(0)}`;
   if (holdsLiquid(f)) {
     const litres = litresIn(f);

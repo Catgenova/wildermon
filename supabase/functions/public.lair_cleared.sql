@@ -4,13 +4,17 @@ CREATE OR REPLACE FUNCTION public.lair_cleared(p_world uuid, p_lair integer, p_t
  RETURNS integer
  LANGUAGE plpgsql
 AS $function$
-declare b record; v_n int := 0; v_clears timestamptz[];
+declare b record; v_n int := 0; v_clears timestamptz[]; v_chest bigint;
 begin
+  -- The lair's piece gone, its hoard chest in its place, a share in it for each who dealt enough.
+  v_chest := lair_chest_stand(p_world, p_lair);
   for b in select * from lair_blow where world_id = p_world and lair = p_lair and dealt >= hoard_share() * p_top order by uid loop
     perform lair_hoard_give(p_world, b.uid, p_lair, hoard_roll((select kind from lair where world_id = p_world and id = p_lair),
-      random(), random()), map_ql_beast(p_top));
+      random(), random()), map_ql_beast(p_top), v_chest);
     v_n := v_n + 1;
   end loop;
+  -- Nobody's share in it: no chest.
+  perform lair_chest_emptied(p_world, v_chest);
   delete from lair_blow where world_id = p_world and lair = p_lair;
   select array(select t from unnest(l.clears) t where t > now() - make_interval(days => lair_move_days()::int)) || now()
     into v_clears from lair l where l.world_id = p_world and l.id = p_lair;

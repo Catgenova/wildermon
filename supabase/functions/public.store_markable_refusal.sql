@@ -9,7 +9,7 @@ begin
   return (
 select case when p.kind = 'furniture' and p.crumbles_at is null
                    and (coalesce(f.capacity, 0) > 0 or coalesce(f.heft, 0) > 0)
-                   and not f.stall and coalesce(f.trash, 0) = 0 and not f.cart and f.id <> 'mailbox'
+                   and not f.stall and coalesce(f.trash, 0) = 0 and not f.cart and f.id <> 'mailbox' and f.id <> lair_chest()
                    and not exists (select 1 from vehicle_def v where v.id = f.id)
                    and not exists (select 1 from boat_def b where b.id = f.id)
               then null

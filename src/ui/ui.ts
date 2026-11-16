@@ -58,6 +58,7 @@ import { GLASSHOUSE_GROWTH } from '../game/growth';
 import { crateLine, crateOf, CREATURE_CRATE, CREATURE_CRATE_ACTION_BY_ID, occupiedRefusal } from '../game/creaturecrate';
 import { graveLine, graveName, graveSays, graveUnits, isGrave } from '../game/graves';
 import { isOutcropKind, OUTCROP_MINE } from '../game/outcrops';
+import { chestLair, isLairChest, isLairPiece, lairPieceSays } from '../game/lairpiece';
 import { COMPANION_STANCES, isBaitFor, SPECIES, tameNeeds, STANCE_HINTS, STANCE_NAMES, GATHER_VERB, GATHER_DO } from '../game/creatures';
 import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items';
 import { LYE_USE } from '../game/placeables';
@@ -1941,6 +1942,9 @@ export class UI {
     if (piece && isGrave(piece)) return { title: `${graveName(this.game, piece)} (${graveLine(this.game, piece)})`, entries: this.graveEntries(piece) };
     // An outcropping: Mine and Examine, and its uses left (`outcrops.ts`).
     if (piece && isOutcropKind(piece.kind)) return { title: `${furnitureName(piece)} (${furnitureState(piece)})`, entries: this.outcropEntries(piece) };
+    // A lair: Examine of its tile and nothing else; its hoard chest: Open, Take all and Examine (`lairpiece.ts`).
+    if (piece && isLairPiece(piece)) return { title: `${furnitureName(piece)} (${furnitureState(piece)})`, entries: [this.tileExamine(piece)] };
+    if (piece && isLairChest(piece)) return { title: this.lairChestTitle(piece), entries: this.lairChestEntries(piece) };
     if (piece) {
       const state = rackSpots(piece) ? `${furnitureState(piece)} · ${this.rackLine(piece)}`
         : piece.kind === CREATURE_CRATE ? `${furnitureState(piece)} · ${crateLine(this.game, piece)}`
@@ -2768,6 +2772,35 @@ export class UI {
       const reason = def.check?.(ft, g) ?? null;
       entries.push({ label: def.labelFor?.(ft, g) ?? def.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(def, ft) });
     }
+    return entries;
+  }
+
+  /** Examine of the tile a piece stands on, which the island answers (`examine_tile_text`): a lair's, an outcropping's. */
+  private tileExamine(f: PlacedFurniture): MenuItem {
+    const look = ACTION_BY_ID.get('examine');
+    return { label: 'Examine', onSelect: () => { if (look) this.game.requestAction(look, { kind: 'tile', x: f.x, y: f.y, cx: f.x, cy: f.y }); } };
+  }
+
+  /** A hoard chest by the lair it stands for, of those seen, and what is in it: "Hoard chest (goblin warren · 8 things)". */
+  private lairChestTitle(f: PlacedFurniture): string {
+    const lair = chestLair(f, this.game.lairsSeen);
+    return `${furnitureName(f)} (${[lair?.toLowerCase(), `${furnitureUnits(f)} things`].filter(Boolean).join(' \u00b7 ')})`;
+  }
+
+  /**
+   * A cleared lair's hoard chest: Open and Take all, for anybody, and Examine of its tile, which the island answers with
+   * its lair and its restock. No picking up, naming, moving or putting in (`lairPieceSays`).
+   */
+  private lairChestEntries(f: PlacedFurniture): MenuItem[] {
+    const g = this.game;
+    const ft: Target = { kind: 'furniture', id: f.id };
+    const entries: MenuItem[] = [{ label: 'Open', note: `${furnitureUnits(f)} things`, onSelect: () => this.cratePanel.openFurniture(f.id) }];
+    const all = ACTION_BY_ID.get('furniture_take_all');
+    if (all) {
+      const reason = lairPieceSays(f, all.id) ?? all.check?.(ft, g) ?? null;
+      entries.push({ label: all.label, hint: reason ?? undefined, disabled: !!reason, onSelect: () => g.requestAction(all, ft) });
+    }
+    entries.push(this.tileExamine(f));
     return entries;
   }
 

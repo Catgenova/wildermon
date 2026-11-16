@@ -98,16 +98,18 @@ export interface StoreShape {
   cart?: boolean;
   vehicle?: unknown;
   boat?: unknown;
+  /** A cleared lair's hoard chest (`lairs.ts`): nobody's, and no settlement's. */
+  lairChest?: boolean;
 }
 
 /**
  * Whether a piece of furniture can be a settlement store: it holds things by
  * count or by weight, and is not a stall, a trash crate, a mailbox or
- * anything driven, pulled or sailed off the land. Any crate can.
+ * anything driven, pulled or sailed off the land, or a lair's hoard chest. Any crate can.
  */
 export const storeMarkable = (kind: string, def: StoreShape, grave = false): boolean =>
   !grave && ((def.capacity ?? 0) > 0 || (def.heft ?? 0) > 0)
-  && !def.stall && !def.trash && !def.cart && !def.vehicle && !def.boat && kind !== 'mailbox';
+  && !def.stall && !def.trash && !def.cart && !def.vehicle && !def.boat && !def.lairChest && kind !== 'mailbox';
 
 /**
  * Why you may not mark (`on`) or unmark a store, or null: the island's
