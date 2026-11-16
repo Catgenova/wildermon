@@ -41,7 +41,7 @@ import {
   type Wall,
 } from '../game/building';
 import { cornerName, storeyOf } from '../game/frame';
-import { fitsMaterial, hiddenDoorIronWords, hiddenDoorWants, planHiddenDoor, wallWords } from '../game/gates';
+import { CHANGE_PLANNED, CHANGE_PLANNED_HINT, fitsMaterial, hiddenDoorIronWords, hiddenDoorWants, planHiddenDoor, wallWords } from '../game/gates';
 import type { Game } from '../game/game';
 import { nearestSide, type Pick } from '../render/renderer';
 import type { MenuItem } from './contextmenu';
@@ -83,9 +83,10 @@ const materials = (g: Game, def: ActionDef, target: TileTarget, label: string, b
 /**
  * A wall of a building's change (`change_wall`): every wall type and
  * material it may be planned as where it stands, each with its bill and, if
- * refused, why (`why`, the menu's own refusal); not the wall standing, nor a
- * change already planned on it. With a change planned, the row building it
- * comes first, and the wall standing is offered too, which drops the change.
+ * refused, why (`why`, the menu's own refusal); not the wall standing. With a
+ * change planned, the row building it comes first, the wall standing is
+ * offered too, which drops the change, and the change itself is listed shut,
+ * noted `CHANGE_PLANNED`.
  */
 export function changeWallRows(g: Game, wall: Wall, target: TileTarget, why: (def: ActionDef, t: TileTarget) => string | null): MenuItem[] {
   const def = act('change_wall');
@@ -109,7 +110,12 @@ export function changeWallRows(g: Game, wall: Wall, target: TileTarget, why: (de
     for (const m of MATERIALS_WITH_GLASS) {
       if (!fitsMaterial(wt.id, m) || !takesAs(m, { wall: wt.id })) continue;
       const stands = wt.id === standing && m.id === wall.material;
-      if ((stands && !ch) || (ch?.type === wt.id && ch.material === m.id)) continue;
+      if (stands && !ch) continue;
+      // The change already planned stays in the list, shut, and points at its Build change row (`CHANGE_PLANNED`).
+      if (ch?.type === wt.id && ch.material === m.id) {
+        kids.push({ label: m.name, note: CHANGE_PLANNED, hint: CHANGE_PLANNED_HINT, disabled: true });
+        continue;
+      }
       const t: TileTarget = { ...target, wallType: wt.id, material: m.id };
       const no = why(def, t);
       kids.push({

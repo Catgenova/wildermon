@@ -34,5 +34,7 @@ begin
       act = null, act_target = null, act_started = null, act_ends = null, act_left = null, act_goes = null,
       act_queue = '[]'::jsonb, moved_at = now(), aboard = null, seat = null
     where world_id = p_world and uid = p_uid;
+  -- How it died, its last blows and what became of what it carried, for the card over the chooser (`private.fall_note`).
+  perform private.fall_note(p_world, p_uid, v_grace);
   perform tell(p_world, p_uid, v_said, 'error');
 end $function$

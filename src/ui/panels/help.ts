@@ -229,6 +229,9 @@ import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, H
 import { LAVA_CHART } from '../../world/lavachart';
 import { ISLAND_ELEMENT, LIFE_MOTES_EACH, MOTE_ELEMENTS, MOTES_LEAST, STATUE_MOTES, MOTES_MOST, MOTES_STEP, POULTICE_HEAL, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY, WATER_MOTES_EACH } from '../../game/motes';
 import { RESPAWN_GAP, RESPAWN_SPARE, STAY_SAID } from '../../game/respawn';
+import {
+  BLOWS_LABEL, CAUSE_LABEL, DEATH_BLOWS, DEATH_BLOWS_SECS, DEATH_TITLE, KILLING_BLOW, RESPAWN_HOLD, THINGS_LABEL, WHEN_LABEL, WHERE_LABEL,
+} from '../../game/deathcard';
 import { FALL_SECS } from '../../game/fell';
 import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
 import { STUMBLE_SECS } from '../../game/fight';
@@ -3100,7 +3103,8 @@ export function helpText(): string {
       <li><b>Respawn</b> chooser, until you step off the spawn: each of the ${RUNESTONES.length} Runestones (${START_GAP} tiles from its edge, as a first join),
       or a settlement you founded or are a member of (first free tile ${RESPAWN_GAP} to ${RESPAWN_GAP + RESPAWN_SPARE} tiles from its token: dry, no building,
       no more than ${metres(LANDING_STAND)} m between highest and lowest corner). Each card: distance in tiles from where you fell.
-      <b>${STAY_SAID}</b>, a step or a closed tab: the spawn.</li>
+      <b>${STAY_SAID}</b>, a step or a closed tab: the spawn. Steps off the spawn in the first ${dur(RESPAWN_HOLD)}: held.</li>
+      <li>Over the chooser, <b>${DEATH_TITLE}</b>: ${listed([CAUSE_LABEL, `${BLOWS_LABEL} (${DEATH_BLOWS} at most, ${dur(DEATH_BLOWS_SECS)} before, ${KILLING_BLOW.toLowerCase()} marked)`, WHERE_LABEL, THINGS_LABEL, WHEN_LABEL])}.</li>
       <li>Until you choose or step off the spawn: lying where you fell (fall ${FALL_SECS} s), the camera there; other players see it. On waking: getting up.</li>
       <li><b>What you carried stays</b> in a <b>grave</b> where you fell: pack, held items, toolbelt, every bag and its contents.</li>
       <li>Kept on you: clothing, armour, jewel, starting kit, a crate with a wildermon in it, anything offered in a deal.</li>

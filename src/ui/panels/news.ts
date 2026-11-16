@@ -16,6 +16,9 @@ import { UPDATE_CHECK_MS } from '../update';
 import { STALE_BUILD } from '../../version';
 import { JOURNAL_TABS } from './journaltabs';
 import { RESPAWN_ARM_MS } from '../respawn';
+import {
+  BLOWS_LABEL, CAUSE_LABEL, CAUSE_SAID, DEATH_BLOWS, DEATH_BLOWS_SECS, DEATH_TITLE, KILLING_BLOW, RESPAWN_HOLD, THINGS_LABEL, WHEN_LABEL, WHERE_LABEL,
+} from '../../game/deathcard';
 import { BLOCK_SECS, FLINCH_LIT, FLINCH_SECS, STUMBLE_SECS } from '../../game/fight';
 // ---- spellcasting (What's new 593) ----
 import { ALL_SPELL_IDS, spellInfo } from '../../render/spells/info';
@@ -295,7 +298,7 @@ import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } f
 import { BAY_PAST_HEFT, BRIDGE_BILL_TIMES, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
 import { AQUEDUCT, AQUEDUCT_MOTE_USE, aqMoteFed } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
-import { changeDropped, changeLine, gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
+import { CHANGE_PLANNED, CHANGE_PLANNED_HINT, changeDropped, changeLine, gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
 import { CROP_LIST, CROP_STAGES, CROPS, growthWords } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS } from '../../game/growth';
 import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
@@ -425,6 +428,17 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Dying while walking: held on the spawn until the pick (`20261120000115_where_to_wake_held.sql`); the death card (`deathcard.ts`); a planned change listed (`changeWallRows`).
+  {
+    n: 656,
+    day: '2026-11-16',
+    lines: () => [
+      `Fixed: death while walking: Respawn chooser shown, the body held on the spawn until a pick (was: the next step left the spawn, no chooser). Steps off the spawn in the first ${dur(RESPAWN_HOLD)}: held.`,
+      `New: Respawn chooser: ${DEATH_TITLE} card: ${listed([CAUSE_LABEL, `${BLOWS_LABEL} (${DEATH_BLOWS} at most, ${dur(DEATH_BLOWS_SECS)} before, ${KILLING_BLOW.toLowerCase()} marked)`, WHERE_LABEL, THINGS_LABEL, WHEN_LABEL])}.`,
+      `New: ${DEATH_TITLE} card, ${CAUSE_LABEL}: ${listed(Object.values(CAUSE_SAID))}.`,
+      `Changed: Change wall: the type and material planned listed, shut, "${CHANGE_PLANNED}": "${CHANGE_PLANNED_HINT}" (was: left out).`,
+    ],
+  },
   // A bridge's pictures on the screen kept past the budget (`bridgekit.ts`, `keep`): at the largest bake scale they were more than it.
   {
     n: 652,

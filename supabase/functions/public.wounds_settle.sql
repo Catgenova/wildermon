@@ -63,6 +63,6 @@ begin
   if kept = 0 and jsonb_array_length(p.wounds) > 0 then
     perform tell(p_world, p_uid, 'The last of what you were carrying has closed over.', 'event');
   end if;
-  if health <= 0 then perform player_die(p_world, p_uid); end if;
+  if health <= 0 then perform set_config('island.death', '{"kind": "bled"}', true); perform player_die(p_world, p_uid); end if;
   return true;
 end $function$

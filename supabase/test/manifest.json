@@ -1942,6 +1942,19 @@
     "why": "\"show that screen on death, with an indicator of how far each rune is from your corpse, or an option to respawn at your deed token or one you belong to\". A death is as it was (the spawn, whole, a grave where the body fell); the beat then offers where it fell and its own and member settlements. Each stone wakes it on a first join's ring; a settlement next to its token, the next tile when that one is built on; a stranger's settlement, a body that never died or stepped off the spawn, and a pick that is none of these are refused; stay, or never picking, is the spawn. Drawn in Chrome over the world: the five and the two settlements with their distances and pictures, keys kept in it, a refusal shown again with why."
   },
   {
+    "file": "supabase/test/deathchooser.ts",
+    "title": "Dying on a real island: the chooser, the death card, and a pick",
+    "shard": 4,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "DEATHCHOOSER_STRICT": "1"
+    },
+    "why": "\"still getting no prompt on where to spawn when I died, should be the ability to spawn at my settlement totem or a runestone of my choice\", and \"a summary card at death with how you died\". A body walking when a goblin kills it: the next word from the ground it fell on leaves it on the spawn, held (rpc_move, respawn_hold), and the page puts it there without taking the walk up; the beat shows the chooser on top with the five stones and its totem, the death card says the goblin, the killing blow among the last blows, where, the grave and when; the totem picked wakes it next to the token. Drowned standing in the sea in its grace: the chooser, drowned and the grace kept; a Runestone picked wakes it on a first join's ring. A step off the spawn after respawn_hold still withdraws the offer; an offer from an island before it shows where only."
+  },
+  {
     "file": "supabase/test/deathgrace.ts",
     "title": "A death in a new character's first 24 h played takes nothing",
     "shard": 6,

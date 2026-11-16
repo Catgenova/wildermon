@@ -15,6 +15,7 @@ begin
    where world_id = p_world and uid = c.keeper
    returning (stats->>'health')::double precision into v_h;
   if v_h <= 0 and not faith_undying(p_world, c.keeper) and not faith_second_life(p_world, c.keeper) then
+    perform set_config('island.death', jsonb_strip_nulls(jsonb_build_object('kind', 'bond', 'by', kind_name_at(c)))::text, true);
     perform player_die(p_world, c.keeper);
   end if;
   return p_pts * (1 - v_share);

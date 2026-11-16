@@ -22,10 +22,11 @@
  * Staying, a step, or a closed tab: the spawn, as before. The offer goes once
  * the body leaves that tile.
  *
- * A leaf, but for the stones: the chooser (`src/ui/respawn.ts`), the help and
+ * A leaf, but for the stones and the death card (`deathcard.ts`): the chooser (`src/ui/respawn.ts`), the help and
  * the defs dump read it; `supabase/test/respawnpick.ts` holds both sides to it.
  */
 import { hasRunestones, rings, RUNESTONES, stonePoint, type RunestoneId } from './runestones';
+import { deathIn, type Death } from './deathcard';
 
 /** What `rpc_respawn` is asked for a settlement: this, then its founder's id. */
 export const DEED_AT = 'deed:';
@@ -53,6 +54,8 @@ export interface Fallen {
   x: number;
   y: number;
   deeds: FallenDeed[];
+  /** How it died, for the card over the chooser (`deathcard.ts`); null or missing from an island before it. */
+  death?: Death | null;
 }
 
 /** One card of the chooser. */
@@ -115,5 +118,5 @@ export function fallenIn(v: unknown): Fallen | null {
     if (typeof e.id !== 'string' || typeof e.name !== 'string' || !num(e.x) || !num(e.y)) continue;
     deeds.push({ id: e.id, name: e.name, x: e.x, y: e.y, level: num(e.level) ? e.level : 1, own: e.own === true });
   }
-  return { x: o.x, y: o.y, deeds };
+  return { x: o.x, y: o.y, deeds, death: deathIn(o) };
 }

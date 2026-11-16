@@ -13,7 +13,9 @@
  *     not be changed from the menu, and choosing Change wall on it changed the wall above;
  *   * the island plans it on that storey's wall and says so in the log, the storey named;
  *   * the menu then has Build change first, open once the bill is in the pack, and Fit all builds it: the wall is the
- *     new one on the island and on the page.
+ *     new one on the island and on the page;
+ *   * the change planned is still in Change wall's list, shut, noted "planned" and pointing at Build change. It was
+ *     left out, so a player looking for Solid > Marble did not find it.
  *
  * Makes its own island, and takes it away again.
  */
@@ -22,7 +24,7 @@ import { join, resolve } from 'node:path';
 import { build } from 'esbuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { MATERIAL_BY_ID, SIDE_NAMES, WALL_TYPE_BY_ID, wallBill, type Side, type WallType } from '../../src/game/building';
-import { changeLine } from '../../src/game/gates';
+import { CHANGE_PLANNED, CHANGE_PLANNED_HINT, changeLine } from '../../src/game/gates';
 import type { Row } from './changewallmenu-page';
 import { bad, check, finish, psql } from './harness';
 
@@ -203,6 +205,11 @@ if (!options) {
       const after = await page('menu', HOUSE[0], HOUSE[1], c.side);
       const buildRow = after.find((r) => r.label.startsWith(`Build change (${where})`));
       check(`${c.name}: the menu has Build change`, !!buildRow, shown(after));
+      // The change planned stays in the list, shut, noted planned and pointing at Build change (`CHANGE_PLANNED`).
+      const plannedRow = after.find((r) => r.label === `Change wall (${where})`)?.children?.find((r) => r.label === typeName)
+        ?.children?.find((r) => r.label === matName);
+      check(`${c.name}: and Change wall → ${typeName} → ${matName} still listed, shut: "${CHANGE_PLANNED}", "${CHANGE_PLANNED_HINT}"`,
+        !!plannedRow && plannedRow.disabled && plannedRow.note === CHANGE_PLANNED && plannedRow.hint === CHANGE_PLANNED_HINT, JSON.stringify(plannedRow));
       psql(`${as}do $g$ begin ${Object.entries(wallBill(c.material, c.type).total).map(([id, n]) => `perform give(${W}, '${U}', '${id}', ${n}, 40);`).join(' ')} end $g$;`);
       await lay();
       const open = (await page('menu', HOUSE[0], HOUSE[1], c.side)).find((r) => r.label.startsWith(`Build change (${where})`));
