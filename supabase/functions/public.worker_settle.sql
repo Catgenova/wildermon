@@ -841,7 +841,7 @@ begin
         -- A Chestkit on its settlement: why nothing moved to a container named for it (`private.hoard_move`), asked
         -- only of one, which asked for it above.
         if kind = 'fetch' and v_site.post is null and c.around is null then
-          if v_hoard.why is not null then c.idle_why := v_hoard.why; end if;
+          if v_hoard.why is not null then c.idle_why := v_hoard.why; c.idle_what := v_hoard.what; end if;
         end if;
         -- All of it in reach worked and on its wait: the seconds till the soonest is back (`worker_wait_left`).
         if worker_wait_left(p_world, v_site.x, v_site.y, v_site.radius, kind) is not null then

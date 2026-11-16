@@ -424,6 +424,23 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Every container named for an item read, not only crates and stores (`20261120000108_named_containers_every_item.sql`, `hoard.ts`).
+  {
+    n: 651,
+    day: '2026-11-16',
+    lines: () => {
+      const line = SPECIES.magga.name;
+      const trash = furnitureDef('trash_crate').name.toLowerCase();
+      const wheels = listed(['cart', 'large_cart', 'wagon'].map((k) => furnitureDef(k).name.toLowerCase()));
+      return [
+        `Fixed: ${line}: moves items out of ${wheels} parked on the settlement (was: never). Not while hitched or driven; not one named for an item.`,
+        `Fixed: ${line}: moves items out of marked settlement stores (was: never).`,
+        `Fixed: ${line}: a ${trash} named for an item is a target for it (was: never filled); contents kept while so named.`,
+        `Fixed: ${line}: a name with spaces doubled inside, or an id made plural ("ancient_whetstones"), names its item (was: no item).`,
+        `Fixed: ${line} idle: a named container that takes none of the item: "${IDLE_LABEL.namedrefuses}", with the item and the container's refusal (was: "${IDLE_LABEL.namedfull}").`,
+      ];
+    },
+  },
   // The home pieces' jobs in their menus (`decorMenu.ts`).
   {
     n: 650,
