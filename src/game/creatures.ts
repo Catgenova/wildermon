@@ -6626,6 +6626,18 @@ export class Creatures {
         continue;
       }
       this.driverAt.delete(c.id);
+      // In the traces of one nobody drives: stood at its yoke, facing the way the vehicle points (`parkedSpot`).
+      if (cart && furnitureDef(cart.kind).vehicle) {
+        const team = cart.team ?? [];
+        const at = game.parkedSpot(cart, Math.max(0, team.indexOf(c.id)), Math.max(1, team.length));
+        c.x = at.x;
+        c.y = at.y;
+        c.dirX = at.fx;
+        c.dirY = at.fy;
+        c.moving = false;
+        this.place(c);
+        continue;
+      }
       const rider = c.riderUid ? game.roster.byUid(c.riderUid) : undefined;
       // On the ground or a storey up a wide staircase (`Game.rideRule`); never down a cellar.
       if (rider && rider.level >= 0) {

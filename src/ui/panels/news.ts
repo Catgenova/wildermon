@@ -433,6 +433,17 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A parked team at its yokes (`parkedSpot`), as a driven one is (`traceSpot`, `YOKE_SPOTS`).
+  {
+    n: 669,
+    day: '2026-11-16',
+    lines: () => {
+      const pairs = new Set((YOKE_SPOTS.wagon ?? []).map((q) => q[0])).size;
+      return [
+        `Fixed: a parked wagon's team: at its yokes, ${pairs} pairs, the pole pair and the leaders ahead, facing the way the wagon points (was: every one on the wagon's middle, crowded abreast).`,
+      ];
+    },
+  },
   // A wall claimed by a lower building's tile, two or more storeys over its top (`maxLevelsAround`, renderer).
   {
     n: 668,

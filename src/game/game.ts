@@ -9099,6 +9099,23 @@ export class Game {
    * one): abreast of one another, a pace and a half ahead of the shafts; on the vehicle where that is no ground to stand
    * on. For your own team (`haulVehicle`) and the team of a vehicle somebody else drives (`Creatures.walkLegs`).
    */
+  /** The way each vehicle was last driven on this screen, in world radians (`haulVehicle`), for its team parked. */
+  readonly vehicleHeadings = new Map<number, number>();
+
+  /**
+   * Where the one at yoke `i` of a parked vehicle's team stands, and the way it faces: at its yoke as when driven
+   * (`traceSpot`), the way the vehicle was last driven or else the way it was set down (`ACROSS_OF`, as it is drawn).
+   * The island stands a team in the traces at the vehicle's middle (`hitch_up`), every one on the same spot.
+   */
+  parkedSpot(f: PlacedFurniture, i: number, n: number): { x: number; y: number; fx: number; fy: number } {
+    const [ax, ay] = ACROSS_OF[f.facing ?? 's'];
+    const a = this.vehicleHeadings.get(f.id) ?? Math.atan2(ay, ax);
+    const [cx, cy] = furnitureCentre(f);
+    const fx = Math.cos(a), fy = Math.sin(a);
+    const [x, y] = this.traceSpot(cx, cy, fx, fy, i, n, f.kind);
+    return { x, y, fx, fy };
+  }
+
   traceSpot(cx: number, cy: number, fx: number, fy: number, i: number, n: number, kind?: string): [number, number] {
     // At its yoke, its neck in the bow, where the vehicle has yokes drawn on it (`YOKE_SPOTS`); else abreast, out ahead.
     const yoke = kind ? YOKE_SPOTS[kind]?.[i] : undefined;
@@ -9142,6 +9159,8 @@ export class Game {
     const len = Math.hypot(this.player.dirX, this.player.dirY) || 1;
     const fx = this.player.dirX / len;
     const fy = this.player.dirY / len;
+    // The way it was driven, kept for when it stands parked with its team still in (`parkedSpot`).
+    this.vehicleHeadings.set(f.id, Math.atan2(fy, fx));
     for (let i = 0; i < team.length; i++) {
       const c = team[i];
       [c.x, c.y] = this.traceSpot(cx, cy, fx, fy, i, team.length, f.kind);
