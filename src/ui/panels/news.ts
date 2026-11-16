@@ -53,6 +53,7 @@ import { SALE_DAYS, SALES_SHOWN } from '../../game/prices';
 import { CRAFT_TABS, craftTabOf, MAKES_SECTION, RECENT } from './craft';
 import { PREVIEW_FPS, PREVIEW_H, PREVIEW_W, STAGE_SECS } from '../craftpreview';
 import { CAMPFIRE_LOGS } from '../../render/kit/campfire';
+import { BAKE_STEPS } from '../../render/runestone';
 import { SACK_FULL } from '../../render/kit/sack';
 import { STANDING_A, WILDERMON_A } from '../../game/journal-a';
 import { LEVEL_REACH } from '../../render/levelmarks';
@@ -424,6 +425,14 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // A bridge's pictures on the screen kept past the budget (`bridgekit.ts`, `keep`): at the largest bake scale they were more than it.
+  {
+    n: 652,
+    day: '2026-11-16',
+    lines: () => [
+      `Fixed: bridges past zoom ${mult(BAKE_STEPS[BAKE_STEPS.length - 2])}: deck and parapet pieces missing, flickering.`,
+    ],
+  },
   // The home pieces' jobs in their menus (`decorMenu.ts`).
   {
     n: 650,
