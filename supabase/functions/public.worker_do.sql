@@ -123,15 +123,17 @@ begin
     return jsonb_build_object('def', 'log', 'count', logs, 'ql', made_ql, 'extra', tree.name);
 
   elsif kind = 'prune' then
-    -- A stage back, as under a sickle: the age and nothing else. It carries
-    -- nothing home.
+    -- A stage back, as under a sickle: the age, and a log of its kind home (`prune_logs`), as a player's prune gives.
     if here <> tile_id('Tree') then return null; end if;
     data := land_data(p_world, wx, wy);
+    select * into tree from tree_def where id = tree_species(data);
     select * into v_age from tree_age_def where id = tree_age(data);
     if v_age.pruned is null then return null; end if;
     perform land_set_data(p_world, wx, wy, tree_pack(tree_species(data), v_age.pruned));
     perform land_announce(p_world, wx, wy);
-    return null;
+    logs := least(prune_logs(), v_age.logs);
+    if logs <= 0 then return null; end if;
+    return jsonb_build_object('def', 'log', 'count', logs, 'ql', made_ql, 'extra', tree.name);
 
   elsif kind = 'fruit' then
     -- Off a bearing tree, as many as a person's hands would take: an old

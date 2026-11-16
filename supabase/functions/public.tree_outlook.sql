@@ -21,7 +21,8 @@ begin
   if not p_age.alive then
     v_out := v_out || ' Fell it before then for its logs.';
   elsif p_age.pruned is not null and v_next.id is not null and not v_next.alive then
-    v_out := v_out || ' Prune to keep it alive.';
+    v_out := v_out || ' Prune to keep it alive: +' || least(prune_logs(), p_age.logs)
+      || case when least(prune_logs(), p_age.logs) = 1 then ' log.' else ' logs.' end;
   end if;
   return v_out;
 end $function$

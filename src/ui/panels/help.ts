@@ -237,8 +237,8 @@ import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
 import { STUMBLE_SECS } from '../../game/fight';
 import { LANDING_STAND, RUNESTONES, SAFE_RING, START_GAP, START_SPARE, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_RANGE_STEP, TELE_REST_STEP, TELE_SLOW, telestoneRange, telestoneRest } from '../../game/runestones';
 import {
-  BURYABLE, BUSH_DEFS, groundRoll, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
-  TREE_DAWN_UTC, TREE_DEFS, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS,
+  BURYABLE, BUSH_DEFS, groundRoll, PRUNE_LOGS, pruneLogs, ROCK_VARIANTS, SLAB_VARIANTS, STEPS_BRICKS, STEPS_LEAST, STEPS_MOST, STEPS_PLANKS, STEPS_SLABS, STEPS_TWIST, TILE_DEFS, TileType,
+  TREE_AGES, TREE_DAWN_UTC, TREE_DEFS, WEAR_FALL, WEAR_MOST, WEAR_TRAIL, WEARS,
 } from '../../world/tiles';
 import { STEPS_BACK, stepsBack, STONE_DIFFICULTY, STONE_STEPS_BILL, TIMBER_DIFFICULTY, TIMBER_STEPS_BILL } from '../../game/steps';
 import { LAVENDER_RULE, ROSES_RULE } from '../../game/roses';
@@ -1860,6 +1860,8 @@ export function helpText(): string {
       ${REGIONS.filter((R) => R.treeless).map((R) => `<li>${capital(islandName(R.name))}: no trees grow or seed on their own.</li>`).join('')}
       <li>Spring flowers: ${FLOWER_KINDS.map(([family, kinds]) => `${family} on ${listed(kinds)}`).join('; ')}.</li>
       <li>A <b>sprout</b> (forestry) planted anywhere grows the tree.</li>
+      <li><b>Prune</b> (${ACTION_BY_ID.get('prune')?.skill}, ${ACTION_BY_ID.get('prune')?.tool}): ${listed(TREE_AGES.filter((a) => a.pruned !== null).map((a) => `${a.name.toLowerCase()} to ${TREE_AGES[a.pruned!].name.toLowerCase()}`))};
+      +${PRUNE_LOGS} log of the tree's kind${TREE_AGES.some((a) => a.pruned !== null && pruneLogs(a) === 0) ? `, none off a ${listed(TREE_AGES.filter((a) => a.pruned !== null && pruneLogs(a) === 0).map((a) => a.name.toLowerCase()))}` : ''}.</li>
       <li><b>${SPECIES.plucka.name}</b> on a settlement: picks bearing trees into the crate.</li>
       <li><b>Seasons</b>: ${TREES_BY_SEASON.join('; ')}. Out of season, <b>Pick fruit</b> gives nothing and names the next season; a plucka skips the tree;
       <b>Examine</b> gives its seasons and whether it is in season.</li>
@@ -3569,7 +3571,7 @@ export function helpText(): string {
       <li><b>${SPECIES.holla.name}</b>: carries <b>water</b> from the shore or a well into your barrels. Evolves: ${evolves('holla')}.</li>
       <li><b>${SPECIES.dowse.name}</b>: only over metal; on a settlement <b>${GATHER_VERB.nail}</b> at your anvils (<b>The settlement's hands</b>). Evolves: ${evolves('dowse')}.</li>
       <li><b>${SPECIES.sappa.name}</b>: <b>plants sprouts</b> where trees were felled.</li>
-      <li><b>${SPECIES.snedda.name}</b>: <b>prunes</b> trees whose next growth stage is dead; nothing else. Level: forestry. Evolves: ${evolves('snedda')}.</li>
+      <li><b>${SPECIES.snedda.name}</b>: <b>prunes</b> trees whose next growth stage is dead, ${PRUNE_LOGS} log of its kind a tree to your settlement stores; nothing else. Level: forestry. Evolves: ${evolves('snedda')}.</li>
       <li><b>${SPECIES.cobbe.name}</b>: <b>hod</b>: carries what a planned wall (any storey), a change planned on a wall (<b>Change wall</b>), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip: a wall or column standing on its storey, beside it; a floor, roof, staircase
       or ladder from the storey under it. Evolves: ${evolves('cobbe')}.</li>
@@ -3693,7 +3695,7 @@ export function helpText(): string {
       <li>In-place tasks handle that many a cycle: mender (most damaged items in your settlement stores); store, fire or press tasks (batches, while the makings last); butcher (carcasses);
       restorer (relics); glazer (pieces); ash raker (hearths raked, lye leached); brusher, milker or shearer, and dresser (your wildermon within ${TEND_REACH} tiles, with a bucket or dressing
       from the settlement stores for each).</li>
-      <li>A cycle still teaches one cycle's gain. No multiples: keeping watch, hunting, pruning, stump digging, scrubbing, tending hives, reading the ground, charging smelters and kilns, brewing.</li>
+      <li>A cycle still teaches one cycle's gain. No multiples: keeping watch, hunting, stump digging, scrubbing, tending hives, reading the ground, charging smelters and kilns, brewing.</li>
     </ul>
     <h4>Stage ${PERK_STAGE + 1} skills</h4>
     <ul>

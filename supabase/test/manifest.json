@@ -3504,5 +3504,11 @@
       "BRIDGEZOOM_STRICT": "1"
     },
     "why": "Reported: \"bridges flicker and glitch at any further zoom than 5x\". Past zoom 5 a bridge's pictures are baked at the largest scale, and those on the screen came to more than the bridge kit's budget, so each bake let go of one still on the screen: deck and parapet pieces left out and made again every frame. Drawn in Chrome: a marble bridge three lanes wide and a stone brick ramp, each meeting two buildings' storey floors, at zoom 4, 6 and the most on four turns, and wheeled in from 5 while dragged: settled, every still frame draws every piece from its own picture, the same pictures in the same places as the last, with the kept pictures past the budget."
+  },
+  {
+    "file": "supabase/test/prunelog.ts",
+    "title": "A prune gives a log of the tree's kind, and a pruner carries it home",
+    "shard": 6,
+    "why": "Asked for: pruning a tree gives 1 log of its kind, and a pruning wildermon brings it to the settlement stores. A player's prune of an old oak, a sapling's none, and a Saplingreach's log walked into the settlement's crate."
   }
 ]

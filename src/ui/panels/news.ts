@@ -90,7 +90,7 @@ import { DRIVING_LEARN, DRIVING_TOP, drivingPace, SAILING_LEARN, SAILING_TOP, sa
 import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } from '../../game/piers';
 import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_PATHS, LAVA_RADIUS, SERYLL_HEART } from '../../game/lava';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
-import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
+import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, PRUNE_LOGS, pruneLogs, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
 import { SEAM_GATE } from '../../game/skillgates';
 import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
@@ -436,6 +436,20 @@ export const NEWS: News[] = [
       const stairs = idleSays({ why: 'stairs', n: 4 }, 'hod');
       return [
         `Fixed: hod carriers, walls a storey up along an unfinished bridge's deck: in reach, fitted from the floor beside it (was: "${stairs}" every round).`,
+      ];
+    },
+  },
+  // A prune gives a log of the tree's kind, and a pruner carries it home (`PRUNE_LOGS`, `20261120000117_prune_gives_a_log.sql`).
+  {
+    n: 658,
+    day: '2026-11-16',
+    lines: () => {
+      const logs = (n: number): string => `${n} ${n === 1 ? 'log' : 'logs'}`;
+      const none = TREE_AGES.filter((a) => a.pruned !== null && pruneLogs(a) === 0).map((a) => a.name.toLowerCase());
+      return [
+        `New: Prune: +${logs(PRUNE_LOGS)} of the tree's kind, QL from forestry and sickle${none.length ? `; none off a ${listed(none)}` : ''}.`,
+        `New: ${SPECIES.snedda.name}: +${logs(PRUNE_LOGS)} of its kind a tree pruned, to your settlement stores; ${STAGE_LOADS[1]} loads a trip at evolution stage 2, ${STAGE_LOADS[2]} at 3.`,
+        `Changed: Examine on a tree to prune: "Prune to keep it alive: +${logs(PRUNE_LOGS)}."`,
       ];
     },
   },

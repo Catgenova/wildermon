@@ -5,7 +5,7 @@ import { MINE_JOB, outcropSays, OUTCROP_BY_ID, OUTCROP_USES } from './outcrops';
 import { OUTCROP_ACTIONS } from './outcropAction';
 import { GRASS_PER_CUT, MOSS_PER_CUT } from './limits';
 import { PROSPECT_HEAD, tryGain } from './learn';
-import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday } from '../world/tiles';
+import { BURYABLE, BUSH_DEFS, SLAB_BY_ITEM, SLAB_VARIANTS, TILE_DEFS, TREE_AGES, TREE_DEFS, TileType, bushSpecies, packTreeData, slabVariant, treeAge, treeSpecies, treeVariant, lastDawn, nextDawn, type TreeAge, LAWN_AFTER, MOWN_TODAY, MOWING, mownDays, mownToday, pruneLogs } from '../world/tiles';
 import { FLOWER_ACTIONS, groundSays } from './wildflowers';
 import { MOTE_ACTIONS, WATER_MOTE, WATER_MOTES_EACH } from './motes';
 import { hasRunestones, RUNESTONES, STONE_GUARDED, stoneGap, stoneGroundRefusal, stoneJobTiles, TELESTONE, TELESTONE_ACTIONS, telestoneSays } from './runestones';
@@ -430,7 +430,7 @@ export function treeOutlook(age: TreeAge, treesAt: number): string {
   const then = age.next === null ? 'gone' : TREE_AGES[age.next].name.toLowerCase();
   let out = ` Next age ${when}: ${then}.`;
   if (!age.alive) out += ' Fell it before then for its logs.';
-  else if (age.pruned !== null && age.next !== null && !TREE_AGES[age.next].alive) out += ' Prune to keep it alive.';
+  else if (age.pruned !== null && age.next !== null && !TREE_AGES[age.next].alive) out += ` Prune to keep it alive: +${pruneLogs(age)} ${pruneLogs(age) === 1 ? 'log' : 'logs'}.`;
   return out;
 }
 
@@ -2013,7 +2013,12 @@ export const ACTIONS: ActionDef[] = [
       // is still a tree: pruning is the crown's business, and a half-felled
       // tree pruned back is still half felled.
       g.world.setTile(t.x, t.y, TileType.Tree, packTreeData(treeSpecies(data), to.id));
-      g.logMsg(`Pruned ${def.name.toLowerCase()}: ${age.name.toLowerCase()} to ${to.name.toLowerCase()}.`, 'event');
+      // And a log of its kind, as felling gives one (`PRUNE_LOGS`), none off a sapling.
+      const logs = pruneLogs(age);
+      const ql = g.productQl('forestry', g.toolQl('sickle'));
+      if (logs > 0) g.gather('log', { count: logs, ql, extra: def.name });
+      g.logMsg(`Pruned ${def.name.toLowerCase()}: ${age.name.toLowerCase()} to ${to.name.toLowerCase()}.`
+        + (logs > 0 ? ` ${logs} ${logs === 1 ? 'log' : 'logs'}, QL ${ql.toFixed(1)}.` : ''), 'event');
     },
   },
   {
