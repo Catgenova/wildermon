@@ -1497,6 +1497,12 @@
     "why": "Four flights in a line, each one's head the next one's foot: a beast stepped off a flight only at its head or its foot, so it went on up to the top storey every time, never onto a storey between, and never down off the top. Bastiondrakes stood on the ground saying no stairs up to storey 4 beside the staircase."
   },
   {
+    "file": "supabase/test/workerreach.ts",
+    "title": "A worker reaches every storey tile the player reaches, by the player's own step rule, and works what it reaches",
+    "shard": 3,
+    "why": "Solara Manor's east building's storey 4 is reached over the bridge from the west one, its own last flight only planned: a worker's reach counted the finished flights of the tile's own building, so its hod carriers said no stairs up to storey 4 about work the player walks to, and a storey with a flight on every storey under it but no way between was handed out and refused every round. Every tile a storey up the player reaches, on the manor and an annex of the other ways up (a flight's side, the building next door, ramps), the worker's way and reach find; a ladder only, neither."
+  },
+  {
     "file": "supabase/test/helpsearch.ts",
     "title": "The help's search puts the sections with it in their heading first",
     "shard": 3,

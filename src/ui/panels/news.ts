@@ -439,6 +439,23 @@ export const NEWS: News[] = [
       `Changed: Change wall: the type and material planned listed, shut, "${CHANGE_PLANNED}": "${CHANGE_PLANNED_HINT}" (was: left out).`,
     ],
   },
+  // A worker's reach a storey up is its own way there, by the player's step (`20261120000114_a_worker_reaches_what_the_player_reaches.sql`).
+  {
+    n: 655,
+    day: '2026-11-16',
+    lines: () => {
+      const stairs = idleSays({ why: 'stairs', n: 4 }, 'hod');
+      return [
+        `Fixed: settlement workers, storeys reached over a bridge from another building: in reach (was: "${stairs}").`,
+        `Fixed: settlement workers, storeys reached across the floor of the building next door: in reach (was: "${stairs}").`,
+        `Fixed: hod carriers, work on a storey with a staircase on every storey under it and no way between them: not taken (was: taken, then "${stairs}" every round).`,
+        'Changed: settlement workers on a flight: on from any side with no wall; off onto its storey at any side with a floor; down at its foot, or at a side with no floor (was: on at its foot, off at its head).',
+        'Added: settlement workers, ramp bridges: storey to another storey, and the ground to a storey.',
+        `Changed: hod carriers, a wall a storey up with no floor on either side at its storey: fitted from a floor on the next tile along it (was: "${stairs}").`,
+        'Unchanged: settlement workers, ladders: not climbed.',
+      ];
+    },
+  },
   // A cleared lair's hoard chest, and a lair nobody picks up or names (`20261120000113_hoard_chest_in_a_cleared_lair.sql`, `lairpiece.ts`).
   {
     n: 653,

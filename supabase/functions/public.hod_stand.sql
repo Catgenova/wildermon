@@ -13,7 +13,12 @@ begin
   if p_kind = 'wall' then
     if frame_stands(p_world, p_x, p_y, p_level) then x := p_x; y := p_y; l := p_level; return next; return; end if;
     x := p_x - case when p_dir = 'v' then 1 else 0 end; y := p_y - case when p_dir = 'h' then 1 else 0 end;
-    if frame_stands(p_world, x, y, p_level) then l := p_level; return next; end if;
+    if frame_stands(p_world, x, y, p_level) then l := p_level; return next; return; end if;
+    for d in 1..4 loop
+      x := p_x + case when p_dir = 'h' then (array[-1, 1, -1, 1])[d] else (array[0, 0, -1, -1])[d] end;
+      y := p_y + case when p_dir = 'h' then (array[0, 0, -1, -1])[d] else (array[-1, 1, -1, 1])[d] end;
+      if frame_stands(p_world, x, y, p_level) then l := p_level; return next; return; end if;
+    end loop;
     return;
   end if;
   v_l := case when p_kind = 'column' then p_level else p_level - 1 end;
