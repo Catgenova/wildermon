@@ -344,7 +344,7 @@ import {
   STONE_LANTERN_REACH, SUNDIAL, WOVEN_RUG,
 } from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
-import { PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
+import { ASHORE_KINDS, GUIDE_START, PATH_CRATE, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE, WILD_NEAR } from '../../game/path';
 import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
@@ -447,6 +447,18 @@ export const NEWS: News[] = [
         `Changed: idle hod carriers, build gate card: "${idleSays(GLASS_GATE_IDLE, 'hod', null, undefined, undefined, glass.level - 10)}" (was: "${glassGateCardWas()}").`,
       ];
     },
+  },
+  // The kinds every field guide starts with seen, and a wild one near (`GUIDE_START`, `WILD_NEAR`, `20261120000128_sapgnaw_known_from_the_start.sql`).
+  {
+    n: 664,
+    day: '2026-11-16',
+    lines: () => [
+      `Fixed: Field guide: seen from the start, every player: the ${GUIDE_START.length} Guiding Light kinds to track or tame, `
+        + `${listed(GUIDE_START.map((id) => SPECIES[id].name))}; Track on their pages (was: not seen until one was in sight; Track refused).`,
+      `New: first coming ashore: a wild ${listed(ASHORE_KINDS.map((id) => SPECIES[id].name))} within ${WILD_NEAR} tiles, if none is.`,
+      `New: Guiding Light: on reaching Track, a tame step or a taming detour's step: its kind marked seen; a wild one within ${WILD_NEAR} tiles, if none is. Once a step.`,
+      `New: Guiding Light supply: on reaching a tame step or a taming detour's step, ${itemDef(PATH_CRATE).name.toLowerCase()} ×${PATH_CRATES} each, short of the empty ones in your pack. Issued. Once a step.`,
+    ],
   },
   // A hod carrier names the build gate over work its stores have pieces for, and stock only what they lack
   // (`20261120000126_hod_names_its_build_gate.sql`, `Game.hodGatedBuild`, `hodGate`).

@@ -82,6 +82,10 @@ begin
         tally_at = now()
       where uid = me and world_id = v_world
         and not (coalesce(ticked, '[]'::jsonb) @> v_ticked);
+    -- A step of the Guiding Light ticked just now: a wild one of the next one's kind near you (`private.thepath_stock`).
+    if found and exists (select 1 from jsonb_array_elements_text(v_ticked) t where t like 'path:%') then
+      perform private.thepath_stock(v_world, me);
+    end if;
   end if;
   for r in select world_id from player
     where uid = me and world_id = v_world and act is not null and act_ends <= now()

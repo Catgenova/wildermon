@@ -618,7 +618,8 @@ begin
   insert into said select 'WILD', (select count(*) from creature where world_id = w and id = (select wild from wld)) || '|'
       || coalesce((select enemy::text from creature where world_id = w and id = (select fighter from wld)), '-');
   insert into said select 'CORPSE', string_agg(extra, ',') from item where world_id = w and def = 'corpse';
-  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u;
+  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u
+    and species <> all (guide_start()); -- what a book starts with (guide_begin) aside
   insert into said select 'STUD', string_agg(species || ':' || stat || ':' || value || ':' || name, ',' order by species, stat) from bred_record where world_id = w;
 end $t$;
 select k || '=' || v from said order by k;
@@ -688,7 +689,8 @@ begin
   insert into said select 'WILD', (select count(*) from creature where world_id = w and id = (select wild from wld)) || '|'
       || coalesce((select enemy::text from creature where world_id = w and id = (select fighter from wld)), '-');
   insert into said select 'CORPSE', string_agg(extra, ',') from item where world_id = w and def = 'corpse';
-  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u;
+  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u
+    and species <> all (guide_start()); -- what a book starts with (guide_begin) aside
   insert into said select 'STUD', string_agg(species || ':' || stat || ':' || value || ':' || name, ',' order by species, stat) from bred_record where world_id = w;
 end $t$;
 select k || '=' || v from said order by k;
@@ -760,7 +762,8 @@ begin
   insert into said select 'WILD', (select count(*) from creature where world_id = w and id = (select wild from wld)) || '|'
       || coalesce((select enemy::text from creature where world_id = w and id = (select fighter from wld)), '-');
   insert into said select 'CORPSE', string_agg(extra, ',') from item where world_id = w and def = 'corpse';
-  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u;
+  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u
+    and species <> all (guide_start()); -- what a book starts with (guide_begin) aside
   insert into said select 'STUD', string_agg(species || ':' || stat || ':' || value || ':' || name, ',' order by species, stat) from bred_record where world_id = w;
 end $t$;
 select k || '=' || v from said order by k;
@@ -830,7 +833,8 @@ begin
   insert into said select 'WILD', (select count(*) from creature where world_id = w and id = (select wild from wld)) || '|'
       || coalesce((select enemy::text from creature where world_id = w and id = (select fighter from wld)), '-');
   insert into said select 'CORPSE', string_agg(extra, ',') from item where world_id = w and def = 'corpse';
-  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u;
+  insert into said select 'GUIDE', string_agg(species || ':' || tamed, ',' order by species) from guide where world_id = w and uid = u
+    and species <> all (guide_start()); -- what a book starts with (guide_begin) aside
   insert into said select 'STUD', string_agg(species || ':' || stat || ':' || value || ':' || name, ',' order by species, stat) from bred_record where world_id = w;
   insert into said select 'GONE7', (select count(*) from species_def where id = 'rootle') || '|' || (select count(*) from wild_table where species = 'rootle')
       || '|' || (select count(*) from species_butcher where species = 'rootle') || '|' || (select count(*) from species_diet where species = 'rootle')

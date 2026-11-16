@@ -53,7 +53,7 @@ import { Roster } from './roster';
 import { runeGateLights } from './runegate';
 import { GameEmitter, isTalk, TALK_LOG, type LogEntry, type LogKind } from './events';
 import { BadgeBook } from './badges';
-import { bagTake, DEED_DECAY, describeWith, foldInto, foodFill, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
+import { bagTake, DEED_DECAY, describeWith, foldInto, groundDecayRate, Inventory, ITEM_DEFS, itemName, type Item, markOf, rarityOf, rarityStep, itemDef, sameMark, sameStack, spendOut, unmendable, unrestored } from './items';
 import { ENCHANTERS_PLINTH, ENCHANTMENTS, furnaceBurn, moreSaid, NETMENDER_WEAR, swingEnchant, wornEnchant, type Enchant, type EnchantEffect } from './enchant';
 import { BASE_SPEED, CARRY_CRAWL, CLIMB_LEARN, CLIMB_LEARN_FROM, CLIMB_LEARN_STEEP, CLIMB_PER_LEVEL, groundStep, MAX_STAND, MAX_STEP, pathOptions, Player, readPlayer, type LiftRule, standsOn, walkKey, SWIM_DEPTH, SWIM_SPEED } from './player';
 import { findPath } from '../world/pathfinding';
@@ -68,6 +68,10 @@ import { ALL_GOALS } from './journal';
 import { journalRulesA } from './journal-a';
 import * as creatureRules from './creatures';
 import * as guideRules from './guide';
+import { startGuide } from './path';
+// The kit's quality and the food given with it, in a module the Guiding Light reads without this one (`kit.ts`).
+import { KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT } from './kit';
+export { KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT };
 import * as aroundRules from './around';
 import * as postRules from './posts';
 import { PATH_TICK, type PathDoor, type PathSite, type PathState } from './pathstate';
@@ -654,9 +658,8 @@ export { QL_TOP };
  * cannot be improved, and it stays on the body when you die (`bury`); a kit
  * tool you hold no issued copy of is given again when you come ashore or wake
  * (`starter_kit`). Copper heads on pine handles, the poorest of everything.
- * Not the cooking vessels (`KIT_LEFT_OUT`).
+ * Not the cooking vessels (`KIT_LEFT_OUT`). Its quality is `KIT_QL` (`kit.ts`).
  */
-export const KIT_QL = 20;
 /** Tools the island asks for that the kit does not hold: the frying pan and the clay vessels. */
 export const KIT_LEFT_OUT: readonly string[] = ['frying_pan', 'clay_bowl', 'clay_pot', 'clay_jar'];
 export const STARTER_KIT: ReadonlyArray<readonly [string, number, string]> = [
@@ -683,14 +686,6 @@ export const STARTER_KIT: ReadonlyArray<readonly [string, number, string]> = [
   ['quern', KIT_QL, ''],
   ['water_skin', 30, ''],
 ];
-/**
- * Food given with the kit on a first coming ashore, beside the stake (`starter_kit`): one full food bar's worth at
- * `KIT_QL`, as many as Eat takes to fill it from empty (`foodFill`). Not issued: eaten, traded, buried like any food,
- * and not given again on coming ashore or waking (the kit's tools are). Cheese: nothing rots in a pack, and on the
- * ground it lasts a day.
- */
-export const STARTER_FOOD = 'cheese';
-export const STARTER_FOOD_COUNT = Math.ceil(1 / foodFill(STARTER_FOOD, KIT_QL));
 /** The quality a tool in the kit comes ashore at, for the text that says why to better it. */
 export const kitQl = (id: string): number => STARTER_KIT.find(([k]) => k === id)?.[1] ?? 0;
 
@@ -837,9 +832,10 @@ export class Game {
   /**
    * The field guide: every kind with a page, and which of them you have seen,
    * tamed and bred (`guide.ts`). Alone it is this side's and goes in the save;
-   * on an island it is the island's, and this holds what the island has said.
+   * on an island it is the island's, and this holds what the island has said. It starts with `GUIDE_START` (`path.ts`) seen,
+   * as the island's book does from the join (`guide_begin`).
    */
-  readonly guide = new FieldGuide();
+  readonly guide: FieldGuide = startGuide();
   /**
    * Who to tell about a kind that has just come into view, on an island,
    * where the book is kept over there and a sighting is only one once the

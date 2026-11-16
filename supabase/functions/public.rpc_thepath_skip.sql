@@ -22,5 +22,6 @@ begin
          select distinct s from jsonb_array_elements_text(v->'skip') s where s <> p_step
          union select p_step where p_skip) u(s)))
     where world_id = p_world and uid = me;
+  perform private.thepath_stock(p_world, me);
   return thepath_said(p_world, me);
 end $function$

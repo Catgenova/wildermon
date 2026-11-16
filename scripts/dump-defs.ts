@@ -276,7 +276,7 @@ import {
 } from '../src/game/vineyard';
 import { CELLAR_AGEING, keepsQl } from '../src/game/ageing';
 import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY, VESP_REST } from '../src/game/bees';
-import { ANVIL_LUMPS, PATH_CLAY, PATH_DETOURS, PATH_FISH, PATH_FORAGE, PATH_KINDS, PATH_SITE, PATH_SKILLED, PATH_STEPS, PATH_SURE, PATH_TAMES, SMELTER_BRICKS, SMELTER_MORTAR } from '../src/game/path';
+import { ANVIL_LUMPS, ASHORE_KINDS, GUIDE_START, PATH_CRATE, PATH_CRATES, WILD_NEAR, PATH_CLAY, PATH_DETOURS, PATH_STOCKS, PATH_FISH, PATH_FORAGE, PATH_KINDS, PATH_SITE, PATH_SKILLED, PATH_STEPS, PATH_SURE, PATH_TAMES, SMELTER_BRICKS, SMELTER_MORTAR } from '../src/game/path';
 import { UPGRADE_WORKERS } from '../src/game/deed';
 
 const q = (v: unknown): string => {
@@ -3368,6 +3368,15 @@ for (const [fn, v] of [
 out.push(`create or replace function thepath_steps() returns text[] language sql immutable as $fn$ select ${arr(PATH_STEPS.map((s) => s.id))} $fn$;`);
 out.push(`create or replace function thepath_detours() returns text[] language sql immutable as $fn$ select ${arr(PATH_DETOURS.map((s) => s.id))} $fn$;`);
 out.push(`create or replace function thepath_kinds() returns text[] language sql immutable as $fn$ select ${arr([...PATH_KINDS])} $fn$;`);
+/* The kinds every body's field guide starts with marked seen (`GUIDE_START`), marked at the join (`guide_begin`); and those a wild one of is put near it (`ASHORE_KINDS`). */
+out.push(`create or replace function guide_start() returns text[] language sql immutable as $fn$ select ${arr([...GUIDE_START])} $fn$;`);
+out.push(`create or replace function ashore_kinds() returns text[] language sql immutable as $fn$ select ${arr([...ASHORE_KINDS])} $fn$;`);
+/* How near a wild one of a kind to track or tame is put down (`WILD_NEAR`), and the Path's steps that put one (`PATH_STOCKS`). */
+out.push(`create or replace function wild_near() returns int language sql immutable as $fn$ select ${WILD_NEAR} $fn$;`);
+out.push(`create or replace function thepath_crate() returns text language sql immutable as $fn$ select ${q(PATH_CRATE)} $fn$;`);
+out.push(`create or replace function thepath_crates() returns int language sql immutable as $fn$ select ${PATH_CRATES} $fn$;`);
+out.push(`create or replace function thepath_stocks() returns table (id text, species text, beside text) language sql immutable as $fn$ select * from (values ${
+  PATH_STOCKS.map(([id, sp, at]) => `(${q(id)}, ${q(sp)}, ${q(at)})`).join(', ')}) v (id, species, beside) $fn$;`);
 out.push(`create or replace function thepath_tames() returns table (step text, species text) language sql immutable as $fn$ select * from (values ${
   PATH_TAMES.map(([step, sp]) => `(${q(step)}, ${q(sp)})`).join(', ')}) v (step, species) $fn$;`);
 for (const [fn, v] of [

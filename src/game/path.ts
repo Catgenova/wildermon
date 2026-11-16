@@ -9,7 +9,8 @@
  * What only this side shows, and the island never needs: the labels, the arrows and which step is current.
  */
 import { FIRST_TAME_SAYS, firstTameSure } from './firsttame';
-import { KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT, type Game } from './game';
+import type { Game } from './game';
+import { KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT } from './kit';
 import { ACTION_BY_ID, foundingRefusal } from './actions';
 import { layingBill, PLAN_TOOL } from './buildActions';
 import { FIRE_COST } from './campfire';
@@ -21,7 +22,7 @@ import { BOTANIZE_TABLE, FORAGE_TABLE } from './forage';
 import { fruitSeason, fruitsIn } from './fruiting';
 import { foodFill, itemDef } from './items';
 import { boundKey, defaultKey } from './keybinds';
-import { whereItLives } from './guide';
+import { FieldGuide, whereItLives } from './guide';
 import { MATERIAL_BY_ID } from './building';
 import { FISH } from './fishing';
 import { AROUND_MOST } from './around';
@@ -694,6 +695,43 @@ export const PATH_DETOUR_BY_ID = new Map(PATH_DETOURS.map((s) => [s.id, s]));
 /** The tame steps and their kinds, which a supply may be handed out for. */
 export const PATH_TAMES: ReadonlyArray<readonly [string, string]> = PATH_STEPS.filter((s) => s.tame && s.id !== 'track' && s.id !== 'assign')
   .map((s) => [s.id, s.tame as string] as const);
+/**
+ * The kinds every body's field guide starts with marked seen, by species id: every kind a step or a detour asks you to
+ * track or tame (its `tame`), so Track takes each from the first minute. Asked for: "players are not starting the game
+ * with Saginaw discovered in the field guide, so they cant track him", and "Make sure for those that already populate
+ * as seen in the guide". The island's `guide_start` (the defs), marked at the join by `guide_begin`.
+ */
+export const GUIDE_START: readonly string[] = [...new Set([...PATH_STEPS, ...PATH_DETOURS].flatMap((s) => (s.tame ? [s.tame] : [])))];
+/** A new body's book: each of `GUIDE_START` seen, nothing else. */
+export const startGuide = (): FieldGuide => FieldGuide.fromJSON({ seen: [...GUIDE_START], tamed: [], bred: [] });
+
+/**
+ * How near a wild one of a kind you are to track or tame is put down, in tiles, where none of that kind, wild, is this
+ * near already: each of `ASHORE_KINDS` as a new body comes ashore, and a step's or detour's kind as it comes up
+ * (`PATH_STOCKS`). The island's `wild_near`, put by `private.wild_near_put`.
+ */
+export const WILD_NEAR = 12;
+/** The kinds a wild one of is put near a new body as it comes ashore: the Track step's. The island's `ashore_kinds`. */
+export const ASHORE_KINDS: readonly string[] = PATH_STEPS.filter((s) => s.id === 'track' && s.tame).map((s) => s.tame as string);
+
+/**
+ * The steps and detours whose kind is put down near you as it comes up (`WILD_NEAR`, the island's
+ * `private.thepath_stock`), as [its id, the kind, the step it comes up with]: Track's and each tame step's, at the step
+ * itself; each taming detour's, at the step it is beside. Not the assign step's: its kind is yours by then.
+ */
+export const PATH_STOCKS: ReadonlyArray<readonly [string, string, string]> = [
+  ...PATH_STEPS.filter((s) => s.tame && s.id !== 'assign').map((s) => [s.id, s.tame as string, s.id] as const),
+  ...PATH_DETOURS.filter((d) => d.tame).map((d) => [d.id, d.tame as string, d.beside] as const),
+];
+/**
+ * The item a second wildermon is tamed into while one follows you (`tameRoomRefusal`, the island's
+ * `tame_room_refusal`), and how many a tame step or taming detour hands out as it comes up, to a body carrying fewer
+ * empty ones than the steps coming up with it ask for (the island's `private.thepath_stock`), once a step: one, since
+ * each asks for one of its kind and a crate is taken only by a tame that takes (`shutIn`, `crate_shut_in`), never by a
+ * failed offering or a catch that slips. Issued, as the supply is.
+ */
+export const PATH_CRATE = 'creature_crate';
+export const PATH_CRATES = 1;
 /** Every skill the Path trains, steps and detours. */
 export const PATH_SKILLS: readonly string[] = [...new Set([...PATH_STEPS, ...PATH_DETOURS].flatMap((s) => s.skills ?? []))];
 

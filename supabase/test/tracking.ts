@@ -35,7 +35,8 @@ import { psql, check, finish } from './harness';
 
 const KIND = 'sedra';
 const DEF = SPECIES[KIND];
-const OTHER = 'rabba';
+// Not a kind every book starts with (`GUIDE_START`): one not seen.
+const OTHER = 'woola';
 const MONSTER = Object.values(SPECIES).find((d) => d.monster)!;
 const [STAGE1, STAGE2] = DEF.stages!.map((s) => s.name);
 

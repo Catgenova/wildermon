@@ -47,6 +47,7 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import {
   EVOLVE_AT, footing, HERD_REACH, levelSkill, PULL_DEFAULT, seasonSays, SPECIES, WATER_RANGE, WILD_RANGE, type Creature, type SpeciesDef,
 } from '../../src/game/creatures';
+import { GUIDE_START } from '../../src/game/path';
 import { psql, ok, bad, check } from './harness';
 import { HYBRID_HARDY } from '../../src/game/hybridlist';
 /** A Woolabee's level skill, which sets its stage (`creatureLevel`): a skill it does not level by sets none. */
@@ -251,7 +252,7 @@ wildDam.due = game.time;
 game.creatures.giveBirth(game, wildDam);
 check('and one born to a dam that is nobody\'s does not', !game.guide.bred.has('sedra') && !game.guide.seen.has('sedra'), sorted(game.guide.bred));
 
-check('the counts over the index are the book\'s', countsLine(game.guide) === `Seen 4 of ${ENTRIES.length} · Tamed 2 of ${KEEPABLE.length} · Bred 1 of ${KEEPABLE.length}`,
+check('the counts over the index are the book\'s, the kinds it starts with among them', countsLine(game.guide) === `Seen ${new Set([...GUIDE_START, 'woola', 'rabba', 'vola', 'cudda']).size} of ${ENTRIES.length} · Tamed 2 of ${KEEPABLE.length} · Bred 1 of ${KEEPABLE.length}`,
   countsLine(game.guide));
 
 // One at its second stage in view marks its stage's page seen as well, said as its stage.
@@ -277,7 +278,8 @@ const back = await unpack(await packLand(game), JSON.parse(JSON.stringify(packWo
 check('the book goes through a save and comes back', !!back && JSON.stringify(back.guide.toJSON()) === JSON.stringify(game.guide.toJSON()),
   JSON.stringify(back?.guide.toJSON()));
 const old = await unpack(await packLand(game), { ...(JSON.parse(JSON.stringify(packWorld(game))) as object), guide: undefined });
-check('and a save from before there was a book opens on an empty one', !!old && old.guide.seen.size === 0);
+check('and a save from before there was a book opens on a new one: the kinds it starts with, seen', !!old && sorted(old.guide.seen) === [...GUIDE_START].sort().join()
+  && !old.guide.tamed.size && !old.guide.bred.size, sorted(old?.guide.seen ?? []));
 
 // On an island: handed over, and only what the island says goes in the book.
 const isle = Game.create(4242);
