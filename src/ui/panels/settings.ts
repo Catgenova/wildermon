@@ -632,6 +632,14 @@ export class SettingsPanel {
       },
     );
     add(
+      'Crafting preview',
+      'The crafting window\'s pane drawing what a recipe makes. Off: no pane; nothing drawn.',
+      () => game.settings.craftPreview,
+      (v) => {
+        game.settings.craftPreview = v;
+      },
+    );
+    add(
       'Keep rare materials out of crafting',
       `Crafting never auto-picks a ${rareWords} stack. Still used when chosen: right-click the stack, or pick it from a station menu.`,
       () => game.settings.spareRare,

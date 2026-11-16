@@ -137,6 +137,8 @@ export const SETTING_DEFAULTS = {
   animations: 'on' as Animations,
   /** Under the frame rate, the milliseconds a frame spends drawing each layer (`Timings`). */
   timings: false,
+  /** The crafting window's preview pane (`craftpreview.ts`): off, no pane and nothing drawn. */
+  craftPreview: true,
   /** The Path's line at the top of the screen folded to its step number (`src/ui/pathstrip.ts`). */
   pathFolded: false,
   /** A card in the corner each time a Path step ticks: what was done, and the next step's how and why (`src/ui/pathcard.ts`). */

@@ -433,6 +433,14 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The crafting window's preview pane, off in Settings (`craftPreview`).
+  {
+    n: 667,
+    day: '2026-11-16',
+    lines: () => [
+      'New: Settings, Crafting: Crafting preview. Off: no preview pane in the crafting window; nothing drawn.',
+    ],
+  },
   // A tamed wildermon's keeper by name (`ownerOf`, `20261120000132_keeper_named.sql`).
   {
     n: 666,

@@ -178,6 +178,8 @@ export class CraftPanel {
   private pointed: string | null = null;
   private pointing: string | null = null;
   private pointTimer = 0;
+  /** The preview pane turned off in Settings (`craftPreview`): gone from the window, nothing drawn. */
+  private previewOff = false;
   /** The preview was stopped by the window shutting. */
   private shut = false;
   /** What each recipe would be made of now, as its row says (`RecipeStatus.material`), from the last draw. */
@@ -386,8 +388,17 @@ export class CraftPanel {
       }
       return;
     }
+    // The pane turned off or on in Settings: gone, and nothing drawn; or back, showing what is chosen.
+    const off = !this.game.settings.craftPreview;
+    if (off !== this.previewOff) {
+      this.previewOff = off;
+      this.previewStrip.style.display = off ? 'none' : '';
+      if (off) this.preview.stop();
+      else this.showPreview();
+    }
     // Opened again: what was shown, from the start.
-    if (this.shut) {
+    if (off) this.shut = false;
+    else if (this.shut) {
       this.shut = false;
       this.showPreview();
     } else this.preview.wake();
@@ -596,6 +607,7 @@ export class CraftPanel {
 
   /** Show what the recipe pointed at, else the one chosen, makes, in what its row says it would be made of; or nothing. */
   private showPreview(): void {
+    if (this.previewOff) return;
     const id = this.pointed ?? this.chosen;
     const r = id && this.win.isOpen ? RECIPE_BY_ID.get(id) : undefined;
     const what: PreviewOf | null = r ? {
