@@ -19,7 +19,7 @@ AS $function$
   select g.kind, g.id, greatest(abs(w.x - p_cx), abs(w.y - p_cy))::int
     from work w
     cross join lateral (select b.kind, b.id from hod_build_gates(p_world, w.kind, w.level, w.dir, w.x, w.y) b
-                         where worker_level(c, b.skill) < b.level
+                         where creature_level(c.skills, c.species) < b.level
                          order by b.ord limit 1) g
    where exists (select 1 from jsonb_each_text(w.needed) e where e.value::int > 0 and e.key in (select hv.def from have hv))
      -- On the ground, or a floor of storey 1, always reached: the reach of the whole range only for work above.

@@ -91,7 +91,7 @@ import { deckBill, metres, PIER_CLEAR, PIER_DROP, PIER_WALL_DROP, PIER_WATER } f
 import { COOLING_DRAUGHT, DRAUGHT_DROP, DRAUGHT_FILL, DRAUGHT_SECS, HEAT_BURN, HEAT_DRAIN, HEAT_FILL, HEAT_ICE, HEAT_NEAR, HEAT_SCALE, LAVA_BAND, LAVA_BURN, LAVA_CELL, LAVA_DESIGNS, LAVA_HEART, LAVA_PATHS, LAVA_RADIUS, SERYLL_HEART } from '../../game/lava';
 import { COIN_FIND_ONE_IN, COIN_FINDS_A_DAY } from '../../game/forage';
 import { BURYABLE, BUSH_DEFS, ISLAND_FRUIT, PRUNE_LOGS, pruneLogs, ROCK_VARIANTS, TILE_DEFS, TileType, TREE_AGES, TREE_DAWN_UTC, TREE_DEFS } from '../../world/tiles';
-import { SEAM_GATE } from '../../game/skillgates';
+import { gateOf, SEAM_GATE } from '../../game/skillgates';
 import { OWN_FRUIT_SHARE, REGIONS } from '../../world/regions';
 import { TREASURE_TIERS } from '../../game/treasure';
 import { ISLAND_ELEMENT, MOTES_LEAST, MOTES_MOST, MOTES_MOST_AT, MOTES_STEP, SEASON_ELEMENT, SWIRL_DARK, SWIRL_LIGHT, SWIRL_SEASON, SWIRLS_A_DAY } from '../../game/motes';
@@ -228,7 +228,7 @@ import { DARK_WALK, DARK_WORK, NIGHT_EYES_FROM, TRACK_AWARE } from '../../game/l
 import { KNACK_BY_LEARNING, KNACK_GO, KNACK_ODDS } from '../../game/titles';
 import { ALL_GOALS, JOURNAL } from '../../game/journal';
 import { ISLAND_GOALS, TRADE_GOALS, WILDERMON_GOALS_C } from '../../game/journal-c';
-import { IDLE_WANTS, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
+import { IDLE_WANTS, type Idle, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { IDLE_LABEL } from '../../game/workstats';
 import { NAME_MAX } from '../../game/naming';
 import { type GatherKind, bushVineSays, CULL_RANGE, COMPANION_SIGHT, FORMER_NAME, HUNT_REST, kindNameOf, REMOVED_KINDS, HEARTH_FULL, HOME_LEG, HOME_SLACK, REED_LEVELS, ringKeepsOut, SPECIES, WILD_RESET_DAYS, WILD_SPECIES, WILD_STAY } from '../../game/creatures';
@@ -427,6 +427,10 @@ const SCRUBS_LATER = new Set(['scrub_wall_paint', 'scrub_floor_paint']);
 /** The seams as they are cut into the rock (`seams/runecut.ts`), named as a list says them. */
 const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
+/** A hod carrier idle at glass building's gate, six rings out (663, 665). */
+const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] };
+/** Its card while a hod carrier's gates read its level in the gate's skill, carpentry 1 (663 to 665): any other worker's gate card. */
+const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
   // A tamed wildermon's keeper by name (`ownerOf`, `20261120000132_keeper_named.sql`).
@@ -437,6 +441,21 @@ export const NEWS: News[] = [
       'New: tamed wildermon: owner shown, yours and anybody\'s, online or not: after its name over it ("Bastiondrake · catgenova"); "Owner: catgenova" on hover, in its menu, '
         + 'on Examine and on a wildermon crate with it in. Settlement workers, companions, mounts and teams in the traces alike. Wild ones: none.',
     ],
+  },
+  // A hod carrier's build gates read its level, whatever the gate's skill (`20261120000130_hod_gated_by_level.sql`,
+  // `hodMay`, `hodGate`, `worker_build_open`).
+  {
+    n: 665,
+    day: '2026-11-16',
+    lines: () => {
+      const glass = gateOf('material', 'glass')!;
+      const own = skillWord(levelSkill(SPECIES.cobbe)!);
+      return [
+        `Changed: hod carriers, build gates (material; wall, floor, roof or staircase type; bridge span): met at its level (${own} for the ${SPECIES.cobbe.name} line), whatever the gate's skill; `
+          + `${glass.name.toLowerCase()} ${glass.level} at ${own} ${glass.level}, ${skillWord(glass.skill)} 1: fitted (was: met at its level in the gate's skill, ${skillWord(glass.skill)} ${glass.level}; refused).`,
+        `Changed: idle hod carriers, build gate card: "${idleSays(GLASS_GATE_IDLE, 'hod', null, undefined, undefined, glass.level - 10)}" (was: "${glassGateCardWas()}").`,
+      ];
+    },
   },
   // The kinds every field guide starts with seen, and a wild one near (`GUIDE_START`, `WILD_NEAR`, `20261120000128_sapgnaw_known_from_the_start.sql`).
   {
@@ -457,7 +476,7 @@ export const NEWS: News[] = [
     day: '2026-11-16',
     lines: () => {
       const was = idleSays({ why: 'stock', n: 3, what: ['glass', 'timber', 'marble_brick'] }, 'hod');
-      const gate = idleSays({ why: 'gate', n: 6, what: ['material', 'glass'] }, 'hod', null, undefined, { carpentry: 1 });
+      const gate = glassGateCardWas();
       const lack = idleSays({ why: 'stock', n: 1, what: ['marble_brick'] }, 'hod');
       return [
         `Fixed: idle hod carriers, a wall, floor or column wanting what your settlement stores hold, over its level: its first unmet gate, nearest first: "${gate}" (was: "${was}").`,

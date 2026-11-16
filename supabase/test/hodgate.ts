@@ -5,19 +5,24 @@
  * Seen on the island: a Bastiondrake idle "stock", naming glass, timber and marble brick, with 1051 glass and 333
  * timber in the settlement stores. Glass walls and a glass roof wanted them; its carpentry (1) was under glass
  * building's gate (40), so it might not fit them, and its card named every thing any work wanted, held or not.
- * One settlement, the same on both sides, a Brickling at masonry 90 on it, the chest holding glass and timber:
+ * Then asked for: "All materials being placed by bastiondrake should be gate determined by its overall level": a hod
+ * carrier's build gates read its level (masonry, whole), whatever the gate's skill (20261120000130).
+ * One settlement, the same on both sides, a hod carrier of the cobbe line at masonry 30, carpentry 1 (level 30) on it,
+ * the chest holding glass and timber:
  *
- *   1. a glass wall wanting glass and timber, carpentry 1: `gate`, naming glass building's carpentry 40, with the
+ *   1. a glass wall wanting glass and timber: `gate`, naming glass building at level 40 and its level, 30, with the
  *      wall's distance in rings from the totem;
  *   2. a marble wall wanting marble brick instead: `stock`, naming marble brick only;
  *   3. both: `gate` as in 1, and what the stores lack (`hod_lacking`, `Game.hodWanted` with `stocked`) is marble brick
  *      only, never glass or timber;
- *   4. carpentry 40: it takes glass or timber for the glass wall.
+ *   4. carpentry 40, masonry 30: still refused the glass wall (its level is 30);
+ *   5. masonry 82, carpentry 1 (level 82): it takes glass or timber for the glass wall.
  *
  * The island half makes its own island and rolls it back.
  */
 import { Game } from '../../src/game/game';
-import { SPECIES, workRangeOf, type Creature } from '../../src/game/creatures';
+import { creatureLevel, SPECIES, workRangeOf, type Creature } from '../../src/game/creatures';
+import { hodMay } from '../../src/game/craftgates';
 import { idleSays, type Idle, type IdleWhy } from '../../src/game/workerlog';
 import { gateOf } from '../../src/game/skillgates';
 import { TileType } from '../../src/world/tiles';
@@ -30,7 +35,11 @@ const j = (v: unknown): string => `'${JSON.stringify(v).replace(/'/g, "''")}'::j
 
 const T = 40;
 const CHEST = [T + 1, T - 1] as const;
-const SKILLS = { carpentry: 1, masonry: 90 };
+const SKILLS = { carpentry: 1, masonry: 30 };
+/** Its level: masonry, whole (`creatureLevel`). */
+const LEVEL = creatureLevel({ species: 'cobbe', skills: SKILLS });
+/** Over glass building's gate (40) in masonry, carpentry 1: the Bastiondrake seen. */
+const HIGH = { carpentry: 1, masonry: 82 };
 const STOCK: [string, number][] = [['glass', 100], ['timber', 40]];
 const g = Game.create(4263);
 for (const c of [...g.creatures.list.values()]) g.creatures.remove(c.id);
@@ -86,7 +95,8 @@ begin
          leg_ends = now() - interval '1 second'
    where world_id = w and id = v_id;
   select * into c from creature where world_id = w and id = v_id;
-  insert into said values ('RANGE', work_range(c)::text), ('CARPENTRY', worker_level(c, 'carpentry')::text);
+  insert into said values ('RANGE', work_range(c)::text), ('CARPENTRY', worker_level(c, 'carpentry')::text),
+    ('LEVEL', creature_level(c.skills, c.species)::text);
   insert into building (world_id, id, name, planned_by) values (w, 1, 'Hall', u);
 
   -- 1. The glass wall alone.
@@ -106,8 +116,17 @@ begin
   insert into said select 'SENT', coalesce(e->>'idleWhy', '') || '|' || coalesce(e->>'idleN', '') || '|' || coalesce(e->>'idleWhat', '')
     from jsonb_array_elements(rpc_creatures(w, 40)) e where (e->>'id')::int = v_id;
 
-  -- 4. At glass building's carpentry: it takes the glass wall's pieces.
-  update creature set skills = skills || '{"carpentry": 40}', carrying = null, phase = 'idle' where world_id = w and id = v_id;
+  -- 4. At glass building's carpentry, masonry 30: still refused the glass wall.
+  update creature set skills = skills || '{"carpentry": 40}' where world_id = w and id = v_id;
+  select * into c from creature where world_id = w and id = v_id;
+  insert into said select 'C40', hod_may(w, c, 'wall', wl.level, wl.dir, wl.x, wl.y)::text || '|' || creature_level(c.skills, c.species)
+    from wall wl where wl.world_id = w and wl.material = 'glass';
+
+  -- 5. Masonry 82, carpentry 1: it takes the glass wall's pieces.
+  update creature set skills = skills || ${j(HIGH)}, carrying = null, phase = 'idle' where world_id = w and id = v_id;
+  select * into c from creature where world_id = w and id = v_id;
+  insert into said select 'M82', hod_may(w, c, 'wall', wl.level, wl.dir, wl.x, wl.y)::text || '|' || creature_level(c.skills, c.species)
+    from wall wl where wl.world_id = w and wl.material = 'glass';
   for i in 1..40 loop
     update creature set worn = 0, hunger = 1, leg_at = leg_at - (until - now()) - interval '1 millisecond',
            leg_ends = leg_ends - (until - now()) - interval '1 millisecond', until = now() - interval '1 millisecond'
@@ -156,8 +175,14 @@ const bothB = step(cobbe);
 const stocked = (item: string): boolean => chestHas(item) > 0;
 const near = (x: number, y: number, dir?: string): boolean => Math.max(Math.abs(x - T), Math.abs(y - T)) <= range && g.workOnDeed(x, y, dir);
 const lackingB = g.hodWanted(near, { x: T, y: T }, stocked);
-// 4. At glass building's carpentry.
-cobbe.skills.carpentry = 40;
+// 4. At glass building's carpentry, masonry 30.
+const glassTarget = { kind: 'wall', wall: glass } as const;
+const c40 = { ...cobbe.skills, carpentry: 40 };
+const c40May = hodMay(creatureLevel({ species: 'cobbe', skills: c40 }), glassTarget);
+// 5. Masonry 82, carpentry 1.
+cobbe.skills = { ...cobbe.skills, ...HIGH };
+const m82Level = creatureLevel(cobbe);
+const m82May = hodMay(m82Level, glassTarget);
 cobbe.idle = undefined;
 for (let i = 0; i < 2400 && cobbe.carrying?.id !== 'glass' && cobbe.carrying?.id !== 'timber' && glass.needed.glass === GLASS_BILL.glass; i++) {
   g.player.stats.stamina = 1;
@@ -168,7 +193,7 @@ for (let i = 0; i < 2400 && cobbe.carrying?.id !== 'glass' && cobbe.carrying?.id
 /* ---- the same on both sides --------------------------------------------------- */
 
 const name = (id: string): string => itemDef(id).name.toLowerCase();
-const says = (idle: Idle | null | undefined): string => (idle ? idleSays(idle, 'hod', null, undefined, SKILLS) : '');
+const says = (idle: Idle | null | undefined): string => (idle ? idleSays(idle, 'hod', null, undefined, SKILLS, LEVEL) : '');
 const sameIdle = (what: string, key: string, here: Idle | null, want: IdleWhy, sentence: string): void => {
   const there = islandIdle(key);
   check(`${what}: "${sentence}" on both sides`,
@@ -181,10 +206,11 @@ check('glass building is gated at carpentry 40', gate?.skill === 'carpentry' && 
 check('a glass wall\'s bill is glass and timber, on both sides',
   JSON.stringify(GLASS_BILL) === JSON.stringify({ glass: 24, timber: 8 }) && JSON.stringify(JSON.parse(isle.get('BILL') ?? '{}')) === JSON.stringify(GLASS_BILL),
   `${JSON.stringify(GLASS_BILL)} / ${isle.get('BILL')}`);
-check('the island and the browser give the Brickling the same range, and carpentry 1',
-  Number(isle.get('RANGE')) === range && Number(isle.get('CARPENTRY')) === 1, `${isle.get('RANGE')} / ${range}; carpentry ${isle.get('CARPENTRY')}`);
+check('the island and the browser give the hod carrier the same range, carpentry 1 and level 30',
+  Number(isle.get('RANGE')) === range && Number(isle.get('CARPENTRY')) === 1 && LEVEL === 30 && Number(isle.get('LEVEL')) === LEVEL,
+  `${isle.get('RANGE')} / ${range}; carpentry ${isle.get('CARPENTRY')}; level ${isle.get('LEVEL')} / ${LEVEL}`);
 
-const GATED = `Idle: Glass building ${RINGS} tiles from the totem needs carpentry 40 (yours 1.0).`;
+const GATED = `Idle: Glass building ${RINGS} tiles from the totem needs level ${gate?.level} (yours ${LEVEL}).`;
 sameIdle('1. a glass wall wanting the glass and timber in the chest, at carpentry 1', 'GLASS', glassB, 'gate', GATED);
 check('   named by its gate: material, glass', islandIdle('GLASS')?.what?.join(',') === 'material,glass' && glassB?.what?.join(',') === 'material,glass',
   `${isle.get('GLASS')} / ${glassB?.what}`);
@@ -197,10 +223,14 @@ check('   and the island sends it so', says(islandIdle('SENT')) === GATED, isle.
 check('   what the stores lack is marble brick only, never glass or timber, on both sides',
   isle.get('LACKING') === 'marble_brick|1' && lackingB.items.join(',') === 'marble_brick' && lackingB.n === 1,
   `${isle.get('LACKING')} / ${lackingB.items.join(',')}|${lackingB.n}`);
+check('4. at carpentry 40, masonry 30 (level 30): still refused the glass wall, on both sides',
+  isle.get('C40') === 'false|30' && !c40May, `${isle.get('C40')} / ${c40May}`);
+check('5. at masonry 82, carpentry 1: level 82, fits the glass wall (gated at 40), on both sides',
+  isle.get('M82') === 'true|82' && m82Level === 82 && m82May, `${isle.get('M82')} / ${m82Level} ${m82May}`);
 {
   const [held, why, needed] = (isle.get('FIT') ?? '').split('|');
   const left = JSON.parse(needed || '{}') as Record<string, number>;
-  check('4. at carpentry 40 it takes glass or timber for the glass wall, on the island',
+  check('   and takes glass or timber for it, on the island',
     ['glass', 'timber'].includes(held) || left.glass < GLASS_BILL.glass || left.timber < GLASS_BILL.timber, `${isle.get('FIT')} (${why})`);
 }
 check('   and in the browser',

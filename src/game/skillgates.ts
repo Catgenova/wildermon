@@ -13,7 +13,7 @@
  *
  * A worker uses the same gate against its own level in the gate's skill (`workerGateOpen`): it never picks the thing
  * its level could not work, and an idle one with only gated work in reach says so (`IdleWhy` 'gate', the island's
- * `gate_idle`).
+ * `gate_idle`). A hod carrier's build gates (material, wall, floor, bridge) read its level instead (`hodMay`).
  *
  * An item whose use a gate stops (a seed by its crop's farming, a sprout by its species' forestry) is unidentified to
  * whoever is under that gate: named "Unidentified seed" (`seenName`) and described only by what identifies it, "30
@@ -64,15 +64,15 @@ export const GATE_STOPS: Readonly<Record<GateKind, string>> = {
   recipe: 'making it: the crafting window, a worker\'s recipe; a Recipe or Formula unidentified under it',
   relic: 'restoring it: Restore, a restorer\'s work; its fragments unidentified under it',
   bauble: 'restoring a tarnished bauble of the tier; unidentified under it',
-  material: 'planning and building walls, floors and roofs of it: a hod carrier\'s work',
-  wall: 'planning and building the wall type: a hod carrier\'s work',
-  floor: 'planning and building the floor type: a hod carrier\'s work',
+  material: 'planning and building walls, floors and roofs of it; a hod carrier\'s work, at its level',
+  wall: 'planning and building the wall type; a hod carrier\'s work, at its level',
+  floor: 'planning and building the floor type; a hod carrier\'s work, at its level',
   paving: 'paving with it',
   metal: 'pouring it: Pour a mould, Cast an anvil; a nail or ribbon smith\'s work',
   graft: 'grafting a fruit sprout onto a tree: Graft',
   water_plant: 'planting it: in still water, in a lily pond; a water planter\'s work; a lily root unidentified under it',
   hoard: 'Dig it up on a treasure map of the tier; the map unidentified under it, still read',
-  bridge: 'planning and building it: a hod carrier\'s work',
+  bridge: 'planning and building it; a hod carrier\'s work, at its level',
   smelt: 'smelting its ore: Smelt, a smelter worker\'s and a stoker\'s work',
   casting: 'working a casting of the metal at the anvil: Smith; a nail or ribbon smith\'s work',
   gem: 'setting the stone in a circlet',
@@ -398,8 +398,8 @@ export const gateOpen = (g: SkillGate | undefined, skill: number): boolean => !g
 export const workerLevel = (c: { skills: Record<string, number> }, skill: string): number => c.skills[skill] ?? 1;
 
 /**
- * Whether a worker may work a gate: its own level in the gate's skill, not its trade's. A hod carrier fitting a plank
- * wall reads its carpentry. The island's `worker_gate_open`.
+ * Whether a worker may work a gate: its own level in the gate's skill, not its trade's. A miner at a stone face reads
+ * its mining. Not a hod carrier's build gates, which read its level (`hodMay`). The island's `worker_gate_open`.
  */
 export const workerGateOpen = (c: { skills: Record<string, number> }, g: SkillGate | undefined): boolean =>
   !g || workerLevel(c, g.skill) >= g.level;

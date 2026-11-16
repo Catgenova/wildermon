@@ -14,8 +14,8 @@
  *     (carpentry), a marble wall (masonry), a spiral staircase, marble slabs and cobblestones (paving);
  *   * a Formula, a relic's fragment and a tarnished bauble unidentified under their gate, with what identifies them,
  *     and refused in their seen names when read or restored; named at the level;
- *   * workers at their own level in each gate's skill: a cook's recipes, a hod carrier's walls and floors, a restorer's
- *     relics; idle `gate` in the stores' words;
+ *   * workers at their own level in each gate's skill: a cook's recipes, a restorer's relics; idle `gate` in the
+ *     stores' words; a hod carrier's walls and floors at its level (masonry for a Brickling), whatever the gate's skill;
  *   * the Skills window: carpentry's and cooking's Unlocks, and each skill's next gate beside its level;
  *   * decided since: stone brick walls at masonry 10; pouring gated by the metal poured, in blacksmithing (a mined metal
  *     at its seam's mining gate, an alloy at its highest metal's): Pour a mould and Cast an anvil refused in the one
@@ -30,7 +30,7 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { RECIPE_BY_ID, RECIPES, recipeReason } from '../../src/game/recipes';
 import { craftLevel, FORMULA_GATE, hodMay, METAL_GATE, metalGateRefusal, POUR_GATE_SAID, recipeLevel, workerBuildOpen, workerMetalOpen, workerRecipeOpen } from '../../src/game/craftgates';
 import { METALS, MOULD_SKILL } from '../../src/game/metal';
-import { smithLumps } from '../../src/game/creatures';
+import { creatureLevel, smithLumps } from '../../src/game/creatures';
 import { idleSays } from '../../src/game/workerlog';
 import { scrollOf } from '../../src/game/enchant';
 import {
@@ -65,6 +65,13 @@ create function pg_temp.worker(w uuid, u uuid, p_skills jsonb) returns creature 
 declare v int; c creature;
 begin
   v := creature_spawn(w, 'magga', ${T}.5, ${T}.5, 'active', now() - interval '60 days', u);
+  update creature set skills = p_skills where world_id = w and id = v returning * into c;
+  return c;
+end $m$;
+create function pg_temp.hod(w uuid, u uuid, p_skills jsonb) returns creature language plpgsql as $m$
+declare v int; c creature;
+begin
+  v := creature_spawn(w, 'cobbe', ${T}.5, ${T}.5, 'active', now() - interval '60 days', u);
   update creature set skills = p_skills where world_id = w and id = v returning * into c;
   return c;
 end $m$;
@@ -183,7 +190,8 @@ begin
   insert into said values ('COOK1', array_to_string(worker_recipes(c, array['bake_potato', 'bake_bread', 'make_apple_pie']), ','));
   c := pg_temp.worker(w, u, '{"cooking": 20}');
   insert into said values ('COOK20', array_to_string(worker_recipes(c, array['bake_potato', 'bake_bread', 'make_apple_pie']), ','));
-  c := pg_temp.worker(w, u, '{"masonry": 30, "carpentry": 1}');
+  c := pg_temp.hod(w, u, '{"masonry": 30, "carpentry": 1}');
+  insert into said values ('HOD_LEVEL', creature_level(c.skills, c.species)::text);
   insert into said values ('HOD', worker_build_open(c, 'plank', 'solid', null, null) || ',' || worker_build_open(c, 'log', 'solid', null, null)
     || ',' || worker_build_open(c, 'log', 'door', null, null) || ',' || worker_build_open(c, 'sandstone', 'door', null, null)
     || ',' || worker_build_open(c, 'marble', 'solid', null, null) || ',' || worker_build_open(c, 'stone_brick', null, 'stairs', 's'));
@@ -191,8 +199,8 @@ begin
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total)
     values (w, 0, 'h', ${T}, ${T}, 0, 'solid', 'plank', '{"plank": 24}', '{"plank": 24}');
   insert into said values ('HOD_PLANK', hod_may(w, c, 'wall', 0, 'h', ${T}, ${T}) || '');
-  update wall set material = 'log' where world_id = w and x = ${T} and y = ${T};
-  insert into said values ('HOD_LOG', hod_may(w, c, 'wall', 0, 'h', ${T}, ${T}) || '');
+  update wall set material = 'marble' where world_id = w and x = ${T} and y = ${T};
+  insert into said values ('HOD_MARBLE', hod_may(w, c, 'wall', 0, 'h', ${T}, ${T}) || '');
   -- A ribbon smith pours only the metals its own blacksmithing may.
   c := pg_temp.worker(w, u, '{"blacksmithing": 1}');
   insert into said values ('RIBBON1', array_to_string(worker_smith_lumps(c, 'ribbon'), ','));
@@ -402,17 +410,18 @@ const isGate = (s: string): boolean => /: needs [a-z ]+ \d+; have \d+\.\d\.$/.te
   check('a cook at cooking 1 takes baked potato only, at 20 bread and apple pie too, on both sides',
     cook(1) === 'bake_potato' && said('COOK1') === 'bake_potato' && cook(20) === 'bake_potato,bake_bread,make_apple_pie' && said('COOK20') === cook(20),
     `island ${said('COOK1')} / ${said('COOK20')} — browser ${cook(1)} / ${cook(20)}`);
-  const c = { skills: { masonry: 30, carpentry: 1 } };
-  const hod = [workerBuildOpen(c, 'plank', { wall: 'solid' }), workerBuildOpen(c, 'log', { wall: 'solid' }), workerBuildOpen(c, 'log', { wall: 'door' }),
-    workerBuildOpen(c, 'sandstone', { wall: 'door' }), workerBuildOpen(c, 'marble', { wall: 'solid' }), workerBuildOpen(c, 'stone_brick', { floor: 'stairs', hand: 's' })].join(',');
-  check('a hod carrier at masonry 30, carpentry 1: a log wall, a sandstone door and a stone spiral staircase, not a plank wall, a log door or marble; each gate at its own level in the gate\'s skill',
-    hod === 'false,true,false,true,false,true' && said('HOD') === hod, `island ${said('HOD')} / browser ${hod}`);
+  const lv = creatureLevel({ species: 'cobbe', skills: { masonry: 30, carpentry: 1 } });
+  check('a Brickling at masonry 30, carpentry 1 is level 30, on both sides', lv === 30 && said('HOD_LEVEL') === '30', `island ${said('HOD_LEVEL')} / browser ${lv}`);
+  const hod = [workerBuildOpen(lv, 'plank', { wall: 'solid' }), workerBuildOpen(lv, 'log', { wall: 'solid' }), workerBuildOpen(lv, 'log', { wall: 'door' }),
+    workerBuildOpen(lv, 'sandstone', { wall: 'door' }), workerBuildOpen(lv, 'marble', { wall: 'solid' }), workerBuildOpen(lv, 'stone_brick', { floor: 'stairs', hand: 's' })].join(',');
+  check('a hod carrier at level 30 (masonry 30, carpentry 1): a plank wall, a log wall, a log door, a sandstone door and a stone spiral staircase, not marble (50); each gate at its level, whatever the gate\'s skill',
+    hod === 'true,true,true,true,false,true' && said('HOD') === hod, `island ${said('HOD')} / browser ${hod}`);
   const wall = { kind: 'wall', wall: { material: 'plank', type: 'solid' } as Wall } as const;
   const floor = { kind: 'floor', floor: { material: 'marble', kind: 'floor' } as FloorTile } as const;
-  check('and fits only the work it may: a plank wall skipped, a log one taken, a marble floor skipped, on both sides',
-    !hodMay(c, wall) && hodMay(c, { kind: 'wall', wall: { ...wall.wall, material: 'log' } }) && !hodMay(c, floor)
-      && said('HOD_WALL') === 'true' && said('HOD_PLANK') === 'false' && said('HOD_LOG') === 'true',
-    `island ${said('HOD_WALL')} ${said('HOD_PLANK')} ${said('HOD_LOG')}`);
+  check('and fits only the work it may: a plank wall (carpentry 10) taken at carpentry 1, a marble wall and a marble floor skipped, on both sides',
+    hodMay(lv, wall) && !hodMay(lv, { kind: 'wall', wall: { ...wall.wall, material: 'marble' } }) && !hodMay(lv, floor)
+      && said('HOD_WALL') === 'true' && said('HOD_PLANK') === 'true' && said('HOD_MARBLE') === 'false',
+    `island ${said('HOD_WALL')} ${said('HOD_PLANK')} ${said('HOD_MARBLE')}`);
   check('a restorer under a relic\'s gate passes it by: Old lamp 40 at its restoration 30',
     !workerRecipeOpen({ skills: {} }, 'make_apple_pie') && gateOf('relic', 'old lamp')?.level === 40);
   const idle = idleSays({ why: 'gate', n: 0, what: ['recipe', 'make_apple_pie'] }, 'cook', null, 1, { cooking: 1 });

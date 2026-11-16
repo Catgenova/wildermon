@@ -176,10 +176,10 @@ begin
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
     values (w, 1, 'h', ${SHED_PLAN[0]}, ${SHED_PLAN[1]}, 2, 'solid', 'plank', '{"mortar": 1}', '{"mortar": 1}', u);
   v_hod := creature_spawn(w, 'cobbe', ${T} + 0.5, ${T} + 0.5, 'deed', now() - interval '60 days', u);
-  -- Its carpentry at a plank wall's gate (craftgates.ts): this is about stairs.
+  -- Its level (masonry) at a plank wall's gate (craftgates.ts): this is about stairs.
   update creature set traits = '{}', rare = null, stance = 'passive', hunger = 1, phase = 'idle', carrying = null, job = null, post = null,
          from_x = to_x, from_y = to_y, until = now() - interval '1 millisecond', leg_at = now() - interval '1 millisecond',
-         leg_ends = now() - interval '1 millisecond', skills = skills || '{"carpentry": 10}'
+         leg_ends = now() - interval '1 millisecond', skills = skills || '{"masonry": 10}'
    where world_id = w and id = v_hod;
   perform worker_settle(w, v_hod);
   insert into said select 'SHED_HOD', coalesce(idle_why, '') || '|' || coalesce(idle_n::text, '') || '|' || storey from creature where world_id = w and id = v_hod;

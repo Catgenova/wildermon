@@ -14,8 +14,8 @@
  *     an aqueduct, a diamond in a circlet, a sound map dug up (and read under it: decided, batch G); a cross and Pyre in the same words;
  *   * a lily root and a treasure map unidentified under their gate, with what identifies them; lotus seeds never;
  *   * the bowstring, the short bow, the awl, leather, papyrus, the paper press and rope open at 1;
- *   * workers at their own level in the gate's skill: a smelter worker's ore, a water planter's roots, a hod carrier's
- *     spans; idle `gate` in the stores' words;
+ *   * workers at their own level in the gate's skill: a smelter worker's ore, a water planter's roots; idle `gate` in
+ *     the stores' words; a hod carrier's spans at its level (masonry for a Brickling), whatever the gate's skill;
  *   * the Unlocks lists: digging's maps, smelting's metals, jewellery's settings, botanizing's plants, forestry's Graft,
  *     each casting trade's metals.
  *
@@ -40,6 +40,7 @@ import {
 } from '../../src/game/skillgates';
 import { packTreeData, TileType, TREE_DEFS } from '../../src/world/tiles';
 import type { Bridge, BridgeSpan } from '../../src/game/bridges';
+import { creatureLevel } from '../../src/game/creatures';
 import { psql, check, finish } from './harness';
 
 const U = '7e5b0000-0000-4000-8000-0000000f7e01';
@@ -78,6 +79,13 @@ create function pg_temp.worker(w uuid, u uuid, p_skills jsonb) returns creature 
 declare v int; c creature;
 begin
   v := creature_spawn(w, 'magga', ${T}.5, ${T}.5, 'active', now() - interval '60 days', u);
+  update creature set skills = p_skills where world_id = w and id = v returning * into c;
+  return c;
+end $m$;
+create function pg_temp.hod(w uuid, u uuid, p_skills jsonb) returns creature language plpgsql as $m$
+declare v int; c creature;
+begin
+  v := creature_spawn(w, 'cobbe', ${T}.5, ${T}.5, 'active', now() - interval '60 days', u);
   update creature set skills = p_skills where world_id = w and id = v returning * into c;
   return c;
 end $m$;
@@ -164,16 +172,18 @@ ${LOWERED.map((id) => `  insert into said values ('LOW_${id}', ${refused(`craft_
   insert into said values ('AQ69', ${refused(`aqueduct_refusal(w, u, 'plan_aqueduct', ${target({ kind: 'tile', x: T + 5, y: T + 1, head: [T + 6, T + 1] })})`)});
   perform pg_temp.skill(w, u, 'masonry', 70);
   insert into said values ('AQ70', ${refused(`aqueduct_refusal(w, u, 'plan_aqueduct', ${target({ kind: 'tile', x: T + 5, y: T + 1, head: [T + 6, T + 1] })})`)});
-  -- A drawbridge's plan, half laid: adding to it at carpentry 49, and a hod carrier at its own carpentry.
+  -- A drawbridge's plan, half laid: adding to it at carpentry 49, and a hod carrier at its level.
   insert into bridge (world_id, kind, ax, ay, bx, by, height) values (w, 'draw', ${BX}, ${BY}, ${BX + 1}, ${BY}, 52) returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total) values (w, v_b, 0, ${BX}, ${BY}, '{"plank": 10}', '{"plank": 10}');
   update player set x = ${BX}.5, y = ${BY + 1}.5 where world_id = w and uid = u;
   perform pg_temp.skill(w, u, 'carpentry', 49);
   insert into said values ('BUILD49', ${refused(`last_refusal(w, u, 'build_bridge', jsonb_build_object('kind', 'bridge', 'id', v_b))`)});
   update player set x = ${T + 3}.5, y = ${T + 1}.5 where world_id = w and uid = u;
-  c := pg_temp.worker(w, u, '{"masonry": 30, "carpentry": 1}');
-  insert into said values ('HOD_SPAN1', hod_may(w, c, 'span', 0, '', ${BX}, ${BY}) || '');
-  c := pg_temp.worker(w, u, '{"masonry": 1, "carpentry": 50}');
+  c := pg_temp.hod(w, u, '{"masonry": 30, "carpentry": 1}');
+  insert into said values ('HOD_SPAN30', hod_may(w, c, 'span', 0, '', ${BX}, ${BY}) || '');
+  c := pg_temp.hod(w, u, '{"masonry": 1, "carpentry": 50}');
+  insert into said values ('HOD_SPAN_C50', hod_may(w, c, 'span', 0, '', ${BX}, ${BY}) || '');
+  c := pg_temp.hod(w, u, '{"masonry": 50, "carpentry": 1}');
   insert into said values ('HOD_SPAN50', hod_may(w, c, 'span', 0, '', ${BX}, ${BY}) || '');
 
   /* ---- smelting, by the metal ---- */
@@ -415,9 +425,11 @@ const isGate = (s: string): boolean => /: needs [a-z ]+ \d+; have \d+\.\d\.$/.te
     a69 === aq && said('AQ69') === aq && !isGate(a70) && !isGate(said('AQ70')), `island "${said('AQ69')}" "${said('AQ70')}" / browser "${a69}" "${a70}"`);
   check(`adding to a drawbridge's plan at carpentry 49: "${draw}" on the island`, said('BUILD49') === draw, said('BUILD49'));
   const span = { kind: 'span', bridge: { kind: 'draw' } as Bridge, span: {} as BridgeSpan } as const;
-  check('a hod carrier fits a drawbridge\'s span only at its own carpentry 50, on both sides',
-    !hodMay({ skills: { masonry: 30, carpentry: 1 } }, span) && hodMay({ skills: { masonry: 1, carpentry: 50 } }, span)
-      && said('HOD_SPAN1') === 'false' && said('HOD_SPAN50') === 'true', `island ${said('HOD_SPAN1')} ${said('HOD_SPAN50')}`);
+  const lv = (masonry: number, carpentry: number): number => creatureLevel({ species: 'cobbe', skills: { masonry, carpentry } });
+  check('a Brickling fits a drawbridge\'s span (carpentry 50) only at level 50: not at masonry 30 or at masonry 1, carpentry 50; at masonry 50, carpentry 1; on both sides',
+    !hodMay(lv(30, 1), span) && !hodMay(lv(1, 50), span) && hodMay(lv(50, 1), span)
+      && said('HOD_SPAN30') === 'false' && said('HOD_SPAN_C50') === 'false' && said('HOD_SPAN50') === 'true',
+    `island ${said('HOD_SPAN30')} ${said('HOD_SPAN_C50')} ${said('HOD_SPAN50')}`);
 }
 
 /* ---- smelting and working a casting --------------------------------------------------- */

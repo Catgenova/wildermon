@@ -3583,7 +3583,8 @@ export function helpText(): string {
       <li><b>${SPECIES.snedda.name}</b>: <b>prunes</b> trees whose next growth stage is dead, ${PRUNE_LOGS} log of its kind a tree to your settlement stores; nothing else. Level: forestry. Evolves: ${evolves('snedda')}.</li>
       <li><b>${SPECIES.cobbe.name}</b>: <b>hod</b>: carries what a planned wall (any storey), a change planned on a wall (<b>Change wall</b>), floor, roof, staircase, ladder, column, open bridge or aqueduct span or foundation
       still needs from your settlement stores, crates and furniture, and fits it, one piece a trip: a wall or column standing on its storey, beside it; a floor, roof, staircase
-      or ladder from the storey under it. Evolves: ${evolves('cobbe')}.</li>
+      or ladder from the storey under it. Build gates (material; wall, floor, roof or staircase type; bridge): its level (${skillWord(levelSkill(SPECIES.cobbe)!)}) against the gate's level, whatever the gate's skill.
+      Evolves: ${evolves('cobbe')}.</li>
       <li><b>${SPECIES.tinka.name}</b>: <b>mends</b> damaged gear in your settlement stores, most damaged first. Evolves: ${evolves('tinka')}.</li>
       <li><b>${SPECIES.middun.name}</b>: turns rotting things on the ground into <b>compost</b>. Evolves: ${evolves('middun')}.</li>
       <li><b>${SPECIES.snout.name}</b>: finds <b>buried relics</b> and marks where to dig. Taming ${SPECIES.snout.tameLevel}.</li>
@@ -3674,7 +3675,7 @@ export function helpText(): string {
       bare rock with no seam (&ldquo;${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}&rdquo;); only work above its level in its task's skill, the lowest then the nearest
       (&ldquo;${idleSays({ why: 'gate', n: 3, what: ['tree', 'willow'] }, 'woodcut', null, 12)}&rdquo;); no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
       Hod carrier, in order after no staircase up: a wall, floor or column wanting what your settlement stores hold, over its level, nearest first, its first unmet gate
-      (&ldquo;${idleSays({ why: 'gate', n: 6, what: ['material', 'glass'] }, 'hod', null, undefined, { carpentry: 1 })}&rdquo;); only bridge spans over its level; what the stores lack, none of what they hold
+      (&ldquo;${idleSays({ why: 'gate', n: 6, what: ['material', 'glass'] }, 'hod', null, undefined, undefined, 30)}&rdquo;); only bridge spans over its level; what the stores lack, none of what they hold
       (&ldquo;${idleSays({ why: 'stock', n: 1, what: ['marble_brick'] }, 'hod')}&rdquo;).
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Storeys</b>: a store, station or planned work a storey up is in reach where a worker walks to it from the ground, by the step rule you walk by: finished staircases, wide or
@@ -4072,7 +4073,7 @@ export function helpText(): string {
     <h4>Skill gates</h4>
     <ul>
       <li>Under a thing's level in its skill: refused, greyed in the menu with the need (&ldquo;${skillGateRefusal('Willow', 'woodcutting', 12.4, gateOf('tree', 'willow')!.level)}&rdquo;).
-      A worker skips it at its own level in that skill. Levels: ${GATE_LADDER.join(', ')}. Skills window: each skill's gates, ticked when met.</li>
+      A worker skips it at its own level in that skill; a hod carrier, at its level, whatever the gate's skill. Levels: ${GATE_LADDER.join(', ')}. Skills window: each skill's gates, ticked when met.</li>
       <li>Unidentified: ${listed([...new Set(GATED_ITEMS.map((x) => x.noun))].map((n) => `${n}s`))} under the level of their use, named
       &ldquo;${seenName({ id: SEED_SHOWN }, FRESH)}&rdquo;; tooltip &ldquo;${identifySaid({ id: SEED_SHOWN }, FRESH)}&rdquo;
       Picked up, carried, stored and traded as any item.</li>
@@ -4083,11 +4084,12 @@ export function helpText(): string {
       (${METALS.filter((m) => !m.ore).map((m) => `${m.name.toLowerCase()} ${METAL_GATE[m.id]}`).join(', ')}). Forming the mould: its own recipe's level.</li>
       <li>The same level a metal: smelting its ore, in ${skillWord(SMELT_SKILL)} (Smelt; smelter workers and stokers); working its casting at the anvil, in the casting's own trade
       (${listed(CASTING_SKILLS.map(skillWord))}; nail and ribbon smiths).</li>
-      <li>Bridges: a material bridge at its material's level; ${listed(Object.values(BRIDGES).filter((b) => !b.material).map((b) => `${b.name.toLowerCase()} ${bridgeLevel(b)}`))}, by difficulty. Planning, and adding to a plan; hod carriers at their own level.</li>
+      <li>Bridges: a material bridge at its material's level; ${listed(Object.values(BRIDGES).filter((b) => !b.material).map((b) => `${b.name.toLowerCase()} ${bridgeLevel(b)}`))}, by difficulty. Planning, and adding to a plan; hod carriers at their level.</li>
       <li>Stones in a circlet: ${listed(GEMS.slice().sort((a, b) => gemLevel(a) - gemLevel(b)).map((s) => `${s.name.toLowerCase()} ${gemLevel(s)}`))}, in ${skillWord('jewellery')}.</li>
       <li>Treasure maps, dug up, in ${skillWord('digging')}: ${listed(TREASURE_TIERS.map((t) => `${t.name} ${gateOf('hoard', t.id)!.level}`))}; unidentified under it, still read.</li>
       <li>Veins: bare, always named; buried, &ldquo;${UNIDENTIFIED_METAL}&rdquo; under its mining level in prospecting; tooltip &ldquo;${VEIN_UNREAD}&rdquo;</li>
-      <li>Walls, floors, roofs: the material's gate and the wall or floor type's, both in the material's skill (carpentry or masonry). Planning, and adding to a plan.</li>
+      <li>Walls, floors, roofs: the material's gate and the wall or floor type's, both in the material's skill (carpentry or masonry). Planning, and adding to a plan.
+      Hod carriers: their level against each gate's level.</li>
       ${GATED_SKILLS.map((id) => `<li><b>${SKILL_BY_ID.get(id)?.name ?? id}</b> (${listed([...new Set(SKILL_GATES.filter((g) => g.skill === id).map((g) => GATE_STOPS[g.kind]))])}): ${unlocksSaid(id)}.</li>`).join('\n      ')}
     </ul>
     <h4>Flatten, decay, skill</h4>

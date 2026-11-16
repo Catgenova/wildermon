@@ -15,7 +15,7 @@ AS $function$
                                  where f.world_id = p_world and f.level = p_level and f.x = p_x and f.y = p_y), true)
     when 'column' then coalesce((select worker_build_open(c, bc.material, null, null, null) from building_column bc
                                   where bc.world_id = p_world and bc.level = p_level and bc.x = p_x and bc.y = p_y), true)
-    when 'span' then coalesce((select bool_and(worker_gate_open(c, skill_gate_of('bridge', b.kind)))
+    when 'span' then coalesce((select bool_and(coalesce((skill_gate_of('bridge', b.kind)).level, 0) <= creature_level(c.skills, c.species))
                                  from bridge_span sp join bridge b on b.world_id = sp.world_id and b.id = sp.bridge
                                 where sp.world_id = p_world and sp.x = p_x and sp.y = p_y and not span_done(sp.needed)), true)
     else true end

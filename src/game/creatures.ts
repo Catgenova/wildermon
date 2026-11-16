@@ -9473,8 +9473,9 @@ export class Creatures {
     // What the stores hold to bring, crates and furniture alike, and never what is kept back.
     const takeable = (it: Item, item: string): boolean => it.id === item && it.count > 0 && !it.locked;
     const stocked = (item: string): boolean => game.deedStores().some((st) => st.items.some((it: Item) => takeable(it, item)));
-    // Only work each of whose gates its own level meets, its carpentry for a plank wall (`craftgates.ts`; the island's `hod_may`).
-    const job = game.hodNeeding(near, c.carrying?.id, deed, stocked, (t) => hodMay(c, t));
+    // Only work each of whose gates its level meets, whatever the gate's skill (`craftgates.ts`; the island's `hod_may`).
+    const level = creatureLevel(c);
+    const job = game.hodNeeding(near, c.carrying?.id, deed, stocked, (t) => hodMay(level, t));
     // Holding a piece nothing within reach wants: back to the nearest store with room for it (`storeFor`).
     if (c.carrying && job?.item !== c.carrying.id) {
       const held = c.carrying;
@@ -9489,11 +9490,11 @@ export class Creatures {
     if (!job) {
       // A wall, floor or column within reach wanting what the stores hold, over its own level: `gate`, naming the
       // nearest one's first unmet gate (the island's `hod_build_gate`).
-      const built = game.hodGatedBuild(near, deed, stocked, (t) => hodGate(c, t));
+      const built = game.hodGatedBuild(near, deed, stocked, (t) => hodGate(level, t));
       if (built) return this.why(c, 'gate', built.n, [built.gate.kind, built.gate.id]);
       // Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest (the
       // island's `hod_span_gate`).
-      const gated = game.hodGatedSpan(near, deed, (t) => hodMay(c, t));
+      const gated = game.hodGatedSpan(near, deed, (t) => hodMay(level, t));
       if (gated) return this.why(c, 'gate', gated.n, ['bridge', gated.kind]);
       // Work within reach wanting what the stores do not hold: `stock`, naming only that (the island's `hod_lacking`).
       // Nothing lacking: `range`.
