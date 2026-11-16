@@ -428,6 +428,17 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Lying on ground a worker cannot stand on, picked up from beside it (`20261120000120_fetch_from_beside.sql`, `Creatures.worksBeside`).
+  {
+    n: 659,
+    day: '2026-11-16',
+    lines: () => {
+      const line = [SPECIES.magga.name, ...(SPECIES.magga.stages ?? []).map((s) => s.name)].join(', ');
+      return [
+        `Fixed: ${line} and composting workers: items lying on a tile over ${metres(MAX_STAND)} m slope or under water picked up from a standable tile beside it (was: never picked up; dropped dirt on dug ground left lying).`,
+      ];
+    },
+  },
   // A worn bag's carry limit bonus by its rarity, as its room is (`rarityShare`, `bagText`, the island's `bag_carry` and `bag_text`).
   {
     n: 657,
