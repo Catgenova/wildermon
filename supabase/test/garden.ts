@@ -350,11 +350,11 @@ begin
   perform give(w, u, 'carving_knife', 1, 50);
   v_it := give(w, u, 'plank', 2, 40, 'Oak');
   insert into said values ('FIG:pick', coalesce(act_refusal(w, u, 'make_${CARVED_FIGURE}', jsonb_build_object('kind', 'item', 'uid', v_it)), 'none'));
-  insert into said values ('FIG:unseen', coalesce(act_refusal(w, u, 'make_${CARVED_FIGURE}', jsonb_build_object('kind', 'item', 'uid', v_it, 'species', 'rabba')), 'none'));
-  insert into guide (world_id, uid, species) values (w, u, 'rabba');
-  insert into said values ('FIG:seen', coalesce(act_refusal(w, u, 'make_${CARVED_FIGURE}', jsonb_build_object('kind', 'item', 'uid', v_it, 'species', 'rabba')), 'none'));
+  insert into said values ('FIG:unseen', coalesce(act_refusal(w, u, 'make_${CARVED_FIGURE}', jsonb_build_object('kind', 'item', 'uid', v_it, 'species', 'vola')), 'none'));
+  insert into guide (world_id, uid, species) values (w, u, 'vola');
+  insert into said values ('FIG:seen', coalesce(act_refusal(w, u, 'make_${CARVED_FIGURE}', jsonb_build_object('kind', 'item', 'uid', v_it, 'species', 'vola')), 'none'));
   perform pg_temp.dice('0.01');
-  perform perform_craft(w, u, 'make_${CARVED_FIGURE}', jsonb_build_object('kind', 'item', 'uid', v_it, 'species', 'rabba'));
+  perform perform_craft(w, u, 'make_${CARVED_FIGURE}', jsonb_build_object('kind', 'item', 'uid', v_it, 'species', 'vola'));
   perform pg_temp.nodice();
   select id into v_it from item where world_id = w and holder_uid = u and def = '${CARVED_FIGURE}';
   insert into said select 'FIG:item', coalesce(i.garden->>'figure', '-') || '|' || coalesce(i.extra, '-') from item i where i.id = v_it;
@@ -483,8 +483,8 @@ check(`${BONSAI_STEPS} steps of shaping and no more: ${GARDEN_SAID.shaped}`, sai
 is('FIG:pick', FIGURE_SAID.pick, 'a carved figure with no kind chosen');
 is('FIG:unseen', FIGURE_SAID.unseen, 'nor one of a kind not in the field guide');
 is('FIG:seen', 'none', 'and is carved as one that is');
-check('the figure is the kind chosen, of the wood it was carved from', said('FIG:item') === 'rabba|Oak', said('FIG:item'));
-is('FIG:placed', 'rabba', 'and is that kind set down');
+check('the figure is the kind chosen, of the wood it was carved from', said('FIG:item') === 'vola|Oak', said('FIG:item'));
+is('FIG:placed', 'vola', 'and is that kind set down');
 /* 9. */
 is('PLQ:window', MOUNT_SAID.noWall, 'a trophy plaque not on a window');
 is('PLQ:unfinished', MOUNT_SAID.unfinished, 'nor on a wall not finished');
@@ -524,7 +524,7 @@ check('and a window box\'s, pulled up', !piece(box)?.garden?.bloom?.length, JSON
 check('and a topiary shrub\'s shape and last trim', piece(top)?.garden?.shape === 'spiral' && typeof piece(top)?.garden?.trimAt === 'number');
 check('and a hedge\'s clip, and its moment set down', piece(hedge)?.garden?.clip === 'flat' && typeof piece(hedge)?.setAt === 'number');
 check('and a bonsai\'s steps of shaping', piece(bon)?.garden?.prunes === BONSAI_STEPS);
-check('and a carved figure\'s kind', piece(fig)?.garden?.figure === 'rabba');
+check('and a carved figure\'s kind', piece(fig)?.garden?.figure === 'vola');
 check('and what is on a stand', JSON.stringify(piece(std)?.garden?.held?.map((h) => h.def)) === JSON.stringify([POTTED_FERN, POTTED_PALM]));
 check('the hedge shuts its border to whoever walks, in the browser too, and leaves the others open',
   seen.buildings.blocksAt(0, 4, 10, 5, 10) && seen.buildings.blocksAt(0, 4, 10, 5, 10, true) && !seen.buildings.blocksAt(0, 4, 10, 4, 11) && !seen.buildings.blocksAt(0, 3, 10, 4, 10));

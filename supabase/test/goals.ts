@@ -201,6 +201,9 @@ begin
   perform rpc_join(w, 'Meri');
   -- The first beat of a page, and then a beat handing over three ticks.
   perform rpc_settle(p_world => w, p_book => true);
+  -- One transaction keeps one now(): the last beat's hearing put back a second, as a beat a second later finds it (a
+  -- new body's field guide begun at its join is already a record, so that beat heard it).
+  update player set tally_seen = tally_seen - interval '1 second' where world_id = w and uid = u;
   r := rpc_settle(p_world => w, p_ticked => '["tree","plank","fire"]'::jsonb);
   insert into said values ('TICKED_BEAT', coalesce(r->'ticked', 'null'::jsonb)::text);
   insert into said values ('KEPT', (select ticked::text from player where world_id = w and uid = u));
