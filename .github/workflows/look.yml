@@ -331,6 +331,22 @@ jobs:
             left join lateral hod_stand(c.world_id, w.kind, w.level, w.dir, w.x, w.y) s on true
            where $me and c.idle_why = 'stairs' and c.mode = 'deed' and w.level >= 1
            order by c.id, w.level, w.x, w.y limit 150"
+          ask "work the whole-range reach (hod_unreached) misses, for the first worker on stairs" "with c as (select c.* from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+                 where $me and c.idle_why = 'stairs' and c.mode = 'deed' order by c.id limit 1),
+               dd as (select md.* from c cross join lateral my_deed(c.world_id, c.keeper) md where md.world_id is not null),
+               r as materialized (select storey_reach(c.world_id, dd.x - work_range(c) - 1, dd.y - work_range(c) - 1, dd.x + work_range(c) + 1, dd.y + work_range(c) + 1) as j from c, dd)
+          select w.kind, w.level + 1 as storey, w.dir, w.x, w.y, left(w.needed::text, 40) as needed, s.x as sx, s.y as sy, s.l + 1 as stand_storey,
+                 hod_reached(c.world_id, w.kind, w.level, w.dir, w.x, w.y) as one_search, hod_reached(c.world_id, w.kind, w.level, w.dir, w.x, w.y, r.j) as whole_range,
+                 hod_work_mine(c.world_id, c.keeper, w.dir, w.x, w.y) as mine,
+                 (select string_agg(k, ' ') from jsonb_object_keys(r.j) k where k like s.x || ',' || s.y || ',%') as reach_keys_at_stand
+            from c, dd, r cross join lateral hod_work(c.world_id, dd.x, dd.y, work_range(c)) w
+            left join lateral hod_stand(c.world_id, w.kind, w.level, w.dir, w.x, w.y) s on true
+           where w.level >= 1 and not hod_reached(c.world_id, w.kind, w.level, w.dir, w.x, w.y, r.j) order by w.level, w.x, w.y limit 60"
+          ask "the whole-range reach, cells per storey" "with c as (select c.* from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+                 where $me and c.idle_why = 'stairs' and c.mode = 'deed' order by c.id limit 1),
+               dd as (select md.* from c cross join lateral my_deed(c.world_id, c.keeper) md where md.world_id is not null),
+               r as materialized (select storey_reach(c.world_id, dd.x - work_range(c) - 1, dd.y - work_range(c) - 1, dd.x + work_range(c) + 1, dd.y + work_range(c) + 1) as j from c, dd)
+          select split_part(k, ',', 3)::int + 1 as storey, count(*) as cells from r cross join lateral jsonb_object_keys(r.j) k group by 1 order by 1"
           ask "floors, stairs, ladders and roofs per building and storey" "select f.building, b.name, f.level + 1 as storey,
                  count(*) filter (where f.kind = 'floor' and bill_done(f.needed)) as floors,
                  count(*) filter (where f.kind = 'floor' and not bill_done(f.needed)) as floors_planned,
