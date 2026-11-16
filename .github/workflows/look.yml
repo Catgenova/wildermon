@@ -18,6 +18,9 @@ on:
       stairs_near:
         description: 'A tile as x,y: floors, stairs, walls, footprints, piers and heights within 4 tiles of it (blank skips it)'
         default: ''
+      workers_of:
+        description: 'A player by name: their settlement workers idle on stairs, their work a storey up and the way to it (blank skips it)'
+        default: ''
 
 # Reads the repository and nothing else; the project is reached with the AI environment's secrets.
 permissions:
@@ -289,6 +292,70 @@ jobs:
            where e.$w and greatest(abs(p.x - $nx), abs(p.y - $ny)) <= 8
              and (e.text ilike '%stair%' or e.text ilike '%storey%' or e.text ilike '%step%' or e.text ilike '%climb%')
            order by e.n desc limit 30"
+
+      - name: A player's workers idle on stairs
+        # Asked about: Bastiondrakes idle on "no stairs up to storey 4" after 20261120000114. For the player in the
+        # `workers_of` input: each worker, its idle reason, its hod work a storey up, where it stands for each piece and
+        # whether reach and the way agree, the storey hod_unreached names, stairs, ladders and bridges. Selects only.
+        if: inputs.workers_of != ''
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          WHO: ${{ inputs.workers_of }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          if ! [[ "$WHO" =~ ^[A-Za-z0-9_\ -]+$ ]]; then echo "::warning::workers_of is not a name"; exit 0; fi
+          me="p.name = '$WHO' and p.world_id::text like 'f3a88670%'"
+          ask "the island has the one search" "select proname, pronargs from pg_proc where proname in ('creature_search', 'storey_reach', 'hod_reached', 'storey_reached', 'creature_way') order by 1, 2"
+          ask "the migrations at the top" "select version, name from supabase_migrations.schema_migrations order by version desc limit 5"
+          ask "the deed" "select md.* from player p cross join lateral my_deed(p.world_id, p.uid) md where $me"
+          ask "workers, their idle reasons" "select c.id, c.species, c.name, stage_of(c) as stage, c.mode, c.job, c.phase, c.idle_why, c.idle_n, c.storey,
+                 round(creature_x(c)::numeric, 1) as x, round(creature_y(c)::numeric, 1) as y, work_range(c) as rng, left(c.carrying::text, 60) as carrying
+            from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+           where $me and (c.idle_why is not null or c.job = 'hod') order by c.species, c.id limit 60"
+          ask "hod_unreached per worker" "select c.id, c.species, hod_unreached(c.world_id, c.keeper, dd.x, dd.y, work_range(c)) as unreached_storey
+            from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+            cross join lateral (select * from my_deed(c.world_id, c.keeper) md where md.world_id is not null) dd
+           where $me and c.mode = 'deed' and c.idle_why = 'stairs' limit 20"
+          ask "hod work a storey up, its stand, reach and the way" "select c.id, w.kind, w.level + 1 as storey, w.dir, w.x, w.y, left(w.needed::text, 50) as needed,
+                 s.x as sx, s.y as sy, s.l + 1 as stand_storey,
+                 case when s.l is not null then storey_reached(c.world_id, s.x, s.y, s.l) end as reached,
+                 case when s.l is not null then creature_way(c.world_id, floor(creature_x(c))::int, floor(creature_y(c))::int, coalesce(c.storey, 0), s.x, s.y, s.l) is not null end as way_from_it,
+                 case when s.l is not null then creature_way(c.world_id, dd.x, dd.y, 0, s.x, s.y, s.l) is not null end as way_from_totem
+            from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+            cross join lateral (select * from my_deed(c.world_id, c.keeper) md where md.world_id is not null) dd
+            cross join lateral hod_work(c.world_id, dd.x, dd.y, work_range(c)) w
+            left join lateral hod_stand(c.world_id, w.kind, w.level, w.dir, w.x, w.y) s on true
+           where $me and c.idle_why = 'stairs' and c.mode = 'deed' and w.level >= 1
+           order by c.id, w.level, w.x, w.y limit 150"
+          ask "floors, stairs, ladders and roofs per building and storey" "select f.building, b.name, f.level + 1 as storey,
+                 count(*) filter (where f.kind = 'floor' and bill_done(f.needed)) as floors,
+                 count(*) filter (where f.kind = 'floor' and not bill_done(f.needed)) as floors_planned,
+                 count(*) filter (where f.kind = 'stairs' and bill_done(f.needed)) as stairs_done,
+                 count(*) filter (where f.kind = 'stairs' and not bill_done(f.needed)) as stairs_planned,
+                 count(*) filter (where f.kind = 'ladder') as ladders, count(*) filter (where f.kind = 'roof') as roofs
+            from player p join floor_tile f on f.world_id = p.world_id and on_my_deed(p.world_id, p.uid, f.x, f.y)
+            left join building b on b.world_id = f.world_id and b.id = f.building
+           where $me group by f.building, b.name, f.level order by f.building, f.level"
+          ask "every staircase and ladder, and the walls a beast does not pass beside it" "select f.building, f.level + 1 as storey, f.x, f.y, f.kind, f.hand, f.facing, bill_done(f.needed) as done,
+                 (select string_agg((wl.level + 1) || wl.dir || '@' || wl.x || ',' || wl.y || ':' || wl.type, ' ')
+                    from wall wl left join wall_type_def t on t.id = wl.type
+                   where wl.world_id = f.world_id and wl.level in (f.level, f.level - 1) and bill_done(wl.needed)
+                     and (wl.type = 'hidden_door' or not coalesce(t.passable, false) or coalesce(t.beast_proof, false) or wl.lowered)
+                     and ((wl.dir = 'h' and wl.x = f.x and wl.y in (f.y, f.y + 1)) or (wl.dir = 'v' and wl.y = f.y and wl.x in (f.x, f.x + 1)))) as walls
+            from player p join floor_tile f on f.world_id = p.world_id and f.kind in ('stairs', 'ladder') and on_my_deed(p.world_id, p.uid, f.x, f.y)
+           where $me order by f.building, f.level, f.x, f.y limit 200"
+          ask "bridges a storey up on the settlement" "select b.id, b.kind, b.ax, b.ay, b.level + 1 as storey_a, b.bx, b.by, coalesce(b.level_b, b.level) + 1 as storey_b, b.width, b.raised,
+                 not exists (select 1 from bridge_span s where s.world_id = b.world_id and s.bridge = b.id and not bill_done(s.needed)) as finished
+            from player p join bridge b on b.world_id = p.world_id
+           where $me and greatest(b.level, coalesce(b.level_b, b.level)) >= 1
+             and (on_my_deed(p.world_id, p.uid, b.ax, b.ay) or on_my_deed(p.world_id, p.uid, b.bx, b.by)) order by b.id"
+          ask "their last 20 worker lines naming stairs" "select to_char(e.at, 'MM-DD HH24:MI:SS') as at, e.kind, left(e.text, 160) as text
+            from event e join player p on p.world_id = e.world_id and p.uid = e.uid
+           where $me and e.text ilike '%stairs%' order by e.n desc limit 20"
 
       - name: Look
         env:
