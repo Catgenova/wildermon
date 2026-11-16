@@ -33,7 +33,7 @@ import { ACTION_BY_ID } from '../../src/game/actions';
 import { heftWord, isDone, MATERIAL_BY_ID, wallBill, WALL_TYPE_BY_ID, type Side, type WallType } from '../../src/game/building';
 import { needsText } from '../../src/game/buildActions';
 import { COUNTER_EMPTY_FIRST, COUNTER_GROUND } from '../../src/game/counters';
-import { changeLine, HIDDEN_DOOR_ALONE, planLine } from '../../src/game/gates';
+import { changeDropped, changeLine, HIDDEN_DOOR_ALONE, planLine } from '../../src/game/gates';
 import { GLASS_ONLY } from '../../src/game/glasshouse';
 import { TileType } from '../../src/world/tiles';
 import { psql, ok, bad, check } from './harness';
@@ -227,7 +227,8 @@ give('mallet', 1);
 const DOOR = wallBill('marble', 'door');
 {
   const [mine, theirs] = both('change_wall', to('door', 'marble'));
-  const want = `${changeLine('door', 'Marble', 'north')} Needs ${needsText(DOOR)}.`;
+  // Storey 2 of three: named (`changeSide`).
+  const want = `${changeLine('door', 'Marble', 'north', 2)} Needs ${needsText(DOOR)}.`;
   check(`a change to a marble door is planned in the same words: "${want}"`, mine === want && theirs === want, `browser "${mine}", island "${theirs}"`);
 }
 {
@@ -250,7 +251,7 @@ same('the same change asked for again is refused', 'change_wall', to('door', 'ma
 same('the wall standing asked for again drops the change', 'change_wall', to('solid', 'marble'), 'ALLOWED');
 {
   const [mine, theirs] = both('change_wall', to('solid', 'marble'));
-  check('and says so in the same words', mine === 'Change dropped: north side.' && theirs === mine, `browser "${mine}", island "${theirs}"`);
+  check('and says so in the same words', mine === changeDropped('north', 2) && theirs === mine, `browser "${mine}", island "${theirs}"`);
   const [a, b] = wallState(1, 20, 26, 'n');
   check('and the change is gone on both sides', a === 'solid|marble|true|-' && b === a, `browser ${a}, island ${b}`);
 }

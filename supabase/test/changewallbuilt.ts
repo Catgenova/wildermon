@@ -148,7 +148,7 @@ CASES.forEach((c, i) => {
   const bill = wallBill(c.material, c.type);
   const name = MATERIAL_BY_ID.get(c.material)?.name ?? c.material;
   const side = SIDE_NAMES[c.side];
-  const wantPlan = `${changeLine(c.type, name, side)} Needs ${needsText({ ...bill, material: c.material })}.`;
+  const wantPlan = `${changeLine(c.type, name, side, c.level + 1)} Needs ${needsText({ ...bill, material: c.material })}.`;
   const plannedSaid = byHand.get(`PLANNED${i}`);
   check(`${c.name}: Change wall through rpc_act plans it, in the browser's words: "${wantPlan}"`, plannedSaid === wantPlan, plannedSaid);
   const plan = byHand.get(`PLAN${i}`) ?? '';
@@ -167,7 +167,7 @@ CASES.forEach((c, i) => {
   for (const [id, n] of Object.entries(bill.total)) page.inventory.add(id, { count: n, ql: 40 });
   const rows = wall ? changeWallRows(page, wall, target, why) : [];
   check(`${c.name}: with its bill to hand, the menu's first row builds the change`,
-    (rows[0]?.label ?? '').startsWith(`Build change (${side}): `) && !rows[0].disabled,
+    (rows[0]?.label ?? '').startsWith(`Build change (${side}, storey ${c.level + 1}): `) && !rows[0].disabled,
     rows.map((r) => `${r.label}${r.hint ? ` [${r.hint}]` : ''}`).join(' / '));
   const buildWhy = why(ACTION_BY_ID.get('build_wall')!, target);
   check(`${c.name}: and Build wall allows it in the browser`, buildWhy === null, String(buildWhy));

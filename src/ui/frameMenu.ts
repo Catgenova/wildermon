@@ -40,7 +40,7 @@ import {
   type StairHand,
   type Wall,
 } from '../game/building';
-import { cornerName } from '../game/frame';
+import { cornerName, storeyOf } from '../game/frame';
 import { fitsMaterial, hiddenDoorIronWords, hiddenDoorWants, planHiddenDoor, wallWords } from '../game/gates';
 import type { Game } from '../game/game';
 import { nearestSide, type Pick } from '../render/renderer';
@@ -90,7 +90,9 @@ const materials = (g: Game, def: ActionDef, target: TileTarget, label: string, b
 export function changeWallRows(g: Game, wall: Wall, target: TileTarget, why: (def: ActionDef, t: TileTarget) => string | null): MenuItem[] {
   const def = act('change_wall');
   if (!target.side || !def.applies(target, g)) return [];
-  const side = SIDE_NAMES[target.side];
+  // Its storey named in a building of more than one: the tile's menu offers every storey's (`buildingEntries`).
+  const levels = storeyOf(g, target)?.levels ?? 1;
+  const side = `${SIDE_NAMES[target.side]}${levels > 1 ? `, storey ${wall.level + 1}` : ''}`;
   const rows: MenuItem[] = [];
   const ch = wall.change;
   if (ch) {

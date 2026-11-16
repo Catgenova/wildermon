@@ -4166,6 +4166,18 @@ export class UI {
           : item(act('no_plan'), withSide, `No plan (${sideName})`));
       }
     }
+    /*
+     * And Change wall on this side's wall of every other storey, named by its storey: what Change wall is for is a
+     * wall something rests on, which is under the storey being worked on once there is one, and it was offered only
+     * the wall of the storey being worked on (`changeWallRows`). Not on a pinned storey's own menu, which is that
+     * storey's.
+     */
+    if (storey === undefined) {
+      for (let l = 0; l < b.levels; l++) {
+        const other = l === level ? undefined : bld.wall(l, x, y, side);
+        if (other) entries.push(...changeWallRows(g, other, { ...withSide, level: l }, (def, t) => cellarReason(g, def, t)));
+      }
+    }
     if (wallOn) return entries;
     // Every storey's wall on this side, whichever storey is being worked on.
     entries.push(...ivy(withSide));

@@ -886,6 +886,19 @@
     "why": "Asked: Change wall kept the old wall and no materials could be added. By hand through rpc_act on the ground and a storey up, a type and a material: planned, carried by the ground read's slow half with its Build change row, built, and the new wall in the slow half and the browser. The browser's Island asks the slow half after a building job's go lands (BUILDS is the island's build_action). A hod carrier fits a change piece for piece in the same order on both sides, and a cobbe finishes one a storey up in an hour on both sides."
   },
   {
+    "file": "supabase/test/changewallmenu.ts",
+    "title": "Change wall through the menu, asked of the island",
+    "shard": 2,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported twice: Change wall seemed to do nothing. The game's own tile menu in Chromium, laid from a real island's answers and asking it as a page does: Change wall (side), type, material, then Build change and Fit all, on the ground and after Work on storey 2 a storey up, a type and a material."
+  },
+  {
     "file": "supabase/test/traces.ts",
     "title": "A team stays in the traces until it is taken out",
     "shard": 2,

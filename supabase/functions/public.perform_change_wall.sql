@@ -13,7 +13,8 @@ begin
   w := frame_wall_at(p_world, tx, ty, v_side, p_target);
   if wall_seen_type(p_world, p_uid, w) = wt.id and w.material = mat.id then
     delete from wall_change c where c.world_id = p_world and c.level = w.level and c.dir = w.dir and c.x = w.x and c.y = w.y;
-    perform tell(p_world, p_uid, 'Change dropped: ' || side_name(v_side) || ' side.', 'event');
+    -- Its storey named in a building of more than one (`changeDropped`).
+    perform tell(p_world, p_uid, 'Change dropped: ' || change_side(v_side, case when p_b.levels > 1 then w.level + 1 end) || '.', 'event');
     return;
   end if;
   -- A fence, a gate or a half wall for less of its material: a Carpenter's Fence Builder, as `plan_wall` has it.
@@ -24,7 +25,7 @@ begin
     on conflict (world_id, level, dir, x, y) do update
       set type = excluded.type, material = excluded.material, needed = excluded.needed, total = excluded.total,
           planned_by = excluded.planned_by;
-    perform tell(p_world, p_uid, change_line(wt.id, mat.id, v_side) || ' Needs ' || bill_text(mat.id, v_bill) || '.', 'event');
+    perform tell(p_world, p_uid, change_line(wt.id, mat.id, v_side, case when p_b.levels > 1 then w.level + 1 end) || ' Needs ' || bill_text(mat.id, v_bill) || '.', 'event');
   else
     -- Nothing stands yet: the plan is the new one, from nothing in.
     update wall set type = wt.id, material = mat.id, needed = v_bill, total = v_bill, lock = null, lowered = false, glass = null
