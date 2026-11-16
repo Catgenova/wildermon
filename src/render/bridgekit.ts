@@ -1,7 +1,7 @@
 import { bridgeBays, bridgeDone, bridgeWidth, BRIDGES, deckArch, deckWalk, laneOffsets, laneStep, rampDeck, type Bridge, type BridgeSpan } from '../game/bridges';
 import { isDone } from '../game/building';
 import { HALF_H, HALF_W, UNITS_PER_TILE } from './iso';
-import { kitBaked, kitIsSync, kitMayBake } from './kitpieces';
+import { kitBaked, kitFrameNow, kitIsSync, kitMayBake } from './kitpieces';
 import { canvasOf, eyeOfView, proj, scaleFor, BAKE_STEPS, type Eye, type NightHole, type NightMask } from './runestone';
 import { VIEWS } from './view';
 import { buildSlice, layGlowMask, layPiece, piecePoints, planOf, type Part3, type PieceModel, type Plan, type Slice } from './kit/bridge/core';
@@ -276,7 +276,8 @@ export function deckKey(f: BridgeFrame, x: number, y: number): number {
 
 /* ---- baking -------------------------------------------------------------------------------------- */
 
-interface Sheet { canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number; drawn?: number }
+/** A picture, and the frame it was last drawn in (`kitFrameNow`). */
+interface Sheet { canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number; drawn?: number; used: number }
 /** Pictures drawn so far, counted: a picture is moved to the newest end of what is kept only once in a while (`TOUCH`). */
 let drawn = 0;
 const TOUCH = 256;
@@ -285,13 +286,25 @@ let keptArea = 0;
 /** Pixels of bridge pictures kept before the least lately drawn is let go. */
 const BUDGET = 14e6;
 const area = (s: Sheet): number => s.canvas.width * s.canvas.height;
+/** Whether a picture is on the screen: drawn in this frame or the last. */
+const onScreen = (s: Sheet): boolean => s.used >= kitFrameNow() - 1;
 
+/**
+ * Keep a picture, and let go of the least lately drawn till the rest fit the
+ * budget -- but never one on the screen, which would only be made again in
+ * the next frame: zoomed in, a bridge's pictures at the largest scale can be
+ * more than the budget, and letting them go made a few again every frame and
+ * left the rest out (pieces of deck and parapet missing, flickering). The
+ * budget is let run over instead, as the kit's furniture's is (`kitpieces.ts`).
+ */
 function keep(key: string, s: Sheet): void {
+  s.used = kitFrameNow();
   kept.set(key, s);
   keptArea += area(s);
+  if (keptArea <= BUDGET) return;
   for (const [k, old] of kept) {
     if (keptArea <= BUDGET) break;
-    if (k === key) continue;
+    if (k === key || onScreen(old)) continue;
     kept.delete(k);
     keptArea -= area(old);
   }
@@ -303,7 +316,7 @@ function bake(pm: PieceModel, box: [number, number, number, number], e: Eye, sca
   g.setTransform(scale, 0, 0, scale, -x0 * scale, -y0 * scale);
   draw(g);
   void pm; void e;
-  return { canvas, x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  return { canvas, x: x0, y: y0, w: x1 - x0, h: y1 - y0, used: kitFrameNow() };
 }
 
 /** Pictures waiting for the browser to be idle. */
@@ -331,8 +344,13 @@ function later(key: string, make: () => void): void {
   schedule();
 }
 
-/** Bake statistics, for a harness: how many pictures and how long they took. */
-export const bridgeBakes = { count: 0, ms: 0, drawMs: 0, takeMs: 0, px: 0 };
+/**
+ * Bake statistics, for a harness: how many pictures and how long they took; and of the pieces drawn without a
+ * picture of their own at the scale, how many had another of theirs stand in (`stood`) and how many were left out (`missed`).
+ */
+export const bridgeBakes = { count: 0, ms: 0, drawMs: 0, takeMs: 0, px: 0, stood: 0, missed: 0 };
+/** For a harness: told of every picture a piece is drawn with and where, so it can see two frames drew the same. */
+export const bridgeWatch: { drew: ((canvas: HTMLCanvasElement, x: number, y: number, w: number, h: number) => void) | null } = { drew: null };
 
 /**
  * Draw a piece at its middle (`sx`, `sy`): its picture at this scale, made
@@ -394,9 +412,13 @@ function drawPiece(ctx: CanvasRenderingContext2D, p: BridgePieceAt, zoom: number
       if (sh) break;
     }
     later(key, () => { if (!kept.has(key)) make(); });
+    if (sh) bridgeBakes.stood++;
+    else bridgeBakes.missed++;
   }
+  if (sh) sh.used = kitFrameNow();
   if (sh) bridgeBakes.px += sh.w * sh.h * zoom * zoom;
   if (sh) ctx.drawImage(sh.canvas, p.sx + sh.x * zoom, p.sy + sh.y * zoom, sh.w * zoom, sh.h * zoom);
+  if (sh && bridgeWatch.drew) bridgeWatch.drew(sh.canvas, p.sx + sh.x * zoom, p.sy + sh.y * zoom, sh.w * zoom, sh.h * zoom);
   const [x0, y0, x1, y1] = sl.box[p.part];
   return [p.sx + x0 * zoom, p.sy + y0 * zoom, p.sx + x1 * zoom, p.sy + y1 * zoom];
 }
@@ -436,6 +458,7 @@ export function bridgeNight(p: BridgePieceAt, zoom: number, rotation: number): {
         sh = bake(sl[p.part], box, e, scale, (gg) => layGlowMask(gg, e, g));
         keep(mkey, sh);
       }
+      sh.used = kitFrameNow();
       return [{ canvas: sh.canvas, x: p.sx + dx + sh.x * zoom, y: p.sy + dy + sh.y * zoom, w: sh.w * zoom, h: sh.h * zoom, a: 0.9 }];
     },
   };
@@ -469,6 +492,9 @@ export function kitBridge(b: Bridge): boolean {
 /** The deck's height at the middle of a tile of a bridge, any lane's, where a body walking it stands (`deckWalk`). */
 export const deckMid = (b: Bridge, x: number, y: number): number => deckWalk(b, x + 0.5, y + 0.5);
 export { bridgeDone };
+
+/** The pixels of pictures kept and the budget they are let go past, for a harness. */
+export const bridgeKept = (): { area: number; budget: number } => ({ area: keptArea, budget: BUDGET });
 
 /** Let go of every plan and picture: for a harness timing them cold. */
 export function forgetBridgeBakes(): void {
