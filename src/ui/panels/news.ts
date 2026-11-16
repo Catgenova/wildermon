@@ -429,6 +429,21 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // A hod carrier names the build gate over work its stores have pieces for, and stock only what they lack
+  // (`20261120000126_hod_names_its_build_gate.sql`, `Game.hodGatedBuild`, `hodGate`).
+  {
+    n: 663,
+    day: '2026-11-16',
+    lines: () => {
+      const was = idleSays({ why: 'stock', n: 3, what: ['glass', 'timber', 'marble_brick'] }, 'hod');
+      const gate = idleSays({ why: 'gate', n: 6, what: ['material', 'glass'] }, 'hod', null, undefined, { carpentry: 1 });
+      const lack = idleSays({ why: 'stock', n: 1, what: ['marble_brick'] }, 'hod');
+      return [
+        `Fixed: idle hod carriers, a wall, floor or column wanting what your settlement stores hold, over its level: its first unmet gate, nearest first: "${gate}" (was: "${was}").`,
+        `Fixed: idle hod carriers, stock: only what your settlement stores lack: "${lack}" (was: every thing wanted, held or not: "${was}").`,
+      ];
+    },
+  },
   // Nine more ancient bauble effects, after the six (`ANCIENT_EFFECTS`, `20261120000124_nine_ancient_baubles.sql`).
   {
     n: 662,

@@ -102,7 +102,7 @@ import { jewelGain } from './gems';
 import { earnedBy, knackBonus, knackChance, knackLands, KNACK_CAP, TITLE_BY_ID } from './titles';
 import { TileIndex, Tally, cropKey, keyX, keyY, tileKey } from './tileindex';
 import { DARK_HIT, NIGHT_EYES_FROM, SOUL_PER_LEVEL, WORK_HAND, WORK_WIND, WORK_WIND_SPENT, HEAVY_SKILLS, WORK_BACK } from './learn';
-import { gateOf, seenVein } from './skillgates';
+import { gateOf, seenVein, type SkillGate } from './skillgates';
 import { DRIVING, DRIVING_LEARN, drivingPace, SAILING, SAILING_LEARN, sailingPace, vehicleQlPace } from './travel';
 import { isLayUp, LEAD_PACE, ROPE_WALK, ROPE_WALK_TIME, ROPEMAKING, ropePerLayUp, ropeTime } from './ropework';
 import { laySwirls, swirlLight, type MoteElement, type Swirl } from './motes';
@@ -8641,18 +8641,21 @@ export class Game {
   }
 
   /**
-   * Everything planned work within reach (`near`) still wants, whether the
-   * stores hold it or not: each thing once, nearest the work wanting it to
-   * `from` first, then by name; and how many things that is. What a hod
-   * carrier with nothing it can fetch names as wanted (`Idle.what`). The
-   * island's `hod_wanted`.
+   * Everything planned work within reach (`near`) still wants, and with
+   * `stocked` only what the stores do not hold: each thing once, nearest the
+   * work wanting it to `from` first, then by name; and how many things that
+   * is. What a hod carrier with nothing it can fetch names as wanted
+   * (`Idle.what`). The island's `hod_wanted`, and with `stocked` its
+   * `hod_lacking`.
    */
-  hodWanted(near: (x: number, y: number, dir?: string) => boolean, from: { x: number; y: number }): { items: string[]; n: number } {
+  hodWanted(near: (x: number, y: number, dir?: string) => boolean, from: { x: number; y: number }, stocked?: (item: string) => boolean): { items: string[]; n: number } {
     const nearest = new Map<string, number>();
     const consider = (bill: Bill, x: number, y: number, dir?: string): void => {
       if (!near(x, y, dir)) return;
       const d = (x - from.x) ** 2 + (y - from.y) ** 2;
-      for (const [item, n] of Object.entries(bill.needed)) if (n > 0 && d < (nearest.get(item) ?? Infinity)) nearest.set(item, d);
+      for (const [item, n] of Object.entries(bill.needed)) {
+        if (n > 0 && !stocked?.(item) && d < (nearest.get(item) ?? Infinity)) nearest.set(item, d);
+      }
     };
     for (const wall of this.buildings.walls.values()) if (!isDone(hodBill(wall))) consider(hodBill(wall), wall.x, wall.y, wall.dir);
     for (const floor of this.buildings.floors.values()) if (!isDone(floor)) consider(floor, floor.x, floor.y);
@@ -8664,6 +8667,40 @@ export class Game {
     for (const foundation of this.foundations.values()) if (!foundationDone(foundation)) consider(foundation, foundation.x, foundation.y);
     const items = [...nearest].sort((a, b) => a[1] - b[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([item]) => item);
     return { items, n: items.length };
+  }
+
+  /**
+   * The nearest wall, floor or column within reach wanting something the
+   * stores hold (`stocked`) and gated over a hod carrier's level (`gate`, the
+   * first gate it does not meet), and how many tiles (rings) from `from` it
+   * is; ties by kind in the order of `HOD_WORK`, then storey, side, x and y.
+   * Its idle reason, `gate`. The island's `hod_build_gate`.
+   */
+  hodGatedBuild(
+    near: (x: number, y: number, dir?: string) => boolean,
+    from: { x: number; y: number },
+    stocked: (item: string) => boolean,
+    gate: (target: HodTarget) => SkillGate | undefined,
+  ): { gate: SkillGate; n: number } | undefined {
+    type Key = { d: number; rank: number; level: number; dir: string; x: number; y: number };
+    const before = (a: Key, b: Key): boolean =>
+      a.d !== b.d ? a.d < b.d : a.rank !== b.rank ? a.rank < b.rank : a.level !== b.level ? a.level < b.level
+        : a.dir !== b.dir ? a.dir < b.dir : a.x !== b.x ? a.x < b.x : a.y < b.y;
+    let best: (Key & { gate: SkillGate }) | undefined;
+    const consider = (target: HodTarget, bill: Bill, x: number, y: number, level: number, dir: string): void => {
+      if (!near(x, y, dir) || !Object.entries(bill.needed).some(([item, n]) => n > 0 && stocked(item))) return;
+      const key = { d: (x - from.x) ** 2 + (y - from.y) ** 2, rank: HOD_WORK.indexOf(target.kind), level, dir, x, y };
+      if (best && !before(key, best)) return;
+      const g = gate(target);
+      if (g) best = { ...key, gate: g };
+    };
+    for (const wall of this.buildings.walls.values()) {
+      const bill = hodBill(wall);
+      if (!isDone(bill)) consider({ kind: 'wall', wall }, bill, wall.x, wall.y, wall.level, wall.dir);
+    }
+    for (const floor of this.buildings.floors.values()) if (!isDone(floor)) consider({ kind: 'floor', floor }, floor, floor.x, floor.y, floor.level, '');
+    for (const column of this.buildings.columns.values()) if (!isDone(column)) consider({ kind: 'column', column }, column, column.x, column.y, column.level, '');
+    return best && { gate: best.gate, n: Math.max(Math.abs(best.x - Math.floor(from.x)), Math.abs(best.y - Math.floor(from.y))) };
   }
 
   /**

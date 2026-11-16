@@ -3666,6 +3666,9 @@ export function helpText(): string {
       its range, with the distance; a miner: a bare seam above its mining (&ldquo;${idleSays({ why: 'seam', n: 4, what: ['iron_ore'] }, 'mine', null, 1)}&rdquo;),
       bare rock with no seam (&ldquo;${idleSays({ why: 'noseam', n: SPECIES.mola.workRange }, 'mine')}&rdquo;); only work above its level in its task's skill, the lowest then the nearest
       (&ldquo;${idleSays({ why: 'gate', n: 3, what: ['tree', 'willow'] }, 'woodcut', null, 12)}&rdquo;); no staircase up to its work's storey (&ldquo;${idleSays({ why: 'stairs', n: 2 }, 'hod')}&rdquo;); no staircase down from where it stands (&ldquo;${idleSays({ why: 'stranded', n: 2 }, 'hod')}&rdquo;): it stays on that storey until one is built.
+      Hod carrier, in order after no staircase up: a wall, floor or column wanting what your settlement stores hold, over its level, nearest first, its first unmet gate
+      (&ldquo;${idleSays({ why: 'gate', n: 6, what: ['material', 'glass'] }, 'hod', null, undefined, { carpentry: 1 })}&rdquo;); only bridge spans over its level; what the stores lack, none of what they hold
+      (&ldquo;${idleSays({ why: 'stock', n: 1, what: ['marble_brick'] }, 'hod')}&rdquo;).
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
       <li><b>Storeys</b>: a store, station or planned work a storey up is in reach where a worker walks to it from the ground, by the step rule you walk by: finished staircases, wide or
       ${SINGLE_STAIRS_NAME} onto it from any side with no wall, off onto its storey at any side with a floor, down at its foot or a side with no floor;

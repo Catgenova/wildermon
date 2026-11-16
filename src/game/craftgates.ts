@@ -309,14 +309,21 @@ export const workerBuildOpen = (c: { skills: Record<string, number> }, material:
   buildGates(material, as).every((g) => workerGateOpen(c, g));
 
 /**
- * Whether a hod carrier may fit what a piece of work wants: every gate on it at its own level (a wall, a floor, a
- * column by its material; a change planned on a wall by the change's). The island's `hod_may`.
+ * The gates on fitting what a piece of work wants: a wall, a floor, a column by its material and type (a change planned
+ * on a wall by the change's); a bridge span by its bridge. The island's `hod_build_gates` and `hod_may`.
  */
-export const hodMay = (c: { skills: Record<string, number> }, t: HodTarget): boolean =>
-  t.kind === 'wall' ? workerBuildOpen(c, (t.wall.change ?? t.wall).material, { wall: (t.wall.change ?? t.wall).type })
-    : t.kind === 'floor' ? workerBuildOpen(c, t.floor.material, { floor: t.floor.kind ?? 'floor', hand: t.floor.hand })
-      : t.kind === 'column' ? workerBuildOpen(c, t.column.material, {})
-        : t.kind === 'span' ? workerGateOpen(c, gateOf('bridge', t.bridge.kind)) : true;
+const hodGates = (t: HodTarget): SkillGate[] =>
+  t.kind === 'wall' ? buildGates((t.wall.change ?? t.wall).material, { wall: (t.wall.change ?? t.wall).type })
+    : t.kind === 'floor' ? buildGates(t.floor.material, { floor: t.floor.kind ?? 'floor', hand: t.floor.hand })
+      : t.kind === 'column' ? buildGates(t.column.material, {})
+        : t.kind === 'span' ? [gateOf('bridge', t.bridge.kind)].filter((g): g is SkillGate => !!g) : [];
+
+/** The first gate on a piece of work over a hod carrier's own level, or undefined: it may fit it. The island's `hod_build_gate`. */
+export const hodGate = (c: { skills: Record<string, number> }, t: HodTarget): SkillGate | undefined =>
+  hodGates(t).find((g) => !workerGateOpen(c, g));
+
+/** Whether a hod carrier may fit what a piece of work wants: every gate on it at its own level. The island's `hod_may`. */
+export const hodMay = (c: { skills: Record<string, number> }, t: HodTarget): boolean => !hodGate(c, t);
 
 /** Paving with cobblestones or a slab under its gate, or null. */
 export const pavingGateRefusal = (viewer: Viewer, id: string): string | null => {
