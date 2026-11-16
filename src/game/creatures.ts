@@ -1,5 +1,5 @@
 import { describeGoals } from './journal';
-import { hodMay, relicGate, smeltGate, waterPlantFrom, workerRecipeOpen, workerSmeltOpen, workerSmithOpen, workerWaterPlantOpen } from './craftgates';
+import { hodGate, hodMay, relicGate, smeltGate, waterPlantFrom, workerRecipeOpen, workerSmeltOpen, workerSmithOpen, workerWaterPlantOpen } from './craftgates';
 import { LAIR_BY_ID } from './lairs';
 import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES, PRUNE_LOGS, pruneLogs } from '../world/tiles';
 import { isSeam } from '../world/tiles';
@@ -9481,12 +9481,17 @@ export class Creatures {
       return true;
     }
     if (!job) {
+      // A wall, floor or column within reach wanting what the stores hold, over its own level: `gate`, naming the
+      // nearest one's first unmet gate (the island's `hod_build_gate`).
+      const built = game.hodGatedBuild(near, deed, stocked, (t) => hodGate(c, t));
+      if (built) return this.why(c, 'gate', built.n, [built.gate.kind, built.gate.id]);
       // Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest (the
       // island's `hod_span_gate`).
       const gated = game.hodGatedSpan(near, deed, (t) => hodMay(c, t));
       if (gated) return this.why(c, 'gate', gated.n, ['bridge', gated.kind]);
-      // Work within reach wanting only what the stores do not hold: `stock`, naming it. None at all: `range`.
-      const wanted = game.hodWanted(near, deed);
+      // Work within reach wanting what the stores do not hold: `stock`, naming only that (the island's `hod_lacking`).
+      // Nothing lacking: `range`.
+      const wanted = game.hodWanted(near, deed, stocked);
       return wanted.n > 0 ? this.why(c, 'stock', wanted.n, wanted.items.slice(0, IDLE_WANTS)) : this.why(c, 'range', range);
     }
     if (!c.carrying) {

@@ -2234,6 +2234,15 @@
     "why": "Seen on the island: hod carriers idle with \"nothing in range\" while work in range wanted marble brick and glass the stores did not hold, one holding mortar nothing wanted. Now `stock`, naming what is wanted, the same words on both sides; `range` only with no work at all; and the unwanted piece back in the stores."
   },
   {
+    "file": "supabase/test/hodgate.ts",
+    "title": "A hod carrier names its build gate, and stock only what the stores lack",
+    "shard": 4,
+    "external": [
+      "typescript"
+    ],
+    "why": "Seen on the island: a Bastiondrake idle \"stock\", naming glass, timber and marble brick, with 1051 glass and 333 timber in the stores: glass walls wanted them and its carpentry (1) was under glass building's gate (40). Now `gate`, naming that gate and how far the work is, the same words on both sides; `stock` names only what the stores lack; and at the gate's level it fits the glass wall."
+  },
+  {
     "file": "supabase/test/farworker.ts",
     "title": "A worker far from anybody still walks home",
     "shard": 4,

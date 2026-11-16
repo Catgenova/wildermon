@@ -45,12 +45,17 @@ begin
         -- Work the stores have for a storey up no staircase goes to: `stairs`, and that storey (`hod_unreached`).
         why_n := hod_unreached(p_world, c.keeper, dd.x, dd.y, rng);
         if why_n is not null then why := 'stairs'; return next; return; end if;
+        -- A wall, floor or column within reach wanting what the stores hold, over its own level: `gate`, naming the
+        -- nearest one's first unmet gate, material then type (`hod_build_gate`). Before a bridge span's.
+        select array[s.kind, s.id], s.n into why_what, why_n from hod_build_gate(p_world, c, dd.x, dd.y, rng) s where s.kind is not null;
+        if why_what is not null then why := 'gate'; return next; return; end if;
         -- Only bridge spans over its own level within reach: `gate`, naming the lowest bridge, then the nearest. The
         -- function always gives one row, its outs null when there is no such span: only a named bridge is a gate.
         select array['bridge', s.kind], s.n into why_what, why_n from hod_span_gate(p_world, c, dd.x, dd.y, rng) s where s.kind is not null;
         if why_what is not null then why := 'gate'; return next; return; end if;
-        -- Work within reach wanting only what the stores do not hold: `stock`, and what it wants. None: `range`.
-        select * into v_wet from hod_wanted(p_world, dd.x, dd.y, rng, c.keeper);
+        -- Work within reach wanting what the stores do not hold: `stock`, naming only that (`hod_lacking`). Nothing
+        -- lacking: `range`.
+        select * into v_wet from hod_lacking(p_world, dd.x, dd.y, rng, c.keeper);
         if coalesce(v_wet.n, 0) > 0 then why := 'stock'; why_n := v_wet.n; why_what := v_wet.items;
         else why := 'range'; why_n := rng; end if;
         return next;
