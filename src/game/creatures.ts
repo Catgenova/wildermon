@@ -19,9 +19,9 @@ import { smelterCapacity, smelterCentre, type PlacedSmelter } from './smelter';
 import { fireSeconds, firedQl, kilnCapacity, kilnCentre, POTTERY, POTTERY_BY_UNFIRED, isGreenware, type PlacedKiln } from './kiln';
 import { brewTime, BREWS, isWorking, type BrewDef } from './brewing';
 import { fragmentOf, RELICS, RESTORE_AGE, type RelicDef } from './archaeology';
-import { fitsDen, furnitureDef, furnitureRefuses, furnitureRoom, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
+import { fitsDen, furnitureDef, furnitureHolds, teamOf, furnitureRefuses, furnitureRoom, holdsLiquid, isPlanter, isWell, litresIn } from './furniture';
 import { crateCapacity, crateCentre, crateKindOfItem, crateUnits } from './crates';
-import { hoardItems, hoardOther } from './hoard';
+import { hoardItems, hoardOther, hoardRole } from './hoard';
 import { storeMarkable } from './stores';
 
 import { MILK_READY, milkLitres } from './dairy';
@@ -1023,16 +1023,21 @@ interface HoardBox {
   store: DeedStore;
   /** The items its name is for (`hoardItems`); none for a source. */
   ids: readonly string[];
-  /** Padlocked or marked a settlement store: never a source. */
+  /** Padlocked: never a source. */
   shut: boolean;
+  /** What it is: `crate` or the piece's kind, for why it takes nothing of a thing (`refuses`). */
+  sub: string;
   /** How many of a thing it has room for. */
   room(item: Item): number;
+  /** Whether it takes none of a thing whatever its room: a bin built for something else. */
+  refuses(item: Item): boolean;
 }
 
 /** The stack a magga moves to a container named for it next, or why there is none (`Creatures.hoardMove`). */
 export type HoardMove =
   | { x: number; y: number; centre: [number, number]; store: DeedStore; item: Item; n: number }
-  | { why: 'noname' | 'nomove' | 'namedfull' };
+  | { why: 'noname' | 'nomove' | 'namedfull' }
+  | { why: 'namedrefuses'; what: [string, string] };
 
 /*
  * Rest. Asked for: "Workers tire after N goes and rest for a short while. A bed or pen on the deed shortens the rest",
@@ -11217,7 +11222,7 @@ export class Creatures {
       const said = mine ?? stone;
       if (said) this.why(c, said.why, said.n, said.what);
       // A magga on its settlement: why nothing moved to a container named for it (`hoardMove`).
-      else if (hoard && 'why' in hoard) this.why(c, hoard.why, range);
+      else if (hoard && 'why' in hoard) this.why(c, hoard.why, range, 'what' in hoard ? hoard.what : undefined);
       else this.why(c, 'range', range);
     }
     // Nothing to do right now: potter about near the token.
@@ -11314,10 +11319,11 @@ export class Creatures {
   }
 
   /**
-   * The containers a magga's named sort looks at (`hoard.ts`): every crate and every piece that may be marked a store
-   * (`storeMarkable`) on its keeper's settlement, with the items its name is for (`hoardItems`, none for a source),
-   * whether it is padlocked or marked a settlement store, and how many of a thing it has room for. The island's
-   * `private.hoard_boxes`.
+   * The containers a magga's named sort looks at (`hoard.ts`, `hoardRole`), on its keeper's settlement: every crate
+   * and every piece that may be marked a store (`storeMarkable`), marked one or not; a trash crate only while named for
+   * an item (a target); a cart or wagon parked, not hitched or driven, and not named for an item (a source only). Each
+   * with the items its name is for (`hoardItems`, none for a source), whether it is padlocked, and how many of a thing
+   * it has room for. The island's `private.hoard_boxes`.
    */
   private hoardBoxes(game: Game): HoardBox[] {
     const stores = game.deedStores();
@@ -11328,18 +11334,28 @@ export class Creatures {
       const store = storeAt(cr.x, cr.y, cr.items);
       if (!store) continue;
       out.push({
-        kind: 0, id: cr.id, x: cr.x, y: cr.y, centre: crateCentre(cr), store, ids: hoardItems(cr.name), shut: !!cr.lock || !!cr.storeOf,
+        kind: 0, id: cr.id, x: cr.x, y: cr.y, centre: crateCentre(cr), store, ids: hoardItems(cr.name), shut: !!cr.lock, sub: 'crate',
         room: (it) => (crateKindOfItem(it.id) ? 0 : Math.max(0, crateCapacity(cr) - crateUnits(cr))),
+        refuses: (it) => !!crateKindOfItem(it.id),
       });
     }
     for (const f of game.furniture.values()) {
       const def = furnitureDef(f.kind);
-      if (!storeMarkable(f.kind, def) || !game.onHomeDeed(f.x, f.y)) continue;
-      const store = storeAt(f.x, f.y, f.items);
+      if (!game.onHomeDeed(f.x, f.y) || !furnitureHolds(f)) continue;
+      const role = hoardRole(def, storeMarkable(f.kind, def));
+      let ids = hoardItems(f.name);
+      if (!role) continue;
+      if (role === 'trash' && !ids.length) continue;
+      if (role === 'wheels') {
+        if (ids.length || f.driven || f.hitched || teamOf(f).length) continue;
+        ids = [];
+      }
+      const store = role === 'trash' ? game.furnitureStore(f, true) : storeAt(f.x, f.y, f.items);
       if (!store) continue;
       out.push({
-        kind: 1, id: f.id, x: f.x, y: f.y, centre: furnitureCentre(f), store, ids: hoardItems(f.name), shut: !!f.lock || !!f.storeOf,
+        kind: 1, id: f.id, x: f.x, y: f.y, centre: furnitureCentre(f), store, ids, shut: !!f.lock, sub: f.kind,
         room: (it) => (furnitureRefuses(f, it) ? 0 : furnitureRoom(f, it)),
+        refuses: (it) => !!furnitureRefuses(f, it),
       });
     }
     return out;
@@ -11351,7 +11367,8 @@ export class Creatures {
    * for an item, not padlocked or marked a settlement store, that it may use (`workerMay`) -- the first stack in it,
    * not locked, of an item a target is named for; into the target for it nearest the source that it may fill, with
    * room for some of it past what of it is in its arms already; as many as that room. `noname` with no target on the
-   * settlement, `namedfull` with something to move and every target for it full, `nomove` with nothing to move. The
+   * settlement; with something to move and none of it moved, `namedrefuses` for the first thing every target for it
+   * takes none of (its id and the nearest such target's kind), else `namedfull`; `nomove` with nothing to move. The
    * island's `private.hoard_move`.
    */
   hoardMove(game: Game, c: Creature, atX?: number, atY?: number): HoardMove {
@@ -11364,6 +11381,7 @@ export class Creatures {
     const sources = boxes.filter((b) => !b.ids.length && !b.shut && b.store.workerMay && (atX === undefined || (b.x === atX && b.y === atY)));
     sources.sort((a, b) => d2(a, fx, fy) - d2(b, fx, fy) || a.kind - b.kind || a.id - b.id);
     let seen = false;
+    let refused: [string, string] | null = null;
     for (const s of sources) {
       for (const item of s.store.items) {
         if (item.count <= 0 || item.locked || !wanted.has(item.id)) continue;
@@ -11375,8 +11393,10 @@ export class Creatures {
           const room = t.room(item) - inArms(c, item.id);
           if (room > 0) return { x: s.x, y: s.y, centre: s.centre, store: s.store, item, n: Math.min(item.count, room) };
         }
+        if (!refused && into.length && into.every((t) => t.refuses(item))) refused = [item.id, into[0].sub];
       }
     }
+    if (refused) return { why: 'namedrefuses', what: refused };
     return { why: seen ? 'namedfull' : 'nomove' };
   }
 

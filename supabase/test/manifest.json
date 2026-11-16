@@ -886,6 +886,19 @@
     "why": "Asked: Change wall kept the old wall and no materials could be added. By hand through rpc_act on the ground and a storey up, a type and a material: planned, carried by the ground read's slow half with its Build change row, built, and the new wall in the slow half and the browser. The browser's Island asks the slow half after a building job's go lands (BUILDS is the island's build_action). A hod carrier fits a change piece for piece in the same order on both sides, and a cobbe finishes one a storey up in an hour on both sides."
   },
   {
+    "file": "supabase/test/changewallmenu.ts",
+    "title": "Change wall through the menu, asked of the island",
+    "shard": 2,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "STOREY_STRICT": "1"
+    },
+    "why": "Reported twice: Change wall seemed to do nothing. The game's own tile menu in Chromium, laid from a real island's answers and asking it as a page does: Change wall (side), type, material, then Build change and Fit all, on the ground and after Work on storey 2 a storey up, a type and a material."
+  },
+  {
     "file": "supabase/test/traces.ts",
     "title": "A team stays in the traces until it is taken out",
     "shard": 2,
@@ -2248,6 +2261,15 @@
       "typescript"
     ],
     "why": "Asked: \"If a player names an eligible container on their settlement, the wildermon will transport items to that container from any unmatched or unnamed containers.\" A name matches by the item's name, plural or id, any case; naming is refused to whoever may not use the piece; the moves split a stack to the room, fill one target then the next, never take out of a target or a padlocked chest, and are the same loads in the same order on both sides; idle, it says which of no named container, nothing to move or every target full."
+  },
+  {
+    "file": "supabase/test/hoardmixed.ts",
+    "title": "A Chestkit moves every item named for, not only mortar",
+    "shard": 4,
+    "external": [
+      "typescript"
+    ],
+    "why": "Reported: mortar moved and ancient whetstones and marble bricks did not, the whetstones in a wagon and a trash crate named for them. A parked wagon, a marked settlement store and a crate are sources, a pulled cart and an unnamed trash crate are not; a trash crate named for an item is a target and keeps what goes in; every item goes, the same loads in the same order on both sides; and an item whose only named container takes none of it says so, item and refusal, on its card."
   },
   {
     "file": "supabase/test/turnover.ts",

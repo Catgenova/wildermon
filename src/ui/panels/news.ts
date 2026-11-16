@@ -294,7 +294,7 @@ import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } f
 import { BAY_PAST_HEFT, BRIDGE_BILL_TIMES, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
 import { AQUEDUCT, AQUEDUCT_MOTE_USE, aqMoteFed } from '../../game/aqueducts';
 import { AQUEDUCT_FLOW, AQUEDUCT_LPS, CHANNEL_DEEP, CHANNEL_WIDE, TILE_METRES } from '../../world/aqueducts';
-import { gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
+import { changeDropped, changeLine, gateJobWords, gateReach, HIDDEN_DOOR_IRON, HIDDEN_DOOR_LAPSE } from '../../game/gates';
 import { CROP_LIST, CROP_STAGES, CROPS, growthWords } from '../../game/farming';
 import { GLASSHOUSE_GROWTH, PLANTER_GROWTH, SEASON_GROWTH, SEASON_SECONDS, YEAR_SECONDS } from '../../game/growth';
 import { STONES_DEPTH, STONES_SLABS, yearSays } from '../../game/watergarden';
@@ -436,6 +436,33 @@ export const NEWS: News[] = [
         `New: Examine on a cleared lair's tile: ${chest}, things in it.`,
         `Fixed: lairs (${listed(LAIR_KINDS.map((k) => k.name.toLowerCase()))}): menu Examine only (was: Pick it up, Give it a name and every furniture job). ${LAIR_CHEST_NAME}: Open, ${ACTION_BY_ID.get('furniture_take_all')?.label}, Examine.`,
         `Changed: names, dyes and padlocks on lairs taken off.`,
+      ];
+    },
+  },
+  // Change wall on every storey's wall of a side, named by storey (`changeWallRows`, `20261120000111_change_wall_storey.sql`).
+  {
+    n: 654,
+    day: '2026-11-16',
+    lines: () => [
+      'Fixed: Change wall: offered for the side\'s wall on every storey (was: the storey being worked on only; with a storey over it, the ground floor\'s wall could not be changed, and Change wall changed the wall above).',
+      'Changed: Change wall, Build change: each row named by its storey, on a building of more than one storey.',
+      `Changed: log: "${changeLine('door', 'Plank', 'north', 1)}", "${changeDropped('north', 1)}", on a building of more than one storey.`,
+    ],
+  },
+  // Every container named for an item read, not only crates and stores (`20261120000108_named_containers_every_item.sql`, `hoard.ts`).
+  {
+    n: 651,
+    day: '2026-11-16',
+    lines: () => {
+      const line = SPECIES.magga.name;
+      const trash = furnitureDef('trash_crate').name.toLowerCase();
+      const wheels = listed(['cart', 'large_cart', 'wagon'].map((k) => furnitureDef(k).name.toLowerCase()));
+      return [
+        `Fixed: ${line}: moves items out of ${wheels} parked on the settlement (was: never). Not while hitched or driven; not one named for an item.`,
+        `Fixed: ${line}: moves items out of marked settlement stores (was: never).`,
+        `Fixed: ${line}: a ${trash} named for an item is a target for it (was: never filled); contents kept while so named.`,
+        `Fixed: ${line}: a name with spaces doubled inside, or an id made plural ("ancient_whetstones"), names its item (was: no item).`,
+        `Fixed: ${line} idle: a named container that takes none of the item: "${IDLE_LABEL.namedrefuses}", with the item and the container's refusal (was: "${IDLE_LABEL.namedfull}").`,
       ];
     },
   },

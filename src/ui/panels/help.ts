@@ -2060,7 +2060,7 @@ export function helpText(): string {
       (next storey, glasshouse). <b>Mark out</b>: the model back. Cleared by a wall planned on it, or the storey or building removed.</li>
       <li>A finished full-height wall with a wall of the storey above on the same side (once any of that wall's materials are in) cannot come down until that upper
       wall does, or a finished column stands at each end; likewise the last wall a jetty rests on. To turn one into a door: <b>Change wall</b>.</li>
-      <li><b>Change wall</b> on a wall of a building: wall type, then material, at its bill; mallet. Finished wall: stands, shut and carrying, until the change is
+      <li><b>Change wall</b> on a wall of a building: wall type, then material, at its bill; mallet. Offered for the side's wall on every storey, whichever is being worked on; a building of more than one storey: each row named by its storey. Finished wall: stands, shut and carrying, until the change is
       built (<b>Build change</b>, as Build wall, or a hod carrier); with the last material, the new wall. Still going up: replanned in place, new bill. Refused: fence, half wall or
       railing on a wall something rests on; a material lighter than the heaviest wall above, glass excepted; a counter with goods or takings; a padlocked portcullis. The standing
       type and material again: change dropped.</li>
@@ -3497,12 +3497,15 @@ export function helpText(): string {
       Evolves: ${evolves('embra')}.</td></tr>
       <tr><td><b>${SPECIES.magga.name}</b></td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range:
       <b>named containers</b> first, then the bins; on its settlement only, not off a work post.<br>
-      Named container: a crate or storage piece on the settlement named for an item (Give it a name: the item's name, plural or id; any case; spaces round it ignored; max ${NAME_MAX} characters).
-      Moves: that item from the other containers, nearest first; to the nearest named for it with room; a stack a load, split to the room;
-      that one full: the next named for it. Never out of a named container, a padlocked or marked store, or a locked item; nothing else into a named container.
+      Named container: a crate, storage piece or ${furnitureDef('trash_crate').name.toLowerCase()} on the settlement named for an item (Give it a name: the item's name or id, or either plural; any case; spaces round it ignored; max ${NAME_MAX} characters).
+      ${furnitureDef('trash_crate').name} so named: contents kept.
+      Moves: that item from the other containers, nearest first: crates, storage pieces, marked settlement stores, and ${['cart', 'large_cart', 'wagon'].map((k) => furnitureDef(k).name.toLowerCase()).join(', ')} parked (not hitched or driven);
+      to the nearest named for it with room; a stack a load, split to the room;
+      that one full: the next named for it. Never out of a named container, a padlocked one, a vehicle named for an item, an unnamed ${furnitureDef('trash_crate').name.toLowerCase()}, or a locked item; nothing else into a named container.
       Stacks a trip: ${STAGE_LOADS.join(', ')} by stage; ${perkLine('magga').toLowerCase()} (${STAGE_LOADS[2]} to ${STAGE_LOADS[2] + STAGE_PERKS.magga.n}). Pace: its speed and work time.<br>
       Bins: a stack a load from a settlement crate, chest or other store into the raw or craft material bin that takes it, up to the bin's room; not from bins, named containers, padlocked or marked stores or locked items.<br>
       Card when idle: ${(['noname', 'nomove', 'namedfull'] as const).map((why) => `&ldquo;${idleSays({ why, n: SPECIES.magga.workRange }, 'fetch')}&rdquo;`).join(' ')}
+      &ldquo;${idleSays({ why: 'namedrefuses', n: SPECIES.magga.workRange, what: ['hatchet', 'craft_bin'] }, 'fetch')}&rdquo;
       Off a work post: &ldquo;${idleSays({ why: 'range', n: SPECIES.magga.workRange, post: true }, 'fetch')}&rdquo; Wild ones steal items left near their trees. Evolves: ${evolves('magga')}.</td></tr>
       <tr><td><b>${SPECIES.woola.name}</b></td><td>No task. <b>Shear</b> with a knife for <b>wool</b> once grown; regrows in ${dur(1 / (SPECIES.woola.fleece ?? 1))}.
       Evolves: ${evolves('woola')}.</td></tr>

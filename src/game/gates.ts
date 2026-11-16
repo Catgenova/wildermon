@@ -189,12 +189,22 @@ export function wallWords(type: WallType, material: string): string {
 }
 
 /**
- * The line a change planned for a finished wall says (`change_wall`), named
- * as a plan is: "Change planned: door, marble, west side.". The island's
- * `change_line`.
+ * A side as a change names it: "west side", and in a building of more than one
+ * storey its storey too, numbered from 1: "west side, storey 2". The island's
+ * `change_side`.
  */
-export const changeLine = (type: WallType, material: string, side: string): string =>
-  `Change planned: ${wallWords(type, material)}, ${side} side.`;
+export const changeSide = (side: string, storey?: number): string => `${side} side${storey === undefined ? '' : `, storey ${storey}`}`;
+
+/**
+ * The line a change planned for a finished wall says (`change_wall`), named
+ * as a plan is: "Change planned: door, marble, west side.", with its storey in
+ * a building of more than one (`changeSide`). The island's `change_line`.
+ */
+export const changeLine = (type: WallType, material: string, side: string, storey?: number): string =>
+  `Change planned: ${wallWords(type, material)}, ${changeSide(side, storey)}.`;
+
+/** And dropped: "Change dropped: west side, storey 2.". The island's `perform_change_wall`. */
+export const changeDropped = (side: string, storey?: number): string => `Change dropped: ${changeSide(side, storey)}.`;
 
 /** What planning one says when the padlock or the hinges went before the wall was planned: it is the solid wall it was asked as. */
 export const HIDDEN_DOOR_SHORT = `No padlock and ${HIDDEN_DOOR_HINGES} hinges in pack: solid wall.`;

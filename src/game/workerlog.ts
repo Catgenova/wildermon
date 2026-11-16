@@ -19,6 +19,7 @@
 import type { GatherKind } from './creatures';
 import { smithLumps, tradeRecipes } from './creatures';
 import { countOf, itemDef } from './items';
+import { furnitureDef, TAKES } from './furniture';
 import { RECIPE_BY_ID } from './recipes';
 import { SKEP_IDLE } from './bees';
 import { SEASONS } from '../world/calendar';
@@ -50,7 +51,9 @@ import { LEDGER_SHOWN, ledgerDays, type Idle, type LedgerDay, type WorkLedger } 
  *     with no finished staircase going up to it (`creature_way`, `hod_unreached`);
  *   * `noname`, `nomove`, `namedfull`: a magga on its settlement with nothing lying within its range (the number) and
  *     nothing to sort into a bin, and no container on the settlement named for an item, nothing in the others for one,
- *     or every one for what is in the others full (`hoardMove`, the island's `private.hoard_move`).
+ *     or every one for what is in the others full (`hoardMove`, the island's `private.hoard_move`);
+ *   * `namedrefuses`: the same, with an item (`what` [0]) whose every container named for it takes none of it, the
+ *     nearest such one's kind `what` [1] (`crate` for a crate).
  *
  * And three that are not idleness but rest, which its card says in the same place (`TIRE_GOES`, `REST_FOR`):
  *
@@ -137,6 +140,14 @@ function recipeWants(kind: GatherKind): string {
   return listedOr(recipes.map(bill));
 }
 
+/** Why a container of this kind (`crate`, or a piece's kind) takes none of a thing, in the words a put is refused in. */
+const refusedBy = (sub: string, id: string): string => {
+  if (sub === 'crate') return 'No crates inside crates.';
+  const def = furnitureDef(sub);
+  const takes = def.takes && TAKES[def.takes];
+  return takes && !takes.is(id) ? takes.refusal : `${def.name}: takes none of it.`;
+};
+
 /** A magga on its settlement with nothing lying about and nothing to sort into a bin (`sortStack`), `n` its range. */
 const fetchIdle = (n: number): string => {
   const bins = `${itemDef('bulk_bin').name.toLowerCase()} or ${itemDef('craft_bin').name.toLowerCase()}`;
@@ -183,6 +194,10 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
       return `${fetchIdle(n)}; nothing in other containers for a container named for it.`;
     case 'namedfull':
       return `${fetchIdle(n)}; containers named for what is in the others: full.`;
+    case 'namedrefuses': {
+      const [id, sub] = idle.what ?? [];
+      return `${fetchIdle(n)}; ${id ? itemDef(id).name.toLowerCase() : 'an item'} refused: ${refusedBy(sub ?? '', id ?? '')}`;
+    }
     case 'stock': {
       // What the work in range wants, by name, and how many more past those: "no marble brick or glass".
       if (idle.what?.length) {
