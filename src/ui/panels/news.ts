@@ -439,6 +439,17 @@ export const NEWS: News[] = [
       ];
     },
   },
+  // Lying on ground a worker cannot stand on, picked up from beside it (`20261120000120_fetch_from_beside.sql`, `Creatures.worksBeside`).
+  {
+    n: 659,
+    day: '2026-11-16',
+    lines: () => {
+      const line = [SPECIES.magga.name, ...(SPECIES.magga.stages ?? []).map((s) => s.name)].join(', ');
+      return [
+        `Fixed: ${line} and composting workers: items lying on a tile over ${metres(MAX_STAND)} m slope or under water picked up from a standable tile beside it (was: never picked up; dropped dirt on dug ground left lying).`,
+      ];
+    },
+  },
   // A prune gives a log of the tree's kind, and a pruner carries it home (`PRUNE_LOGS`, `20261120000117_prune_gives_a_log.sql`).
   {
     n: 658,

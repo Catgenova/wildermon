@@ -2282,6 +2282,15 @@
     "why": "Asked: \"If a player names an eligible container on their settlement, the wildermon will transport items to that container from any unmatched or unnamed containers.\" A name matches by the item's name, plural or id, any case; naming is refused to whoever may not use the piece; the moves split a stack to the room, fill one target then the next, never take out of a target or a padlocked chest, and are the same loads in the same order on both sides; idle, it says which of no named container, nothing to move or every target full."
   },
   {
+    "file": "supabase/test/fetchdirt.ts",
+    "title": "A Hoardback picks up dirt dropped on dug ground",
+    "shard": 4,
+    "external": [
+      "typescript"
+    ],
+    "why": "Reported: \"Hoardback will not pick up dirt on the settlement ground to bring to raw material bin named Dirt.\" Dirt lies where it was dug, on ground steeper than a worker stands on or under the water; it is picked up from a standable tile beside it, into a bin named Dirt or an unnamed raw material bin, the same loads on both sides, and dirt with nowhere beside it to stand is left lying."
+  },
+  {
     "file": "supabase/test/hoardmixed.ts",
     "title": "A Chestkit moves every item named for, not only mortar",
     "shard": 4,

@@ -7037,7 +7037,8 @@ export class Creatures {
    */
   private worksBeside(game: Game, kind: GatherKind, x: number, y: number): boolean {
     if (kind === 'woodcut' || kind === 'prune' || kind === 'fish' || kind === 'fruit' || kind === 'sprout' || kind === 'resin') return true;
-    return (kind === 'mine' || kind === 'quarry') && !this.tileOk(game, x, y);
+    // And what lies on ground too steep or too deep to stand on, picked up from beside it (`worker_settle`).
+    return (kind === 'mine' || kind === 'quarry' || kind === 'fetch' || kind === 'compost') && !this.tileOk(game, x, y);
   }
 
   /**
@@ -7741,12 +7742,13 @@ export class Creatures {
     if (kind === 'fetch') {
       // Anything lying on the deed that is not already somebody's errand.
       if (!game.onHomeDeed(x, y) || !game.groundAt(x, y).length) return false;
-      return this.tileOk(game, x, y) && !this.claimed(x, y, c);
+      // On a tile it stands on, or beside one it stands on (`worker_gatherable`).
+      return (this.tileOk(game, x, y) || !!this.beside(game, x, y)) && !this.claimed(x, y, c);
     }
     if (kind === 'compost') {
       // A carcass, or anything knocked about past saving, lying on the deed (`isRotting`): the island's `worker_gatherable`.
       if (!game.onHomeDeed(x, y) || !game.groundAt(x, y).some((it) => isRotting(it))) return false;
-      return this.tileOk(game, x, y) && !this.claimed(x, y, c);
+      return (this.tileOk(game, x, y) || !!this.beside(game, x, y)) && !this.claimed(x, y, c);
     }
     if (kind === 'farm') return !!c && this.farmJobAt(game, c, x, y) !== null;
     if (kind === 'woodcut') {
@@ -7817,8 +7819,10 @@ export class Creatures {
     const x0 = Math.floor(cx);
     const y0 = Math.floor(cy);
     const visit = (x: number, y: number): void => {
-      // A tree is never walkable, so a feller, a pruner, a picker and a tapper judge the tile beside it instead.
-      if (kind !== 'woodcut' && kind !== 'prune' && kind !== 'fruit' && kind !== 'sprout' && kind !== 'resin' && !this.tileOk(game, x, y)) return;
+      // A tree is never walkable, so a feller, a pruner, a picker and a tapper judge the tile beside it instead; a
+      // fetcher and a composter ask it of the tile and those beside it (`gatherable`).
+      if (kind !== 'woodcut' && kind !== 'prune' && kind !== 'fruit' && kind !== 'sprout' && kind !== 'resin'
+        && kind !== 'fetch' && kind !== 'compost' && !this.tileOk(game, x, y)) return;
       if (!this.gatherable(game, x, y, kind, who)) return;
       const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) + game.rand() * 1.5;
       if (d < bestD) {

@@ -111,12 +111,14 @@ begin
        and creature_tile_ok(p_world, p_x, p_y)
        and not is_foraged(p_world, p_x, p_y, 'dig');
   elsif p_kind = 'fetch' then
-    return on_home_deed(p_world, c.keeper, p_x, p_y) and creature_tile_ok(p_world, p_x, p_y)
+    return on_home_deed(p_world, c.keeper, p_x, p_y)
+       and (creature_tile_ok(p_world, p_x, p_y) or exists (select 1 from beside_tile(p_world, p_x, p_y)))
        and exists (select 1 from item i where i.world_id = p_world and i.holder = 'ground'
                      and i.gx = p_x and i.gy = p_y);
   elsif p_kind = 'compost' then
     -- A carcass, or anything knocked about past saving.
-    return on_home_deed(p_world, c.keeper, p_x, p_y) and creature_tile_ok(p_world, p_x, p_y)
+    return on_home_deed(p_world, c.keeper, p_x, p_y)
+       and (creature_tile_ok(p_world, p_x, p_y) or exists (select 1 from beside_tile(p_world, p_x, p_y)))
        and exists (select 1 from item i where i.world_id = p_world and i.holder = 'ground'
                      and i.gx = p_x and i.gy = p_y and (i.def = 'corpse' or i.dmg >= 40));
   elsif p_kind = 'farm' then

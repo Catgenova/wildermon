@@ -866,7 +866,7 @@ begin
         -- tree, a rod or a fruit bough, and for a rock face when the water
         -- over it is deeper than a beast can wade.
         if kind in ('woodcut', 'prune', 'fish', 'fruit', 'sprout', 'resin')
-           or (kind in ('mine', 'quarry') and not creature_tile_ok(p_world, spot.x, spot.y)) then
+           or (kind in ('mine', 'quarry', 'fetch', 'compost') and not creature_tile_ok(p_world, spot.x, spot.y)) then
           select * into stand from beside_tile(p_world, spot.x, spot.y);
           if stand.x is null then
             /*
