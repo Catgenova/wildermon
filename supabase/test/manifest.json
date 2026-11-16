@@ -3429,5 +3429,11 @@
       "typescript"
     ],
     "why": "Asked for: \"add an open all option on ancient jars\". Seed jars do not stack, so Open opens the jar named while it is carried and else the next one in the pack; All (N) runs N goes, the same jars in the same order and the same refusal on both sides."
+  },
+  {
+    "file": "supabase/test/standdress.ts",
+    "title": "An armour stand dressed from its menu, through the island's door",
+    "shard": 4,
+    "why": "Reported: \"unable to add armor to the armor stand\". The stand's jobs were on both sides, but no menu listed them: a click on a stand offered Pick up and nothing else, and a sundial, a compost bin and curtains the same. Off the island's own ground read and pack, the browser's menu offers Put on stand for a piece of every armour slot, the shawl among them, carried and worn, for the stand's maker and for a citizen of the maker's settlement; the target the row asks with goes through rpc_act and the clock, and the piece is the stand's, out of the pack and off the body, said in the browser's words; Take off brings it back; a slot taken and a rank without the crates are refused in the same words on both sides; and a piece for every slot at once is listed, carried first, and each goes on."
   }
 ]

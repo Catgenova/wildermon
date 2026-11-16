@@ -311,7 +311,7 @@ import {
   TROPHY_PLAQUE, WIND_CHIME, WINDOW_BOX, WISTERIA_PERGOLA, type Mount,
 } from '../../game/gardendefs';
 import { MOUNT_SAID } from '../../game/garden';
-import { STAND_SLOTS } from '../../game/decor';
+import { DRAW_CURTAINS, EMPTY_COMPOST, FILL_COMPOST, READ_SUNDIAL, SPREAD_COMPOST, STAND_PUT, STAND_SLOTS, STAND_SWAP } from '../../game/decor';
 import { grassEaters, seatsOf } from '../../game/furnish';
 import { benchTreeWords } from '../../game/fitting';
 import { PEA_NAMES, potDishWords, watersideWords } from '../../game/adorn';
@@ -424,6 +424,19 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // The home pieces' jobs in their menus (`decorMenu.ts`).
+  {
+    n: 650,
+    day: '2026-11-15',
+    lines: () => {
+      const name = (id: string): string => itemDef(id).name;
+      const job = (id: string): string => ACTION_BY_ID.get(id)?.label ?? id;
+      return [
+        `Fixed: ${name(ARMOUR_STAND)} menu: ${job(STAND_PUT)} (any armour piece, carried or worn), Take off (per slot), ${job(STAND_SWAP)} (was: Pick up only).`,
+        `Fixed: ${name(SUNDIAL)} menu: ${job(READ_SUNDIAL)}. ${name(COMPOST_BIN)} menu: ${job(FILL_COMPOST)}, ${job(EMPTY_COMPOST)}. ${name(CURTAINS)} menu: ${job(DRAW_CURTAINS)}. Planter menu: ${job(SPREAD_COMPOST)} (were: missing).`,
+      ];
+    },
+  },
   // Ancient seed jars opened all at once (`20261120000106_seed_jars_all.sql`, `seedJarOpened`, `allOfKindEntry`).
   {
     n: 649,

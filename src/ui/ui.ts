@@ -109,6 +109,8 @@ import { unseenNews } from './panels/news';
 import { CratePanel } from './panels/crate';
 import { counterEntries, counterTip, dropOnCounter, type CounterWays } from './counterMenu';
 import { lampEntries } from './lampMenu';
+import { decorEntries } from './decorMenu';
+import { SPREAD_COMPOST } from '../game/decor';
 import { isLampPiece, lampState } from '../game/lamps';
 import { boughtLine, COUNTER_SEEN, COUNTER_TOO_FAR_TO_SEE, stallBuyRefusal } from '../game/counters';
 import { priceWords } from '../game/money';
@@ -2729,7 +2731,7 @@ export class UI {
 
   /**
    * A planter's own jobs: what is in it, sowing it from the seeds you carry,
-   * and tending, harvesting or pulling up what grows there -- the field's
+   * and tending, composting, harvesting or pulling up what grows there -- the field's
    * jobs, aimed at the piece.
    */
   private planterEntries(f: PlacedFurniture): MenuItem[] {
@@ -2760,7 +2762,7 @@ export class UI {
           : undefined,
       });
     }
-    for (const id of ['tend_crop', 'harvest_crop', 'clear_field']) {
+    for (const id of ['tend_crop', SPREAD_COMPOST, 'harvest_crop', 'clear_field']) {
       const def = ACTION_BY_ID.get(id);
       if (!def || !def.applies(ft, g)) continue;
       const reason = def.check?.(ft, g) ?? null;
@@ -3030,6 +3032,8 @@ export class UI {
     entries.push(...this.adornEntries(f));
     // A lantern post: its lantern, its candle and its light.
     entries.push(...lampEntries(g, f));
+    // A home piece: a sundial, a compost bin, curtains, an armour stand (`decorMenu.ts`).
+    entries.push(...decorEntries(g, f));
     for (const id of ['light_oven', 'put_out_oven', 'take_ashes_oven', 'sleep', 'set_home', 'pull_cart', 'drop_cart', 'board_vehicle', 'board_passenger', 'leave_vehicle', 'leave_passenger', 'unhitch_team', 'examine_vessel', 'drink_from_vessel', 'fill_barrel', 'leach_lye', 'empty_vessel', 'furniture_take_all', 'crate_follow', 'crate_work', 'scrub_moss', 'scrub_dye', 'pick_up_furniture']) {
       const def = ACTION_BY_ID.get(id);
       if (!def || !def.applies(ft, g)) continue;
