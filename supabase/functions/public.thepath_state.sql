@@ -9,5 +9,7 @@ AS $function$
     'on', coalesce((p->>'on')::boolean, false),
     'skip', case when jsonb_typeof(p->'skip') = 'array' then p->'skip' else '[]'::jsonb end,
     'supply', case when jsonb_typeof(p->'supply') = 'object' then p->'supply' else '{}'::jsonb end,
-    'did', case when jsonb_typeof(p->'did') = 'object' then p->'did' else '{}'::jsonb end)
+    'did', case when jsonb_typeof(p->'did') = 'object' then p->'did' else '{}'::jsonb end,
+    'stocked', case when jsonb_typeof(p->'stocked') = 'object' then p->'stocked' else '{}'::jsonb end,
+    'crates', case when jsonb_typeof(p->'crates') = 'object' then p->'crates' else '{}'::jsonb end)
 $function$

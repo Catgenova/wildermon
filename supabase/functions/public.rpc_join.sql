@@ -34,6 +34,9 @@ begin
     returning * into p;
     born := true;
     perform starter_kit(p_world, me);
+    -- Its field guide begun: the kinds every book starts with, seen (`guide_begin`); and a wild Sapgnaw near it.
+    perform guide_begin(p_world, me);
+    perform private.wild_near_put(p_world, k, p.x, p.y) from unnest(ashore_kinds()) k;
     perform tell(p_world, me, 'You wash ashore on an untouched island with a few tools and your wits.', 'system');
   else
     if kit_topup(p_world, me) > 0 then

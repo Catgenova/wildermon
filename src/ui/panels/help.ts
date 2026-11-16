@@ -316,7 +316,7 @@ import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { WATCH_AWAKE_HOURS, WATCH_BREAK_MINS, WATCH_KEEP_DAYS, WATCH_SKILL_MINS, WATCH_SKILL_TIMES, WATCH_STOCK_PER_MILLE } from '../../game/watch';
 import { fixed, setMarkup } from '../html';
-import { PATH_CARD_HOLD, PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE } from '../../game/path';
+import { ASHORE_KINDS, GUIDE_START, PATH_CARD_HOLD, PATH_CRATE, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_STOCKS, PATH_SURE, WILD_NEAR } from '../../game/path';
 import { KIT, kitBody, made as kitMade } from '../kit';
 
 /** The QL the help reads a station's decay an hour at. */
@@ -1256,7 +1256,9 @@ function pathHelp(): string {
       <li><b>Ticks</b>: a step done ticks itself, early or late, once the island's own record shows it done.</li>
       <li><b>Field guide</b>: Guiding Light on notes ${PATH_KINDS.length} kinds (${listed(kinds)}): <b>Noted (Guiding Light)</b>; Track as if seen. Noted: no seen count, goal or title.</li>
       <li><b>Suggested sites</b>: ${PATH_SITE.count} nearest, every ${PATH_SITE.every} tiles within ${PATH_SITE.reach} of you, ${PATH_SITE.apart} apart: every founding check; trees your woodcutting fells ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}; water within ${PATH_SITE.water}; bare rock within ${PATH_SITE.rock}.</li>
+      <li><b>A wild one near</b>: on reaching Track, a tame step or a taming detour's step (${PATH_STOCKS.length}: ${listed(PATH_STOCKS.map(([, sp]) => SPECIES[sp]?.name ?? sp).filter((n, i, a) => a.indexOf(n) === i))}): its kind marked seen; a wild one within ${WILD_NEAR} tiles (on ground it lives on; none there: ${2 * WILD_NEAR}, then ${4 * WILD_NEAR}), if none wild is. Once a step; not for a step done.</li>
       <li><b>Guiding Light supply</b>: a tame step whose kind eats nothing in season: its favourite food, enough to tame it ${percent(PATH_SURE)} of the time at its own chance, one offering a try. Issued: no sale, no trade, kept at death. Once a step.</li>
+      <li><b>Guiding Light supply, crate</b>: on reaching a tame step or a taming detour's step, ${itemDef(PATH_CRATE).name.toLowerCase()} ×${PATH_CRATES} for each one of them, short of the empty ones in your pack. Needed to tame a second wildermon while one follows you; used only by a tame that takes. Issued. Once a step.</li>
       <li><b>Skills</b>: ${PATH_SKILLS.length}: ${listed(PATH_SKILLS.map((id) => (SKILL_BY_ID.get(id)?.name ?? id).toLowerCase()))}.</li>
     </ul>`;
 }
@@ -2880,6 +2882,7 @@ export function helpText(): string {
       <li>A stage's page: seen once one at that stage stood in your sight; its model, level it comes in at, stat multipliers, wild odds and taming, habitat, its combat figures. Tamed and bred are its kind's.</li>
       <li>Seen: one stood out of a crate within your sight (your wildermon's and settlement's sight count). Tamed: an offering took, or one taken from a trap.
       Bred: a young born to a dam you keep. Taming or breeding also marks seen; the first sighting is logged.</li>
+      <li>Seen from the start, every player: the ${GUIDE_START.length} kinds the Guiding Light asks you to track or tame (${listed(GUIDE_START.map((id) => SPECIES[id].name))}).</li>
       <li>Index: seen kinds drawn, the rest as shadows. Progress: seen of all ${guideEntries().length} pages; tamed and bred of the ${guidePages().filter(keepable).length}
       tameable (monsters are not).</li>
       <li>A page: where it spawns and how far it keeps from home, its % of wild spawns, taming needed and accepted food, its use once yours, how it fights, carcass yield.</li>
@@ -3159,6 +3162,8 @@ export function helpText(): string {
       Failure damages it; past ${IMPROVE_DAMAGE} damage it must be <b>Repair</b>ed before more work. Not on ${unmendableSaid()}.</li>
       <li><b>Starting kit</b>: one of each of ${STARTER_KIT.length - 1} tools at QL ${KIT_QL}, and a water skin. Named <b>Starter (tool)</b>. <b>Cannot be improved</b> (repairable only), <b>sold or traded</b> (barter, deal, parcel, stall price, order). Kept on death; a missing piece given again on coming ashore and on waking after a death.</li>
       <li><b>Starting food</b>: ${STARTER_FOOD_COUNT} ${lowName(STARTER_FOOD)} at QL ${KIT_QL}, food bar +${percent(foodFill(STARTER_FOOD, KIT_QL))} each (${percent(STARTER_FOOD_COUNT * foodFill(STARTER_FOOD, KIT_QL))} in all). First coming ashore only; not a kit piece (eaten, traded, into the grave; not given again).</li>
+      <li><b>Field guide</b>: seen from the start, the ${GUIDE_START.length} Guiding Light kinds (${listed(GUIDE_START.map((id) => SPECIES[id].name))}); Track on their pages.</li>
+      <li><b>First coming ashore</b>: a wild ${listed(ASHORE_KINDS.map((id) => SPECIES[id].name))} within ${WILD_NEAR} tiles, if none is.</li>
     </ul>
     <table>
       <tr><td><b>Metal</b></td><td><b>File</b> + <b>whetstone</b>; a lump of metal per pass</td></tr>

@@ -32,12 +32,19 @@ import { guideCounts } from '../../src/game/guide';
 import { trackRefusal } from '../../src/game/tracking';
 import { SEASONS, type Season } from '../../src/world/calendar';
 import {
-  ANVIL_LUMPS, dietInSeason, needsSupply, PATH_DETOURS, PATH_FORAGE, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEP_BY_ID, PATH_STEPS,
+  ANVIL_LUMPS, dietInSeason, GUIDE_START, needsSupply, PATH_DETOURS, PATH_FORAGE, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEP_BY_ID, PATH_STEPS,
   PATH_SURE, PATH_TAMES, SMELTER_BRICKS, SMELTER_MORTAR, supplyItem, supplySize,
 } from '../../src/game/path';
 import { psql, check, finish } from './harness';
 
 const U = '7e5b0000-0000-4000-8000-0000000000e1';
+/**
+ * A kind the Path notes, taken out of the book this test's body starts with (`GUIDE_START`, every Path kind), as a
+ * book from before there were kinds to start with: not tracked until the Path is on.
+ */
+const NOTE_KIND = PATH_KINDS[1];
+/** What the book says seen then. */
+const SEEN_THEN = GUIDE_START.filter((k) => k !== NOTE_KIND);
 /** Where the steps are done: a site well past the stones' gap on a 1024 island, its ground laid out below. */
 const SITE = { x: 300, y: 300 };
 const NEAR_STONE = { x: 540.5, y: 700.5 };
@@ -137,6 +144,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Pathfinder');
   update player set body_at = now(), x = ${NEAR_STONE.x}, y = ${NEAR_STONE.y} where world_id = w and uid = u;
+  delete from guide where world_id = w and uid = u and species = '${NOTE_KIND}';
 
   -- The lists, as the island has them.
   insert into said values ('STEPS', array_to_string(thepath_steps(), ','));
@@ -146,13 +154,14 @@ begin
 
   -- Off: nothing counted round a go, nothing noted.
   insert into said values ('OFF_BEFORE', coalesce(private.thepath_before(w, u, 'forage', '{}'::jsonb)::text, '-'));
-  insert into said values ('OFF_TRACK', coalesce(track_refusal(w, u, 'track', '{"species":"bevere"}'), '-'));
+  insert into said values ('OFF_TRACK', coalesce(track_refusal(w, u, 'track', '{"species":"${NOTE_KIND}"}'), '-'));
+  insert into said values ('TALLY_BEFORE', coalesce((select tally->>'guide:seen' from player where world_id = w and uid = u), '-'));
 
   -- On: the kinds noted.
   j := rpc_thepath(w, true);
   insert into said values ('ON', (j->>'on'));
   insert into said values ('NOTED', (select string_agg(x, ',' order by x) from jsonb_array_elements_text(j->'noted') x));
-  insert into said values ('NOTED_TRACK', coalesce(track_refusal(w, u, 'track', '{"species":"bevere"}'), '-'));
+  insert into said values ('NOTED_TRACK', coalesce(track_refusal(w, u, 'track', '{"species":"${NOTE_KIND}"}'), '-'));
   insert into said values ('UNNOTED_TRACK', coalesce(track_refusal(w, u, 'track', '{"species":"woola"}'), '-'));
   insert into said values ('GUIDE', (rpc_guide(w))::text);
   insert into said values ('GUIDE_TALLY', coalesce((select tally->>'guide:seen' from player where world_id = w and uid = u), '-'));
@@ -211,20 +220,22 @@ check('the counts a step asks for are the rules\' on both sides',
 check(`${PATH_STEPS.length} steps, ${PATH_DETOURS.length} detours, ${PATH_SKILLS.length} skills trained`, PATH_SKILLS.length === 15, PATH_SKILLS.join(','));
 
 check('with the Path off, a go is not counted', said('OFF_BEFORE') === '-', said('OFF_BEFORE'));
-check('and a kind not seen is not tracked', said('OFF_TRACK') === trackRefusal(SPECIES.bevere, new Set()), said('OFF_TRACK'));
+check('and a kind not seen is not tracked', said('OFF_TRACK') === trackRefusal(SPECIES[NOTE_KIND], new Set(SEEN_THEN)), said('OFF_TRACK'));
 check('on: kept on the island', said('ON') === 'true', said('ON'));
 check(`on: the ${PATH_KINDS.length} kinds noted`, said('NOTED') === [...PATH_KINDS].sort().join(','), said('NOTED'));
-check('a noted kind is tracked, on both sides', said('NOTED_TRACK') === '-' && trackRefusal(SPECIES.bevere, new Set(), new Set(['bevere'])) === null, said('NOTED_TRACK'));
+check('a noted kind is tracked, on both sides', said('NOTED_TRACK') === '-' && trackRefusal(SPECIES[NOTE_KIND], new Set(SEEN_THEN), new Set([NOTE_KIND])) === null, said('NOTED_TRACK'));
 check('a kind neither seen nor noted is not', said('UNNOTED_TRACK') === trackRefusal(SPECIES.woola, new Set(), new Set(PATH_KINDS)), said('UNNOTED_TRACK'));
 {
   const guide = JSON.parse(said('GUIDE')) as { seen: string[]; noted: string[] };
-  check('noted is not seen: the book says none seen, and the noted apart', guide.seen.length === 0 && guide.noted.length === PATH_KINDS.length, said('GUIDE'));
+  check('noted is not seen: the book says only what it had seen, and the noted apart',
+    guide.seen.join() === [...SEEN_THEN].sort().join() && guide.noted.length === PATH_KINDS.length, said('GUIDE'));
 }
-check('and the journal\'s count of pages seen does not move', said('GUIDE_TALLY') === '-', said('GUIDE_TALLY'));
+check('and the journal\'s count of pages seen does not move', said('GUIDE_TALLY') === said('TALLY_BEFORE') && said('TALLY_BEFORE') === String(GUIDE_START.length),
+  `${said('TALLY_BEFORE')} → ${said('GUIDE_TALLY')}`);
 {
   const g = Game.create(4040);
   g.guide.take({ seen: [], tamed: [], bred: [], noted: [...PATH_KINDS] });
-  check('nor the field guide\'s counts in the browser', guideCounts(g.guide).seen === 0 && g.guide.noted.size === PATH_KINDS.length, `${guideCounts(g.guide).seen}`);
+  check('nor the field guide\'s counts in the browser', guideCounts(g.guide).seen === GUIDE_START.length && g.guide.noted.size === PATH_KINDS.length, `${guideCounts(g.guide).seen}`);
 }
 check('on: a go the Path counts is measured', said('ON_BEFORE') !== '-', said('ON_BEFORE'));
 check('and one it does not count is not', said('NOT_WATCHED') === '-', said('NOT_WATCHED'));

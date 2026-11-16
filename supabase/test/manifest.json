@@ -2183,6 +2183,15 @@
     "why": "Asked for: a tracking skill, and a Track button in the field guide that points to the nearest wild one of a kind you have seen, more finely the higher your Tracking. Refused for a kind not seen and a monster; the nearest wild one found past kept ones and other kinds, none past the reach; the reach, spread, bands, reading and line the same on both sides; each band exact with the roll forced; a go trains Tracking; through rpc_act and the clock, arrow and all."
   },
   {
+    "file": "supabase/test/sapgnawknown.ts",
+    "title": "The Guiding Light kinds in every field guide from the start, a wild one near, and a crate to take it",
+    "shard": 4,
+    "external": [
+      "typescript"
+    ],
+    "why": "Reported: \"players are not starting the game with Saginaw discovered in the field guide, so they cant track him\"; asked for as well: a nearby Sapgnaw on spawning and the same for the Guiding Light's other kinds, those kinds seen in the guide, and enough wildermon crates to capture them. The kinds a book starts with the same on both sides and every step's and detour's tame kind; a new body's book has them seen and nothing else, in the browser and on the island from the join; the migration's backfill, run twice, adds them to a body already on the island and changes no row it had nor the Guiding Light's notes; Track not refused for the Sapgnaw, and a go reads the way to a wild one past a kept one, the same line and arrow on both sides at two bands; a new body comes ashore with one ordinary wild Sapgnaw within the reach on ground it lives on, and a second beside it adds none; the chiptail's step, reached by its tick kept through the beat, puts one wild quarra within the reach on rock, marks it seen, says so and hands out one issued crate, once a step; with it the quarra is captured into the crate while another follows; a detour whose kind is tamed puts nothing; the wadd lands beside water, with a crate of its own."
+  },
+  {
     "file": "supabase/test/rareinput.ts",
     "title": "Rare ingredients make rare work more likely",
     "shard": 4,

@@ -23,5 +23,6 @@ begin
     on conflict do nothing;
   end if;
   perform tell(p_world, me, case when p_on then 'Guiding Light: on. Journal, Guiding Light tab.' else 'Guiding Light: off.' end, 'system');
+  if p_on then perform private.thepath_stock(p_world, me); end if;
   return thepath_said(p_world, me);
 end $function$
