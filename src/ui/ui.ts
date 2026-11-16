@@ -63,7 +63,7 @@ import { itemDef, itemName, markOf, storedLine, type Item } from '../game/items'
 import { LYE_USE } from '../game/placeables';
 import { nearestSide } from '../render/renderer';
 import { CRATE_DEFS, crateHolds, crateKindOfItem, crateName, crateCapacity, crateUnits, rackSpotOf, subtileOf } from '../game/crates';
-import { hoardExamine, hoardHover, type HoardSeen } from '../game/hoard';
+import { hoardExamine, hoardHover, hoardRole, type HoardRole, type HoardSeen } from '../game/hoard';
 import { NAME_MAX } from '../game/naming';
 import { storeMarkable } from '../game/stores';
 import { trellisFacing } from '../game/vineyard';
@@ -1615,7 +1615,10 @@ export class UI {
     if (fu) {
       lines.push(furnitureName(fu));
       // Named: what it is, and what its name is for (`hoardHover`).
-      if (fu.name) lines.push([furnitureDef(fu.kind).name, storeMarkable(fu.kind, furnitureDef(fu.kind)) ? hoardHover(fu) : null].filter((l) => l).join(' · '));
+      if (fu.name) {
+        const role = hoardRole(furnitureDef(fu.kind), storeMarkable(fu.kind, furnitureDef(fu.kind)));
+        lines.push([furnitureDef(fu.kind).name, role ? hoardHover(fu, role) : null].filter((l) => l).join(' · '));
+      }
       lines.push(furnitureState(fu));
       // A lantern post's lantern, what it throws and its candle, as its menu says them (`lamps.ts`).
       if (isLampPiece(fu)) lines.push(lampState(fu));
@@ -2903,7 +2906,8 @@ export class UI {
       const heft = furnitureHeft(f);
       const note = heft ? `${furnitureKg(f).toFixed(0)} / ${heft} kg` : `${furnitureUnits(f)} / ${furnitureCapacity(f)} things`;
       entries.push({ label: 'Open', note, onSelect: () => this.cratePanel.openFurniture(f.id) });
-      if (storeMarkable(f.kind, def)) entries.push(this.examineContainer(`${def.name}${f.material ? ` (${f.material.toLowerCase()})` : ''}`, note, f));
+      const role = hoardRole(def, storeMarkable(f.kind, def));
+      if (role) entries.push(this.examineContainer(`${def.name}${f.material ? ` (${f.material.toLowerCase()})` : ''}`, note, f, role));
     }
     if (def.stall && this.island) entries.push(...this.stallEntries(f));
     /*
@@ -3890,10 +3894,10 @@ export class UI {
   }
 
   /** Examine on a crate or a storage piece: what it is, its room, its name and what the Chestkit line does with it (`hoardExamine`). */
-  private examineContainer(what: string, room: string, s: HoardSeen): MenuItem {
+  private examineContainer(what: string, room: string, s: HoardSeen, role: HoardRole = 'store'): MenuItem {
     return {
       label: 'Examine',
-      onSelect: () => this.game.logMsg(`${what}: ${room} · ${hoardExamine(s, SPECIES.magga.name, NAME_MAX).join(' · ')}.`, 'event'),
+      onSelect: () => this.game.logMsg(`${what}: ${room} · ${hoardExamine(s, SPECIES.magga.name, NAME_MAX, role).join(' · ')}.`, 'event'),
     };
   }
 

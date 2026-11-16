@@ -5,4 +5,4 @@ CREATE OR REPLACE FUNCTION private.hoard_fold(p_name text)
  LANGUAGE sql
  IMMUTABLE
  SET search_path TO 'public'
-AS $function$ select lower(btrim(p_name, ' ')) $function$
+AS $function$ select lower(btrim(regexp_replace(p_name, ' {2,}', ' ', 'g'), ' ')) $function$

@@ -15,8 +15,8 @@ import { ITEM_DEFS, itemDef } from './items';
  * `private.hoard_into`; the browser's `Creatures.hoardMove`.
  */
 
-/** A name as it is matched: lower case, spaces round it off. The island's `private.hoard_fold`. */
-export const hoardFold = (name: string | null | undefined): string => (name ?? '').replace(/^ +| +$/g, '').toLowerCase();
+/** A name as it is matched: lower case, spaces round it off and a run of them inside one. The island's `private.hoard_fold`. */
+export const hoardFold = (name: string | null | undefined): string => (name ?? '').replace(/ {2,}/g, ' ').replace(/^ +| +$/g, '').toLowerCase();
 
 /**
  * An item's name made plural, lower case: "planks", "berries"; a name ending in s as it is. Every plural `countOf`
@@ -31,8 +31,9 @@ export const hoardPlural = (name: string): string => {
 const ITEMS_FOR = new Map<string, readonly string[]>();
 
 /**
- * The items a container's name is for, by id in code-point order: every item whose name, plural (`hoardPlural`) or id
- * is the name (`hoardFold`). Empty for no name and for a name no item has: such a container is a source.
+ * The items a container's name is for, by id in code-point order: every item whose name, id, or either made plural
+ * (`hoardPlural`) is the name (`hoardFold`): "Ancient Whetstones", "ancient_whetstones". Empty for no name and for a
+ * name no item has: such a container is a source.
  */
 export function hoardItems(name: string | null | undefined): readonly string[] {
   const v = hoardFold(name);
@@ -40,7 +41,7 @@ export function hoardItems(name: string | null | undefined): readonly string[] {
   let ids = ITEMS_FOR.get(v);
   if (!ids) {
     ids = Object.entries(ITEM_DEFS)
-      .filter(([id, d]) => id.toLowerCase() === v || d.name.toLowerCase() === v || hoardPlural(d.name) === v)
+      .filter(([id, d]) => id.toLowerCase() === v || hoardPlural(id) === v || d.name.toLowerCase() === v || hoardPlural(d.name) === v)
       .map(([id]) => id)
       .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     ITEMS_FOR.set(v, ids);
@@ -61,18 +62,25 @@ export const hoardOther = (name: string | null | undefined, id: string): boolean
 export const hoardForSaid = (name: string | null | undefined): string =>
   hoardItems(name).map((id) => itemDef(id).name.toLowerCase()).join(' or ');
 
-/** A container as the named sort sees it (`hoardItems`): its name, and whether it is padlocked or marked a settlement store. */
+/** A container as the named sort sees it (`hoardItems`): its name, and whether it is padlocked. */
 export interface HoardSeen {
   name?: string;
   lock?: unknown;
-  storeOf?: unknown;
 }
 
+/**
+ * What a container is to the named sort: a store (crates and pieces that may be marked a store), a trash crate (a
+ * target only while named for an item; otherwise left alone), or something on wheels (a source while parked, never
+ * a target; named for an item, left alone).
+ */
+export type HoardRole = 'store' | 'trash' | 'wheels';
+
 /** The hover's line for a named container: "named for: mortar", or that its name is no item's; nothing unnamed. */
-export function hoardHover(s: HoardSeen): string | null {
+export function hoardHover(s: HoardSeen, role: HoardRole = 'store'): string | null {
   if (!s.name) return null;
   const for_ = hoardForSaid(s.name);
-  return for_ ? `Named for: ${for_}` : 'Name: no item';
+  if (!for_) return 'Name: no item';
+  return role === 'wheels' ? `Named for: ${for_} · not a target (vehicle)` : `Named for: ${for_}`;
 }
 
 /**
@@ -80,17 +88,31 @@ export function hoardHover(s: HoardSeen): string | null {
  * longest name (`NAME_MAX`): its name and what it is for, and whether that line moves things into it, out of it, or
  * neither.
  */
-export function hoardExamine(s: HoardSeen, line: string, max: number): string[] {
+export function hoardExamine(s: HoardSeen, line: string, max: number, role: HoardRole = 'store'): string[] {
   const for_ = hoardForSaid(s.name);
   const out = [s.name ? `Name: ${s.name}` : 'Name: none'];
+  if (for_ && role === 'wheels') {
+    out.push(`Named for: ${for_}`, `${line}: never moves into or out of it (vehicle named for an item)`);
+    return out;
+  }
   if (for_) {
     out.push(`Named for: ${for_}`, `${line}: moves ${for_} in from your other containers on the settlement, up to its room; never out`);
+    if (role === 'trash') out.push('Contents kept while named for an item');
     return out;
   }
   if (s.name) out.push('Name: no item');
-  if (s.lock) out.push(`${line}: never moves out of it (padlocked)`);
-  else if (s.storeOf) out.push(`${line}: never moves out of it (settlement store)`);
+  if (role === 'trash') out.push(`${line}: never moves into or out of it (trash crate; named for an item: a target)`);
+  else if (s.lock) out.push(`${line}: never moves out of it (padlocked)`);
+  else if (role === 'wheels') out.push(`${line}: moves items out of it into a container on the settlement named for them; not while hitched or driven`);
   else out.push(`${line}: moves items out of it into a container on the settlement named for them`);
   out.push(`Name for an item: its name, plural or id, any case; max ${max} characters`);
   return out;
+}
+
+/** What it is to the named sort (`HoardRole`) by its kind's shape; null for something it never reads (a boat, a stall). */
+export function hoardRole(def: { trash?: number; cart?: boolean; vehicle?: unknown; boat?: unknown }, markable: boolean): HoardRole | null {
+  if (def.boat) return null;
+  if (def.vehicle || def.cart) return 'wheels';
+  if (def.trash) return 'trash';
+  return markable ? 'store' : null;
 }
