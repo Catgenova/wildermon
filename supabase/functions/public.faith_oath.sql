@@ -20,6 +20,10 @@ begin
                                       to_jsonb(greatest(0, coalesce((stats->>'health')::double precision, 1) - v_half)))
    where world_id = p_world and uid = o
    returning (stats->>'health')::double precision into v_h;
-  if v_h <= 0 and not faith_undying(p_world, o) and not faith_second_life(p_world, o) then perform player_die(p_world, o); end if;
+  if v_h <= 0 and not faith_undying(p_world, o) and not faith_second_life(p_world, o) then
+    perform set_config('island.death', jsonb_strip_nulls(jsonb_build_object('kind', 'oath',
+      'by', (select pl.name from player pl where pl.world_id = p_world and pl.uid = p_uid)))::text, true);
+    perform player_die(p_world, o);
+  end if;
   return p_taken - v_half;
 end $function$

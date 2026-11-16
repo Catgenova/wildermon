@@ -13,7 +13,10 @@ begin
     update player set fell = null where world_id = p_world and uid = p_uid and fell is not null;
     return null;
   end if;
-  return jsonb_build_object('x', f.x, 'y', f.y, 'deeds', coalesce((
+  return jsonb_strip_nulls(jsonb_build_object('at', f.at,
+           'clock', (select extract(epoch from (f.at - w.epoch)) from world w where w.id = p_world),
+           'region', region_at(p_world, f.x, f.y), 'cause', f.cause, 'blows', f.blows, 'things', f.things))
+    || jsonb_build_object('x', f.x, 'y', f.y, 'deeds', coalesce((
     select jsonb_agg(jsonb_build_object('id', d.founded_by, 'name', d.name, 'x', d.x, 'y', d.y, 'level', d.level,
                                         'own', d.founded_by = p_uid))
       from deeds_of(p_world, p_uid) d), '[]'::jsonb));

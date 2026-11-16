@@ -263,7 +263,8 @@ check('fallenIn: none, and not one', fallenIn(null) === null && fallenIn({ x: 'a
   const sb = supabase() as unknown as Record<string, unknown> & { auth: Record<string, unknown> };
   sb.rpc = async (door: string, args: unknown) => {
     asked.push([door, args]);
-    return door === 'rpc_settle' ? { data: { settled: 0, fallen: offer }, error: null } : answer;
+    // The island's own offer, as it said it.
+    return door === 'rpc_settle' ? { data: { settled: 0, fallen: JSON.parse(said.get('OFFER') ?? 'null') }, error: null } : answer;
   };
   let heard: Fallen | null | undefined;
   const moved: string[] = [];

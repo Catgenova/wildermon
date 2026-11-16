@@ -203,5 +203,10 @@ begin
       || jsonb_build_object('heat', v_heat) || case when v_hsaid is null then '{}'::jsonb else jsonb_build_object('heatSaid', v_hsaid) end
     where world_id = p_world and uid = p_uid;
   -- And a body that has taken its last breath, where every other death goes.
-  if hp <= 0 then perform player_die(p_world, p_uid); end if;
+  if hp <= 0 then
+    -- The water, lava underfoot, or the heat.
+    perform set_config('island.death', jsonb_strip_nulls(jsonb_build_object('kind',
+      case when gasped > 0 then 'drowned' when v_on then 'lava' when v_heat > 0 then 'heat' end))::text, true);
+    perform player_die(p_world, p_uid);
+  end if;
 end $function$

@@ -330,12 +330,13 @@ begin
   -- And an ash wraith's blinding, from a kind that blinds (`ash_blind_put`).
   perform ash_blind_put(p_world, p_uid, v_from);
   perform tell(p_world, p_uid, p_what || note || '. Wound: ' || wound_text(w) || '.', 'fight');
+  perform private.blow_note(p_world, p_uid, v_from, p_what, p_kind, part, taken);
   -- And a Second Life, which the killing blow spends instead of you (`faith_second_life`).
   -- Undying holds you at its floor and is not spent; a Second Life is.
   if health <= 0 and faith_undying(p_world, p_uid) then perform fight_back(p_world, p_uid, (p.stats->>'hurtBy')::int);
   elsif health <= 0 and faith_second_life(p_world, p_uid) then perform fight_back(p_world, p_uid, (p.stats->>'hurtBy')::int);
   -- And Power's Hard to Kill, once in so long (`path_hard_to_kill`).
   elsif health <= 0 and path_hard_to_kill(p_world, p_uid) then perform fight_back(p_world, p_uid, (p.stats->>'hurtBy')::int);
-  elsif health <= 0 then perform player_die(p_world, p_uid);
+  elsif health <= 0 then perform set_config('island.death', '{"kind": "blow"}', true); perform player_die(p_world, p_uid);
   else perform fight_back(p_world, p_uid, (p.stats->>'hurtBy')::int); end if;
 end $function$

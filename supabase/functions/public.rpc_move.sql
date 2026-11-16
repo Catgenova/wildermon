@@ -11,7 +11,7 @@ declare me uuid := auth.uid(); p player; w world; v_asked double precision[]; v_
         gap double precision; far double precision; allowed double precision; share double precision;
         pulled boolean := false; blocked boolean := false; crawl double precision := 1;
         cart placed; beast creature; c double precision; v_tiles int; v_puller creature;
-        v_xs double precision[]; v_ys double precision[]; v_turn jsonb; v_leg int;
+        v_xs double precision[]; v_ys double precision[]; v_turn jsonb; v_leg int; v_fall private.fallen;
 begin
   perform private.pace(me, 'move');
   perform private.check_args('rpc_move', 'p_via', p_via, private.spec_move_via());
@@ -125,6 +125,15 @@ begin
     far := 0;
     v_xs := array[p.x, p.x]; v_ys := array[p.y, p.y];
     pulled := true;
+  end if;
+  v_fall := private.respawn_fall(p_world, me);
+  if v_fall.uid is not null and (far > allowed
+       or (v_fall.at > now() - make_interval(secs => respawn_hold())
+           and (floor(p_x)::int <> v_fall.wx or floor(p_y)::int <> v_fall.wy or coalesce(p_level, 0) <> 0))) then
+    p_x := p.x; p_y := p.y; p_level := coalesce(p.level, 0);
+    far := 0;
+    v_xs := array[p.x, p.x]; v_ys := array[p.y, p.y];
+    pulled := true; blocked := true;
   end if;
   if far > allowed then
     if array_length(v_xs, 1) > 2 then

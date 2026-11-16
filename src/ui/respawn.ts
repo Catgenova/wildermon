@@ -7,7 +7,8 @@
  * and a way to stay on the spawn. The pick goes to the island
  * (`Island.respawn`), which puts the body there; a pick refused is shown again
  * with why. An offer the island stops making (another tab picked, or the body
- * stepped off) takes the chooser away.
+ * stepped off) takes the chooser away. At its top, how the body died
+ * (`deathCard`, `src/game/deathcard.ts`).
  *
  * Inside the interface root, as a question is (`ask.ts`), so a phone's scale
  * applies to it. Keys stay in it: Tab goes round it, the arrows go between the
@@ -23,11 +24,40 @@ import type { Island } from '../net/island';
 import { deedTotemVariant } from '../render/deedtotem';
 import { stoneCards, type StoneCard } from './stonestart';
 import { graceKeptSaid } from '../game/deathgrace';
+import { DEATH_TITLE, deathRows } from '../game/deathcard';
 
-/** A chooser on the screen: the pick it answers with, and a way to take it off unanswered. */
+/** The card of how the body died: its title, then each row's label and lines (`deathRows`). */
+export function deathCard(fell: Fallen): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'respawn-death';
+  const head = document.createElement('div');
+  head.className = 'respawn-death-title';
+  head.textContent = DEATH_TITLE;
+  box.append(head);
+  for (const r of deathRows(fell, fell.death ?? null)) {
+    const row = document.createElement('div');
+    row.className = 'respawn-death-row';
+    row.dataset.row = r.label;
+    const k = document.createElement('span');
+    k.className = 'respawn-death-label';
+    k.textContent = r.label;
+    const v = document.createElement('span');
+    v.className = 'respawn-death-lines';
+    for (const line of r.lines) {
+      const l = document.createElement('span');
+      l.textContent = line;
+      v.append(l);
+    }
+    row.append(k, v);
+    box.append(row);
+  }
+  return box;
+}
+
 /** How long after it shows the chooser takes no pick, in ms. */
 export const RESPAWN_ARM_MS = 600;
 
+/** A chooser on the screen: the pick it answers with, and a way to take it off unanswered. */
 export interface RespawnShown {
   el: HTMLElement;
   done: Promise<string>;
@@ -55,8 +85,10 @@ export function showRespawn(root: HTMLElement, fell: Fallen, size: number, spawn
   title.id = 'respawn-title';
   title.textContent = RESPAWN_TITLE;
   card.setAttribute('aria-labelledby', title.id);
-  card.append(title);
-  if (grace !== null && grace > 0) {
+  // How it died, at the top (`deathcard.ts`): what the island said of it, and where it fell from an island that said nothing.
+  card.append(deathCard(fell), title);
+  // The death grace kept, said on the card's Your things where the island says it; here from an island before it.
+  if (grace !== null && grace > 0 && !fell.death?.things) {
     const kept = document.createElement('div');
     kept.className = 'respawn-grace';
     kept.textContent = graceKeptSaid(grace);
@@ -177,6 +209,13 @@ export function mountRespawn(root: HTMLElement, game: Game, island: Island): voi
       open = null;
       return;
     }
+    /*
+     * The island has the body on its spawn while it may pick (`respawn_fall`). A body that died standing still is
+     * still drawn where it fell, and its next word would claim that ground: put on the spawn tile here, as the
+     * island has it, it is drawn lain there and says nothing from the ground it fell on.
+     */
+    const p = game.player;
+    if (Math.floor(p.x) !== game.spawn.x || Math.floor(p.y) !== game.spawn.y || p.level !== 0) game.putBody(game.spawn.x + 0.5, game.spawn.y + 0.5, 0);
     if (open && shownFor === `${fell.x},${fell.y}`) return;
     game.player.stop();
     game.endTravel();

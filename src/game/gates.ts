@@ -205,6 +205,9 @@ export const changeLine = (type: WallType, material: string, side: string, store
 
 /** And dropped: "Change dropped: west side, storey 2.". The island's `perform_change_wall`. */
 export const changeDropped = (side: string, storey?: number): string => `Change dropped: ${changeSide(side, storey)}.`;
+/** The note on the type and material already planned as a wall's change in Change wall's list, and its hint: shut, built from Build change. */
+export const CHANGE_PLANNED = 'planned';
+export const CHANGE_PLANNED_HINT = 'Planned: Build change above';
 
 /** What planning one says when the padlock or the hinges went before the wall was planned: it is the solid wall it was asked as. */
 export const HIDDEN_DOOR_SHORT = `No padlock and ${HIDDEN_DOOR_HINGES} hinges in pack: solid wall.`;
