@@ -5449,6 +5449,8 @@ export interface IslandCreature {
   /** The tame creature a wild one has turned on, when it has. */
   brawl?: number | null;
   mine?: boolean;
+  /** Its keeper's name (`folk_name`), for a tamed one; absent for a wild one, and from an island before 20261120000132. */
+  keeperName?: string | null;
   /** How rare it is, as the island words it ('rare', 'supreme', 'fantastic'); absent for an ordinary one. */
   rare?: string | null;
   /** How old it is, as the island reckons it ('young', 'grown', 'old'). */
@@ -5558,6 +5560,8 @@ export interface Creature {
    * where everything on the ground is yours because there is only you.
    */
   mine?: boolean;
+  /** Its keeper's name, as the island says it (`IslandCreature.keeperName`); read through `ownerOf`. */
+  keeperName?: string;
 
   species: string;
   name: string;
@@ -6441,6 +6445,8 @@ export class Creatures {
       c.brawl = r.brawl ?? null;
       // Whose it is, which the island says and the journal has to know.
       c.mine = r.mine;
+      // And whose by name, to be said over it and on its card (`ownerOf`); none from an island that does not send it.
+      c.keeperName = typeof r.keeperName === 'string' && r.keeperName ? r.keeperName : undefined;
       // And what is in its panniers, when they open for you (`pannier_sent`): the same rows a chest's window shows.
       c.panniersOpen = r.pannier !== undefined || undefined;
       c.pannier = (r.pannier ?? []).map((it) => ({
@@ -11935,7 +11941,7 @@ export class Creatures {
     if (c.hitchedTo !== null) return 'in the traces';
     switch (c.mode) {
       case 'active':
-        return `your companion · ${STANCE_NAMES[c.stance].toLowerCase()}`;
+        return `${c.mine === false ? 'companion' : 'your companion'} · ${STANCE_NAMES[c.stance].toLowerCase()}`;
       case 'deed':
         if (c.carrying) return `settlement worker · carrying ${itemDef(c.carrying.id).name.toLowerCase()}`;
         if (c.state === 'forage') return `settlement worker · ${job === 'farm' && c.job ? `${c.job}ing a field` : verb}`;

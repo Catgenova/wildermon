@@ -429,6 +429,15 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // A tamed wildermon's keeper by name (`ownerOf`, `20261120000132_keeper_named.sql`).
+  {
+    n: 666,
+    day: '2026-11-16',
+    lines: () => [
+      'New: tamed wildermon: owner shown, yours and anybody\'s, online or not: after its name over it ("Bastiondrake · catgenova"); "Owner: catgenova" on hover, in its menu, '
+        + 'on Examine and on a wildermon crate with it in. Settlement workers, companions, mounts and teams in the traces alike. Wild ones: none.',
+    ],
+  },
   // The kinds every field guide starts with seen, and a wild one near (`GUIDE_START`, `WILD_NEAR`, `20261120000128_sapgnaw_known_from_the_start.sql`).
   {
     n: 664,

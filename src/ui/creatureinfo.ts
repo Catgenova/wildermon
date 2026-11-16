@@ -42,6 +42,7 @@ import { traitReadNeeds } from '../game/husbandry';
 import { SKILL_BY_ID } from '../game/skills';
 import { idleSays, ledgerLines } from '../game/workerlog';
 import { seenDefName } from '../game/skillgates';
+import { ownerLine } from '../game/owner';
 
 const pct = (v: number): number => Math.round(v * 100);
 
@@ -132,8 +133,11 @@ export function creatureLines(g: Game, c: Creature): string[] {
     return lines;
   }
 
-  // One of your own: name, what it is, and how far along it is.
+  // A tamed one: name, what it is, how far along it is, and whose.
   lines.push(`${c.name} · ${SEX_NAMES[c.sex]} ${kindName(c)} · ${age}${growing > 0 ? `, grown in ${clockLeft(growing)}` : ''} · Lv ${creatureLevel(c)}`);
+  // Whose it is, yours or anybody else's (`ownerLine`).
+  const owner = ownerLine(c, g.player.name);
+  if (owner) lines.push(owner);
   if (c.rare) lines.push(...rarityLines(c));
   lines.push(...formLabels(c, def));
   const max = maxHealth(c, def);

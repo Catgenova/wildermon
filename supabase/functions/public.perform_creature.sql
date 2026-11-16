@@ -49,7 +49,8 @@ begin
            else '' end, 'event');
     else
       perform wtell(p_world, p_uid, c.name || ' (' || c.sex || ' ' || lower(d.name) || ', ' || a.name
-        || '): ' || case when d.description <> '' then d.description || ' ' else '' end || 'Level ' || creature_level(c.skills, c.species)
+        || '): ' || case when c.keeper is not null then 'Owner: ' || folk_name(p_world, c.keeper) || '. ' else '' end
+        || case when d.description <> '' then d.description || ' ' else '' end || 'Level ' || creature_level(c.skills, c.species)
         || '. Health ' || ceil(c.health) || '/' || max_health(c) || '. Care: ' || care_word(c.care)
         || '. Traits: ' || trait_names(c.traits) || '. '
         || case when c.hunger < 0.3 then 'Hungry.' when c.hunger < 0.6 then 'Peckish.'

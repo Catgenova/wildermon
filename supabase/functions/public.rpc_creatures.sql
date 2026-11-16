@@ -13,6 +13,8 @@ declare me uuid := auth.uid(); p player;
         -- Each row packed (`p_pack`, in the new shape only): its values in the order of `private.mob_cols()`, and the
         -- rest of what it says as one object after them.
         v_pack boolean := p_pack and (p_since is not null or p_have is not null);
+        -- The reader as anybody else names them (`folk_name`), for their own rows' `keeperName`.
+        v_me_name text;
 begin
   perform private.pace(auth.uid(), 'look');
   p_range := least(greatest(coalesce(p_range, 0), 0), private.read_range_most());
@@ -23,6 +25,7 @@ begin
   if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
   select * into p from player where world_id = p_world and uid = me;
   if not found then raise exception 'you are not on this island'; end if;
+  v_me_name := coalesce(account_name(me), p.name);
   /*
    * And the wildlife is not moved from in here any more.
    *
@@ -193,6 +196,10 @@ begin
               then pannier_sent(p_world, me, c) else '{}'::jsonb end
       -- The work post it works out of, to anybody: the post is in the open.
       || case when c.post is null then '{}'::jsonb else jsonb_build_object('post', c.post) end
+      -- Whose it is, by name, to anybody: a wild one says none, whatever keeper it was let go by.
+      || case when c.keeper is null or c.mode = 'wild' then '{}'::jsonb
+              when c.keeper = me then jsonb_build_object('keeperName', v_me_name)
+              else jsonb_build_object('keeperName', folk_name(p_world, c.keeper)) end
       -- And what it did this island day and the one before, for its keeper.
       || case when c.keeper = me and c.mode = 'deed' then jsonb_build_object('ledger', c.ledger, 'worn', c.worn, 'unfed', c.unfed, 'sparWith', c.spar_with,
            'specialty', coalesce(((select deed_trade_counts(p_world, me))->>coalesce(c.job, (select sd.gathers from species_def sd where sd.id = c.species)))::int, 0))

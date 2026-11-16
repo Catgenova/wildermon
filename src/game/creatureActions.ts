@@ -21,6 +21,7 @@ import { takeGear } from './wildgearActions';
 import { boundKey } from './keybinds';
 import { pannierExitRefusal } from './panniers';
 import { LEAD_ROPE, noTackSaid } from './ropework';
+import { ownerLine } from './owner';
 
 /**
  * What one offering and one blow teach, landed or not.
@@ -414,7 +415,9 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       const skills = Object.entries(c.skills).map(([id, v]) => `${id} ${v.toFixed(1)}`).join(', ');
       const range = c.mode === 'deed' && def.gathers ? ` Range: ${workRangeOf(c, def)} tiles from the totem.` : '';
       const desc = kindDescription(c);
-      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${desc ? `${desc} ` : ''}Level ${creatureLevel(c)}: ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. Care: ${careWord(c.care)}. Traits: ${traitList(c.traits)}.${raritySays(c)}${formSays(c, def)}${range} ${mood} Eats: ${dietText(c)}.${studBook(g, c)}`, 'wildermon');
+      // Whose it is, first, as the island's `perform_creature` says it.
+      const owner = ownerLine(c, g.player.name);
+      g.logMsg(`${c.name} (${c.rare ? `${rarityOf(c).name} ` : ''}${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${g.creatures.describe(c)}): ${owner ? `${owner}. ` : ''}${desc ? `${desc} ` : ''}Level ${creatureLevel(c)}: ${skills}. Health ${Math.ceil(c.health)}/${maxHealth(c, def)}. Care: ${careWord(c.care)}. Traits: ${traitList(c.traits)}.${raritySays(c)}${formSays(c, def)}${range} ${mood} Eats: ${dietText(c)}.${studBook(g, c)}`, 'wildermon');
     },
   },
   {

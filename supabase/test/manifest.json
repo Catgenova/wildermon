@@ -3350,6 +3350,19 @@
     "why": "Asked for: \"streamline cpu\". The read with its short cuts says what it says with them taken out, key for key; a browser that says neither cursor nor ids gets the list it always got; handed back its cursor and the ids it holds, it is sent exactly what was written since, what it lacks and which went, and a browser laying those holds what the whole answer says after every turn of the clock. Packed, every row unpacks to the whole answer's, key for key."
   },
   {
+    "file": "supabase/test/keepershown.ts",
+    "title": "Whose a tamed wildermon is, by name, wherever it is seen",
+    "shard": 6,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "KEEPERSHOWN_STRICT": "1"
+    },
+    "why": "Asked for: \"Make it apparent who tamed wildermon belong to\". The creatures read names the keeper of somebody else's, offline or not, whole and packed, and yours as you; a wild one none. Examine says \"Owner: <name>.\" on both sides; the name over it and its hover card name the keeper, and in Chrome the plates drawn over them say so, in each one's colour; and a row from an island that sends no name is taken without a throw, somebody else's showing its name alone and yours your name."
+  },
+  {
     "file": "supabase/test/grounddelta.ts",
     "title": "The ground read sends only what changed, and the same answer for less",
     "shard": 6,

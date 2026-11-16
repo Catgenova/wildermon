@@ -1494,6 +1494,8 @@ export function helpText(): string {
       <li><b>Yours</b>: name, sex, kind, age, level; health and fullness bars; brushing; current task and skill at it, worker reach in tiles; traits
       (marked when better than common; <i>something unread</i> until your animal husbandry can read them); time left on a carried young.</li>
       <li><b>Monster</b>: health, hit damage, "cannot be tamed".</li>
+      <li><b>Owner</b> (any tamed one, yours included; wild: none): its keeper's name. Also: after its name over it (<i>Name · owner</i>), its menu, Examine,
+      a wildermon crate with it in.</li>
     </ul>
     <h3>The belt, and doing a thing many times</h3>
     <h4>Repeats</h4>
