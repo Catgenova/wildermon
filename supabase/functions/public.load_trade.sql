@@ -6,6 +6,6 @@ CREATE OR REPLACE FUNCTION public.load_trade(p_kind text)
  IMMUTABLE
 AS $function$
   select p_kind in ('forage', 'botanize', 'woodcut', 'farm', 'mine', 'sand', 'clay', 'quarry', 'fetch', 'peat', 'reed', 'fish',
-                    'seek', 'fruit', 'bush', 'grass', 'pan', 'worm', 'sprout', 'resin', 'flower', 'compost', 'moss',
+                    'seek', 'fruit', 'bush', 'grass', 'pan', 'worm', 'sprout', 'resin', 'flower', 'compost', 'moss', 'prune',
                     'water', 'hod', 'stoke', 'plant', 'lamp', 'patch', 'fill', 'vine', 'lily')
 $function$

@@ -1,7 +1,7 @@
 import { describeGoals } from './journal';
 import { hodMay, relicGate, smeltGate, waterPlantFrom, workerRecipeOpen, workerSmeltOpen, workerSmithOpen, workerWaterPlantOpen } from './craftgates';
 import { LAIR_BY_ID } from './lairs';
-import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES } from '../world/tiles';
+import { TileType, TILE_DEFS, TREE_DEFS, treeAge, treeSpecies, packTreeData, TREE_AGES, PRUNE_LOGS, pruneLogs } from '../world/tiles';
 import { isSeam } from '../world/tiles';
 import { mapFromBeast } from './treasure';
 import { BOTANIZE_TABLE, FORAGE_TABLE, rollTable } from './forage';
@@ -529,7 +529,7 @@ export const GATHER_VERB: Record<GatherKind, string> = { forage: 'foraging', bot
   moss: 'cutting moss', vine: 'planting vines', lily: 'planting water lilies and lotus', concrete: 'mixing concrete', mortar: 'mixing mortar', timber: 'sawing timbers',
   shaft: 'carving shafts', bandage: 'making bandages, covers and salves', cheese: 'pressing cheese', churn: 'churning butter', alloy: 'mixing alloys' };
 /** The plain form, for "it will forage" rather than "it will foraging". */
-export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; move items from your other containers into a container named for the item; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls and columns on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations; storeys up by staircase, not ladder', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: 'prune dying wood', stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, get dairy() { return `milk your ${milkers()} into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`; }, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', get kiln() { return `load your kilns with ${kilnLoads()} from your settlement stores and empty them`; }, ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations, statues and stone lanterns and ivy off your stone walls',
+export const GATHER_DO: Record<GatherKind, string> = { forage: 'forage', botanize: 'botanize', woodcut: 'fell trees', farm: 'sow, tend and harvest fields', mine: 'mine ore', sand: 'collect sand', clay: 'collect clay', quarry: 'cut stone', stoke: 'keep your campfires, ovens, braziers, smelters and kilns fuelled', fetch: 'pick up dropped items; move items from your other containers into a container named for the item; sort raw and worked materials from your settlement stores into your raw and craft material bins', guard: 'guard the settlement', hunt: 'hunt round the settlement and bring carcasses home', peat: 'collect peat and tar', reed: 'cut reeds', water: 'carry water to your barrels from the shore or a well', prospect: 'prospect for metal and mark finds', plant: 'plant sprouts where trees were cut', hod: 'carry what planned building work wants from your settlement stores and fit it: walls and columns on their storey; floors, roofs, staircases and ladders from the storey under; bridge or aqueduct spans, foundations; storeys up by staircase, not ladder', mend: 'mend damaged gear in your settlement stores', compost: 'turn rotting items into compost', seek: 'find buried relics and mark dig sites', fish: 'fish round the settlement and bring the catch home', prune: `prune dying wood, ${PRUNE_LOGS} log of its kind a tree to your settlement stores`, stump: 'dig out stumps', fruit: 'pick fruit trees' , hive: 'fill your hives with honey and beeswax', groom: `brush your wildermon under ${percent(CARE_WANTING)} care`, get dairy() { return `milk your ${milkers()} into empty buckets in your settlement stores; shear or pluck your others at ${percent(DAIRY_FULL)} regrowth; output to your settlement stores`; }, heal: `dress your wildermon that are bleeding or under ${percent(HEAL_BELOW)} health, with a bandage or cover from your settlement stores`, tan: 'tan hides in your settlement stores with lye', mill: 'grind wheat and corn and press olives in your settlement stores', lamp: 'put candles from your settlement stores in your empty lantern posts and pillars; light them after dark, put them out by day', bush: 'pick bushes and trellis vines', grass: 'cut grass and moss', pan: 'pan sand at the water\'s edge', smelt: 'charge your smelters with ore from your settlement stores and empty them', get kiln() { return `load your kilns with ${kilnLoads()} from your settlement stores and empty them`; }, ash: 'rake ashes from your campfires, ovens, smelters and kilns into your settlement stores; leach ash and buckets of water from your settlement stores into lye', brew: 'start a brew in each idle water barrel of yours from makings in your settlement stores', cook: 'cook from your settlement stores at your lit campfires and ovens', restore: 'restore relics whose pieces are all in your settlement stores', patch: 'sow, tend and harvest your planters from your settlement stores', worm: 'dig worms', sprout: 'pick tree sprouts', resin: 'tap pines for tar, once a day each', flower: 'pick wildflowers, except those a skep or hive feeds on', scrub: 'scrub moss off your paving, foundations, statues and stone lanterns and ivy off your stone walls',
   // Read when asked for rather than when this module loads, so the recipes and the glaze are there to be read.
   get saw() { return `saw logs in your settlement stores into planks, ${recipeMakes('make_planks')} a log`; },
   get chisel() { return `chisel rock shards in your settlement stores into stone brick, ${recipeMakes('make_stone_brick')} a shard`; },
@@ -1137,7 +1137,7 @@ describeWith({
  */
 export const LOAD_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
   'forage', 'botanize', 'woodcut', 'farm', 'mine', 'sand', 'clay', 'quarry', 'fetch', 'peat', 'reed', 'fish', 'seek', 'fruit',
-  'bush', 'grass', 'pan', 'worm', 'sprout', 'resin', 'flower', 'compost', 'moss',
+  'bush', 'grass', 'pan', 'worm', 'sprout', 'resin', 'flower', 'compost', 'moss', 'prune',
   'water', 'hod', 'stoke', 'plant', 'lamp', 'patch', 'fill', 'vine', 'lily',
 ]);
 /**
@@ -1149,8 +1149,8 @@ export const LOAD_TRADES: ReadonlySet<GatherKind> = new Set<GatherKind>([
  * went to, with a bucket or a dressing for each out of what it fetched. The island's `hands_trade`.
  *
  * Left as they were, as no step of theirs is something a stage could do more of at once: a keeping watch and a hunt,
- * which carry nothing but a carcass on a walk of its own; pruning, digging out stumps and scrubbing, which bring
- * nothing home; a Vesp's trip, one flower and back to its hive; reading the ground, which carries nothing and reads
+ * which carry nothing but a carcass on a walk of its own; digging out stumps and scrubbing, which bring nothing
+ * home; a Vesp's trip, one flower and back to its hive; reading the ground, which carries nothing and reads
  * where it stands; charging a smelter or a kiln, whose every go already moves a whole stack, as much as the furnace
  * has room for; and brewing, where each barrel is a walk of its own.
  */
@@ -2332,7 +2332,7 @@ export const SPECIES: Record<string, SpeciesDef> = withTameGates({
     name: 'Saplingreach',
     was: ['Snedda'],
     // Asked for, with a reference sheet: Saplingreach, Canopyshaper, Grovemaster.
-    description: 'Settlement task: prune trees whose next growth stage is dead; nothing else.',
+    description: 'Settlement task: prune trees whose next growth stage is dead, {pruneLogs} log of its kind a tree; output to your settlement stores. Nothing else.',
     stages: [
       { name: 'Canopyshaper', description: '' },
       { name: 'Grovemaster', description: '' },
@@ -4401,7 +4401,7 @@ export const MEND_QL_LEAST = 0.05;
 for (const s of Object.values(SPECIES)) {
   s.description = fill(s.description, {
     ...s, pullDefault: PULL_DEFAULT, careWanting: CARE_WANTING, dairyFull: DAIRY_FULL, healBelow: HEAL_BELOW, tanLye: TAN_LYE,
-    milkers: milkers(), grassPerCut: GRASS_PER_CUT, mossPerCut: MOSS_PER_CUT, panLeast: PAN_FIND[0], panMost: PAN_FIND[1], skillTop: SKILL_TOP, resinTapped: RESIN_TAPPED,
+    milkers: milkers(), grassPerCut: GRASS_PER_CUT, mossPerCut: MOSS_PER_CUT, panLeast: PAN_FIND[0], panMost: PAN_FIND[1], skillTop: SKILL_TOP, resinTapped: RESIN_TAPPED, pruneLogs: PRUNE_LOGS,
     skepReach: SKEP_REACH, skepHours: SKEP_CLUMP_HOURS, skepWax: SKEP_WAX_EVERY, skepIdle: SKEP_IDLE,
   });
 }
@@ -8050,7 +8050,7 @@ export class Creatures {
     return { uid: game.inventory.nextUid++, id: 'log', ql, dmg: 0, count: logs, extra: def.name };
   }
 
-  /** Prune the tree a forester walked to back a stage. It carries nothing home. */
+  /** Prune the tree a forester walked to back a stage, and hand it the log it carries home (`PRUNE_LOGS`). */
   private finishPruning(game: Game, c: Creature): Item | null {
     const tx = c.workX;
     const ty = c.workY;
@@ -8059,10 +8059,15 @@ export class Creatures {
     const age = treeAge(data);
     if (age.pruned === null) return null;
     this.gainSkill(game, c, GATHER_SKILL.prune, 0.225);
-    // The age and nothing else, as under a sickle: the species stays, and so
-    // does any notch, since the tile is still a tree.
+    // The age, as under a sickle: the species stays, and so does any notch,
+    // since the tile is still a tree.
     game.world.setTile(tx, ty, TileType.Tree, packTreeData(treeSpecies(data), age.pruned));
-    return null;
+    // And a log of its kind home, as a player's prune gives one: at a feller's quality (`finishFelling`).
+    const logs = pruneLogs(age);
+    if (!logs) return null;
+    const skill = c.skills[GATHER_SKILL.prune] ?? 1;
+    const ql = Math.min(100, Math.max(1, skill * (DIG_QL[0] + game.rand() * (DIG_QL[1] - DIG_QL[0])) + 1) * this.yieldMul(c));
+    return { uid: game.inventory.nextUid++, id: 'log', ql, dmg: 0, count: logs, extra: TREE_DEFS[treeSpecies(data)].name };
   }
 
   /** Dig out the stump a forester walked to. Bare dirt where it stood. */

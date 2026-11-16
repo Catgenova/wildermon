@@ -380,8 +380,14 @@ begin
      */
     perform land_set_data(p_world, tx, ty, tree_pack(tree_species(v_data), v_to.id));
     perform land_announce(p_world, tx, ty);
+    -- And a log of its kind, as felling gives one (`prune_logs`), none off a sapling (`pruneLogs`).
+    v_n := least(prune_logs(), v_age.logs);
+    v_ql := product_ql(v_skill, v_tool);
+    if v_n > 0 then perform gather(p_world, p_uid, 'log', v_n, v_ql, v_tree.name); end if;
     perform tell(p_world, p_uid, 'Pruned ' || lower(v_tree.name) || ': ' || lower(v_age.name)
-      || ' to ' || lower(v_to.name) || '.', 'event');
+      || ' to ' || lower(v_to.name) || '.'
+      || case when v_n > 0 then ' ' || v_n || case when v_n = 1 then ' log' else ' logs' end
+                                || ', QL ' || to_char(v_ql, 'FM990.0') || '.' else '' end, 'event');
     perform skill_raise(p_world, p_uid, 'forestry', 1);
 
   elsif p_action = 'plant' then

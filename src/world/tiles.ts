@@ -941,6 +941,15 @@ export const TREE_AGES: TreeAge[] = [
 ];
 
 /**
+ * Logs a prune gives, of the tree's kind, as felling gives them (`cut_down`): a player's under a sickle and a
+ * pruner's to its settlement stores. Asked for: "pruning a tree also gives 1 log of that type". The island's
+ * `prune_logs`.
+ */
+export const PRUNE_LOGS = 1;
+/** A prune's logs off a tree of this age: `PRUNE_LOGS`, and none off an age that fells for none (a sapling). The island's `perform_ground`. */
+export const pruneLogs = (age: TreeAge): number => Math.min(PRUNE_LOGS, age.logs);
+
+/**
  * A day apiece, and a real one, turning at dawn.
  *
  * Asked for from the island as "a real life day" per stage, so this is wall
