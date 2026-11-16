@@ -257,7 +257,7 @@ begin
   elsif p_action = 'remove_floor' then
     if b.id is null then return; end if;
     kind := coalesce(p_target->>'floorKind', 'floor');
-    lvl := frame_floor_level(p_world, b.id, kind, p_target); -- cellar: storey nought for a flight down; Frame: else the job's storey.
+    lvl := remove_floor_level(p_world, b.id, kind, p_target); -- cellar: storey nought for a flight down; Frame: else the job's storey.
     select * into f from floor_tile where world_id = p_world and level = lvl and x = tx and y = ty;
     if not found then return; end if;
     delete from floor_tile where world_id = p_world and level = lvl and x = tx and y = ty;

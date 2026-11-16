@@ -433,6 +433,15 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Remove floor: never the roof (`removeFloorLevel`); a floor under walls held up otherwise (`wallLeftStanding`).
+  {
+    n: 670,
+    day: '2026-11-16',
+    lines: () => [
+      'Fixed: Remove floor under a roof, no storey picked: the floor under the roof (was: the roof).',
+      'Changed: Remove floor with a wall on a side: allowed where each such wall stands on a finished floor across it or a finished wall under it (was: refused while any wall stood on it).',
+    ],
+  },
   // A parked team at its yokes (`parkedSpot`), as a driven one is (`traceSpot`, `YOKE_SPOTS`).
   {
     n: 669,

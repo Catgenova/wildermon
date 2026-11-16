@@ -276,6 +276,30 @@ const topLevel = (b: Building, t: TileTarget): number => jobLevel(b, t);
 const slotLevel = (t: TileTarget, b: Building, g: Game): number =>
   (t.floorKind === 'roof' ? g.buildings.roofLevelFor(b, t) : t.down ? 0 : topLevel(b, t));
 /**
+ * The storey Remove floor works on: the job's (`slotLevel`); but never a roof, which is Remove roof's -- the storey's own
+ * top slot is its roof, and a Remove floor there took the roof off over the room it was asked in (the island's
+ * `remove_floor_level`).
+ */
+const removeFloorLevel = (t: TileTarget, b: Building, g: Game): number => {
+  const l = slotLevel(t, b, g);
+  const f = g.buildings.floor(l, t.x, t.y);
+  return t.floorKind !== 'roof' && l > 0 && f && floorKind(f) === 'roof' ? l - 1 : l;
+};
+/** The tile across a side. */
+const SIDE_STEP: Record<'n' | 'e' | 's' | 'w', [number, number]> = { n: [0, -1], e: [1, 0], s: [0, 1], w: [-1, 0] };
+/**
+ * A wall on a side of a floor at `level` stands on something else when the floor is taken up: a finished floor across that
+ * side on its storey, or a finished wall under it on the storey below. A floor inside a room comes up for a higher ceiling;
+ * a wall with nothing else under it keeps it (the island's `remove_floor_refusal`).
+ */
+const wallLeftStanding = (g: Game, level: number, x: number, y: number, side: 'n' | 'e' | 's' | 'w'): boolean => {
+  const [dx, dy] = SIDE_STEP[side];
+  const across = g.buildings.floor(level, x + dx, y + dy);
+  if (across && isDone(across)) return true;
+  const under = level > 0 ? g.buildings.wall(level - 1, x, y, side) : undefined;
+  return !!under && isDone(under);
+};
+/**
  * The staircase or ladder planned and not finished on the floor slot of the storey over `level` at a tile, built from
  * `level`, the storey it is climbed from: its target names the storey it is on (`level + 1`), which `build_floor` and
  * the island's `build_refusal` both read, and neither asks which storey the builder stands on. A floor upstairs is
@@ -1242,7 +1266,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return null;
       const b = storeyOf(g, t);
       if (!b) return 'No building here.';
-      const level = slotLevel(t, b, g);
+      const level = removeFloorLevel(t, b, g);
       const floor = g.buildings.floor(level, t.x, t.y);
       if (!floor) return 'Nothing to remove.';
       // A flight down is let into the ground floor, and the walls round it stand on the ground;
@@ -1256,7 +1280,9 @@ export const BUILD_ACTIONS: ActionDef[] = [
         // A wall stands on a floor only where it may not go up without a finished one (`plan_wall`): a storey up, or a
         // deck on piers. On the ground floor it stands on the ground, and a floor still planned carries nothing.
         if (isDone(floor) && (level > 0 || g.buildings.onPiers(t.x, t.y))) {
-          for (const side of ['n', 'e', 's', 'w'] as const) if (g.buildings.wall(level, t.x, t.y, side)) return 'Remove the walls on it first.';
+          for (const side of ['n', 'e', 's', 'w'] as const) {
+            if (g.buildings.wall(level, t.x, t.y, side) && !wallLeftStanding(g, level, t.x, t.y, side)) return 'Remove the walls on it first.';
+          }
         }
         // A column on it, or the roof over a jetty (`frame.ts`).
         const holds = floorHolds(g, b, level, t.x, t.y);
@@ -1276,7 +1302,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!isTile(t)) return;
       const b = storeyOf(g, t);
       if (!b) return;
-      const level = slotLevel(t, b, g);
+      const level = removeFloorLevel(t, b, g);
       const floor = g.buildings.floor(level, t.x, t.y);
       if (!floor) return;
       g.buildings.removeFloor(level, t.x, t.y);

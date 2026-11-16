@@ -3565,5 +3565,11 @@
     "title": "A prune gives a log of the tree's kind, and a pruner carries it home",
     "shard": 6,
     "why": "Asked for: pruning a tree gives 1 log of its kind, and a pruning wildermon brings it to the settlement stores. A player's prune of an old oak, a sapling's none, and a Saplingreach's log walked into the settlement's crate."
+  },
+  {
+    "file": "supabase/test/floorunderwall.ts",
+    "title": "Remove floor: never the roof, and a floor under walls that stand on something else",
+    "shard": 6,
+    "why": ""
   }
 ]

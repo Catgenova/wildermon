@@ -265,7 +265,8 @@ begin
     if b.id is null then return case when p_action = 'build_floor'
       then 'Nothing planned here.' else 'No building here.' end; end if;
     kind := coalesce(p_target->>'floorKind', 'floor');
-    lvl := frame_floor_level(p_world, b.id, kind, p_target); -- cellar; Frame: on the job's storey.
+    lvl := case when p_action = 'remove_floor' then remove_floor_level(p_world, b.id, kind, p_target)
+                else frame_floor_level(p_world, b.id, kind, p_target) end; -- cellar; Frame: on the job's storey.
     select * into f from floor_tile where world_id = p_world and level = lvl and x = tx and y = ty;
     if p_action = 'remove_floor' then
       if not found then return 'Nothing to remove.'; end if;
@@ -283,7 +284,8 @@ begin
           select 1 from (values ('n'), ('e'), ('s'), ('w')) as s(side)
           cross join lateral border_of(tx, ty, s.side) bd
           join wall w2 on w2.world_id = p_world and w2.level = lvl
-            and w2.dir = bd.dir and w2.x = bd.x and w2.y = bd.y) then
+            and w2.dir = bd.dir and w2.x = bd.x and w2.y = bd.y
+          where not wall_left_standing(p_world, lvl, tx, ty, s.side)) then
         return 'Remove the walls on it first.';
       end if;
       -- Piers: a deck holds up whatever stands or lies on it, and whoever is taking it up (`deck_refusal`).
