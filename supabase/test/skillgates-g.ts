@@ -13,8 +13,8 @@
  *     recipe's own skill, and for obsidian glass building;
  *   * refused in the one rule's words on both sides: steel pouring at blacksmithing 1, fire-tempered steel at 30, an
  *     obsidian vase at glassblowing 90, obsidian glass building at masonry 90; the bucket, lye and wemp open at 1;
- *   * a hod carrier at carpentry 1 with only a drawbridge's span within reach is idle `gate`, naming it, on both sides;
- *     at carpentry 50, not; and its words;
+ *   * a hod carrier at level 1 with only a drawbridge's span within reach is idle `gate`, naming it, on both sides;
+ *     at level 50 (masonry 50, carpentry 1), not; and its words, naming the gate's level and its own;
  *   * the Unlocks: glassblowing, stonecutting and platesmithing list their obsidian work at 99.
  *
  * The island half makes its own island and rolls it back.
@@ -27,6 +27,7 @@ import { METALS } from '../../src/game/metal';
 import { idleSays } from '../../src/game/workerlog';
 import { cropSeed, gateOf, itemGateRefusal, OBSIDIAN_LEVEL, seenName, SKILL_GATES, unlocksOf } from '../../src/game/skillgates';
 import { TileType } from '../../src/world/tiles';
+import { creatureLevel } from '../../src/game/creatures';
 import { psql, check, finish } from './harness';
 
 const U = '7e5b0000-0000-4000-8000-0000000a7e01';
@@ -66,6 +67,13 @@ create function pg_temp.worker(w uuid, u uuid, p_skills jsonb) returns creature 
 declare v int; c creature;
 begin
   v := creature_spawn(w, 'magga', ${T}.5, ${T}.5, 'active', now() - interval '60 days', u);
+  update creature set skills = p_skills where world_id = w and id = v returning * into c;
+  return c;
+end $m$;
+create function pg_temp.hod(w uuid, u uuid, p_skills jsonb) returns creature language plpgsql as $m$
+declare v int; c creature;
+begin
+  v := creature_spawn(w, 'cobbe', ${T}.5, ${T}.5, 'active', now() - interval '60 days', u);
   update creature set skills = p_skills where world_id = w and id = v returning * into c;
   return c;
 end $m$;
@@ -111,16 +119,16 @@ ${LOWERED.map((id) => `  insert into said values ('LOW_${id}', ${refused(`craft_
   /* ---- a hod carrier and a drawbridge's span ---- */
   insert into bridge (world_id, kind, ax, ay, bx, by, height) values (w, 'draw', ${BX}, ${BY}, ${BX + 1}, ${BY}, 52) returning id into v_b;
   insert into bridge_span (world_id, bridge, n, x, y, needed, total) values (w, v_b, 0, ${BX}, ${BY}, '{"plank": 10}', '{"plank": 10}');
-  c := pg_temp.worker(w, u, '{"masonry": 1, "carpentry": 1}');
+  c := pg_temp.hod(w, u, '{"masonry": 1, "carpentry": 1}');
   select * into r from hod_span_gate(w, c, ${T}, ${T}, 10);
   insert into said values ('SPAN1', coalesce(r.kind || ':' || r.n, 'none'));
-  c := pg_temp.worker(w, u, '{"masonry": 1, "carpentry": 50}');
+  c := pg_temp.hod(w, u, '{"masonry": 50, "carpentry": 1}');
   select * into r from hod_span_gate(w, c, ${T}, ${T}, 10);
   insert into said values ('SPAN50', coalesce(r.kind || ':' || r.n, 'none'));
   -- And a wall it may fit within reach: not only spans, so no gate.
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total)
     values (w, 0, 'h', ${T + 2}, ${T + 2}, 0, 'solid', 'log', '{"log": 4}', '{"log": 4}');
-  c := pg_temp.worker(w, u, '{"masonry": 1, "carpentry": 1}');
+  c := pg_temp.hod(w, u, '{"masonry": 1, "carpentry": 1}');
   select * into r from hod_span_gate(w, c, ${T}, ${T}, 10);
   insert into said values ('SPANWALL', coalesce(r.kind || ':' || r.n, 'none'));
 end $t$;
@@ -204,16 +212,16 @@ const set = (g: Game, skill: string, v: number): void => { g.skills.values.set(s
   g.addBridge('draw', BX - 1, BY, BX + 2, BY, 52);
   const near = (): boolean => true;
   const from = { x: T, y: T };
-  const at = (carpentry: number): string => {
-    const got = g.hodGatedSpan(near, from, (t) => hodMay({ skills: { masonry: 1, carpentry } }, t));
+  const at = (masonry: number): string => {
+    const got = g.hodGatedSpan(near, from, (t) => hodMay(creatureLevel({ species: 'cobbe', skills: { masonry, carpentry: 1 } }), t));
     return got ? `${got.kind}:${got.n}` : 'none';
   };
-  check(`a hod carrier at carpentry 1 with only a drawbridge's span in reach: gate, naming it (${at(1)}); at 50, not; on both sides`,
+  check(`a hod carrier at level 1 with only a drawbridge's span in reach: gate, naming it (${at(1)}); at level 50 (masonry 50, carpentry 1), not; on both sides`,
     at(1) === `draw:${Math.max(BX - T, BY - T)}` && said('SPAN1') === at(1) && at(50) === 'none' && said('SPAN50') === 'none',
     `island ${said('SPAN1')} ${said('SPAN50')} / browser ${at(1)} ${at(50)}`);
   check('and with a wall it may fit in reach too, not only spans: no gate, on the island', said('SPANWALL') === 'none', said('SPANWALL'));
-  const idle = idleSays({ why: 'gate', n: BX - T, what: ['bridge', 'draw'] }, 'hod', null, 1, { carpentry: 1 });
-  check(`its words: "${idle}"`, idle === `Idle: Drawbridge ${BX - T} tiles from the totem needs carpentry 50 (yours 1.0).`, idle);
+  const idle = idleSays({ why: 'gate', n: BX - T, what: ['bridge', 'draw'] }, 'hod', null, 1, { carpentry: 1 }, 1);
+  check(`its words: "${idle}"`, idle === `Idle: Drawbridge ${BX - T} tiles from the totem needs level 50 (yours 1).`, idle);
 }
 
 /* ---- the Skills window ------------------------------------------------------------ */

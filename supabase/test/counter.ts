@@ -254,10 +254,10 @@ begin
   update deed set x = ${X}, y = ${Y} where world_id = w and founded_by = a;
   insert into wall (world_id, level, dir, x, y, building, type, material, needed, total, planned_by)
     values (w, 0, 'h', ${X + 1}, ${Y}, 91, 'counter', 'plank', '{"plank":1,"timber":0,"hinge":0}', '{"plank":18,"timber":3,"hinge":2}', a);
-  -- At a plank counter's carpentry, its gates (craftgates.ts).
+  -- At a plank counter's gates, its level (masonry; craftgates.ts).
   insert into creature (world_id, id, species, name, from_x, from_y, to_x, to_y, health, sex, mode, job, work_x, work_y, keeper, carrying, skills)
     select w, coalesce(max(id), 0) + 1, 'cobbe', 'Hoddy', ${X} + 1.5, ${Y} - 0.5, ${X} + 1.5, ${Y} - 0.5, 20, 'female', 'deed', 'hod', ${X + 1}, ${Y}, a, '{"def":"plank"}'::jsonb,
-           '{"carpentry": 10}'::jsonb
+           '{"masonry": 10}'::jsonb
     from creature where world_id = w
     returning id into v_pip;
   -- The errand on its own: what it changes is seen by the statements after it, not by one it is part of.

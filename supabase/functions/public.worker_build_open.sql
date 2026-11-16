@@ -5,5 +5,5 @@ CREATE OR REPLACE FUNCTION public.worker_build_open(c creature, p_material text,
  LANGUAGE sql
  STABLE
 AS $function$
-  select coalesce(bool_and(worker_level(c, b.skill) >= b.level), true) from build_gates(p_material, p_wall, p_floor, p_hand) b
+  select coalesce(max(b.level), 0) <= creature_level(c.skills, c.species) from build_gates(p_material, p_wall, p_floor, p_hand) b
 $function$

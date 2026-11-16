@@ -304,9 +304,12 @@ export const buildGateRefusal = (viewer: Viewer, material: string | undefined, a
   return null;
 };
 
-/** Whether a worker may build with a material as a type: every gate at its own level in the gate's skill. The island's `worker_build_open`. */
-export const workerBuildOpen = (c: { skills: Record<string, number> }, material: string | undefined, as: BuildType): boolean =>
-  buildGates(material, as).every((g) => workerGateOpen(c, g));
+/**
+ * Whether a worker at `level` (`creatureLevel`) may build with a material as a type: every gate's level at or under it,
+ * whatever the gate's skill. A hod carrier's. The island's `worker_build_open`.
+ */
+export const workerBuildOpen = (level: number, material: string | undefined, as: BuildType): boolean =>
+  buildGates(material, as).every((g) => level >= g.level);
 
 /**
  * The gates on fitting what a piece of work wants: a wall, a floor, a column by its material and type (a change planned
@@ -318,12 +321,15 @@ const hodGates = (t: HodTarget): SkillGate[] =>
       : t.kind === 'column' ? buildGates(t.column.material, {})
         : t.kind === 'span' ? [gateOf('bridge', t.bridge.kind)].filter((g): g is SkillGate => !!g) : [];
 
-/** The first gate on a piece of work over a hod carrier's own level, or undefined: it may fit it. The island's `hod_build_gate`. */
-export const hodGate = (c: { skills: Record<string, number> }, t: HodTarget): SkillGate | undefined =>
-  hodGates(t).find((g) => !workerGateOpen(c, g));
+/**
+ * The first gate on a piece of work over a hod carrier's level (`creatureLevel`), whatever the gate's skill, or
+ * undefined: it may fit it. The island's `hod_build_gate`.
+ */
+export const hodGate = (level: number, t: HodTarget): SkillGate | undefined =>
+  hodGates(t).find((g) => level < g.level);
 
-/** Whether a hod carrier may fit what a piece of work wants: every gate on it at its own level. The island's `hod_may`. */
-export const hodMay = (c: { skills: Record<string, number> }, t: HodTarget): boolean => !hodGate(c, t);
+/** Whether a hod carrier at `level` may fit what a piece of work wants: every gate on it at or under it. The island's `hod_may`. */
+export const hodMay = (level: number, t: HodTarget): boolean => !hodGate(level, t);
 
 /** Paving with cobblestones or a slab under its gate, or null. */
 export const pavingGateRefusal = (viewer: Viewer, id: string): string | null => {

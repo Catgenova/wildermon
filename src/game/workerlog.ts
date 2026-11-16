@@ -174,9 +174,10 @@ const STORE_GATES: ReadonlySet<GateKind> = new Set<GateKind>(['recipe', 'relic',
  * The sentence for a reason, in the game's own terms and with its number:
  * "Idle: no reed bed within 30 tiles of the token." `kind` is the trade it
  * works; `carrying` the name of what is in its arms, for `full`; `skill` its task skill, for `seam`; `skills` its
- * levels, for `gate`, which names its level in the gate's own skill.
+ * levels, for `gate`, which names its level in the gate's own skill; `level` its level (`creatureLevel`), for a hod
+ * carrier's `gate`, which names that instead.
  */
-export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carrying?: string | null, skill?: number, skills?: Record<string, number>): string {
+export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carrying?: string | null, skill?: number, skills?: Record<string, number>, level?: number): string {
   const n = Math.round(idle.n);
   // Where it works from: its keeper, its post or the totem.
   const from = idle.around ? 'you' : idle.post ? 'its work post' : 'the totem';
@@ -228,6 +229,11 @@ export function idleSays(idle: Idle, kind: GatherKind | null | undefined, carryi
     case 'gate': {
       const gate = idle.what && idle.what.length >= 2 ? gateOf(idle.what[0] as GateKind, idle.what[1]) : undefined;
       if (!gate) return `Idle: work ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} above its level.`;
+      // A hod carrier's gates read its level (`creatureLevel`), whatever the gate's skill (`hodGate`, the island's `hod_may`).
+      if (kind === 'hod') {
+        const yours = level !== undefined ? ` (yours ${level})` : '';
+        return `Idle: ${gate.name} ${n} ${n === 1 ? 'tile' : 'tiles'} from ${from} needs level ${gate.level}${yours}.`;
+      }
       const have = skills ? workerLevel({ skills }, gate.skill) : skill;
       const yours = have !== undefined ? ` (yours ${have.toFixed(1)})` : '';
       // What it would make or restore out of the stores (a recipe, a relic) is in the stores, not tiles off.

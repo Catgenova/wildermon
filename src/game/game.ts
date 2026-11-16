@@ -8613,7 +8613,7 @@ export class Game {
     let best: (Key & { target: HodTarget }) | undefined;
     const consider = (target: HodTarget, bill: Bill, x: number, y: number, level: number, dir: string): void => {
       if (!near(x, y, dir)) return;
-      // Only work its own levels open (`workerBuildOpen`): a hod carrier's gates.
+      // Only work its level opens (`hodMay`): a hod carrier's gates, at its level whatever the gate's skill.
       if (may && !may(target)) return;
       const d = from ? (x - from.x) ** 2 + (y - from.y) ** 2 : 0;
       for (const [item, n] of Object.entries(bill.needed)) {
