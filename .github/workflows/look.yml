@@ -348,7 +348,7 @@ jobs:
                r as materialized (select storey_reach(c.world_id, dd.x - work_range(c) - 1, dd.y - work_range(c) - 1, dd.x + work_range(c) + 1, dd.y + work_range(c) + 1) as j from c, dd)
           select split_part(k, ',', 3)::int + 1 as storey, count(*) as cells from r cross join lateral jsonb_object_keys(r.j) k group by 1 order by 1"
           ask "hod workers idle on stock: each piece of work wanting what the stores hold, and why it is not handed out" "with c as (select c.* from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
-                 where $me and c.job = 'hod' and c.mode = 'deed' and c.idle_why = 'stock' order by c.id limit 1),
+                 where $me and c.job = 'hod' and c.mode = 'deed' order by c.id limit 1),
                dd as (select md.* from c cross join lateral my_deed(c.world_id, c.keeper) md where md.world_id is not null),
                r as materialized (select storey_reach(c.world_id, dd.x - work_range(c) - 1, dd.y - work_range(c) - 1, dd.x + work_range(c) + 1, dd.y + work_range(c) + 1) as j from c, dd),
                have as materialized (select distinct (s.it).def as def from c cross join lateral deed_store_items(c.world_id, c.keeper) s
@@ -362,15 +362,21 @@ jobs:
            where exists (select 1 from jsonb_each_text(w.needed) e where e.value::int > 0)
            order by w.level, w.x, w.y limit 80"
           ask "the build gates of that work, and the worker's levels" "with c as (select c.* from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
-                 where $me and c.job = 'hod' and c.mode = 'deed' and c.idle_why = 'stock' order by c.id limit 1),
+                 where $me and c.job = 'hod' and c.mode = 'deed' order by c.id limit 1),
                dd as (select md.* from c cross join lateral my_deed(c.world_id, c.keeper) md where md.world_id is not null),
                k as (select distinct w.kind, coalesce(ch.material, wl.material, f.material) as material, coalesce(ch.type, wl.type) as wtype, f.kind as fkind, f.hand
-                       from c, dd cross join lateral hod_work(c.world_id, dd.x, dd.y, work_range(c)) w
+                       from c cross join dd cross join lateral hod_work(c.world_id, dd.x, dd.y, work_range(c)) w
                        left join wall wl on w.kind = 'wall' and wl.world_id = c.world_id and wl.level = w.level and wl.dir = w.dir and wl.x = w.x and wl.y = w.y
                        left join wall_change ch on w.kind = 'wall' and ch.world_id = c.world_id and ch.level = w.level and ch.dir = w.dir and ch.x = w.x and ch.y = w.y
                        left join floor_tile f on w.kind = 'floor' and f.world_id = c.world_id and f.level = w.level and f.x = w.x and f.y = w.y)
           select k.kind, k.material, k.wtype, k.fkind, b.skill, b.level as needs, worker_level(c, b.skill) as has
             from c, k cross join lateral build_gates(k.material, k.wtype, k.fkind, k.hand) b order by 1, 2, 3, 4, 5"
+          ask "hod workers on the settlement: when they last went idle, and what the island says they want now" "select c.id, c.mode, c.idle_why, c.idle_n, c.idle_what::text as idle_what, to_char(c.idle_since, 'MM-DD HH24:MI:SS') as idle_since,
+                 (select hw.items::text || ' ' || hw.n from hod_wanted(c.world_id, dd.x, dd.y, work_range(c), c.keeper) hw) as wanted_now,
+                 (select count(*) from hod_work(c.world_id, dd.x, dd.y, work_range(c)) w where exists (select 1 from jsonb_each_text(w.needed) e where e.value::int > 0)) as work_wanting
+            from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+            cross join lateral (select * from my_deed(c.world_id, c.keeper) md where md.world_id is not null) dd
+           where $me and c.job = 'hod' order by c.id"
           ask "the stores' stock of what the work wants" "with c as (select c.* from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
                  where $me and c.job = 'hod' and c.mode = 'deed' order by c.id limit 1)
           select (s.it).def as def, sum((s.it).count) as count, bool_or(coalesce((s.it).locked, false)) as any_locked, string_agg(distinct s.kind, ' ') as store_kinds
