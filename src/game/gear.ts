@@ -1,7 +1,7 @@
 import type { ActionDef, Target } from './actions';
 import type { Game } from './game';
 import { CIRCLET, JEWEL_PIECES } from './gems';
-import { describeFrom, itemDef, markOf, rarityOf, type Item } from './items';
+import { bagRoom, describeFrom, itemDef, markOf, rarityOf, rarityShare, type Item } from './items';
 import { matOf } from './materials';
 
 /**
@@ -29,11 +29,32 @@ export const SLOT_NAMES: Record<Slot, string> = {
 
 /**
  * A bag worn, and what it adds to the carry limit: a backpack on the back, a sack at the side, each its share here
- * at QL 100 and that share times QL / 100 below it. Both may be worn. The island's `bag_carry`.
+ * at QL 100 and that share times QL / 100 below it, and `RARITY_ROOM` more of that a rarity step. Both may be worn.
+ * The island's `bag_carry`.
  */
 export const BAG_CARRY: Record<string, number> = { backpack: 0.5, sack: 0.25 };
-export const bagCarry = (item: Pick<Item, 'id' | 'ql'> | undefined): number => (item ? (BAG_CARRY[item.id] ?? 0) * Math.min(100, item.ql) / 100 : 0);
+/** The QL a worn bag's share is whole at. */
+export const BAG_CARRY_QL = 100;
+// And by its rarity, `RARITY_ROOM` more of the share a step (`rarityShare`), as its room is (`roomFor`).
+export const bagCarry = (item: Pick<Item, 'id' | 'ql' | 'rare'> | undefined): number =>
+  (item ? rarityShare((BAG_CARRY[item.id] ?? 0) * Math.min(BAG_CARRY_QL, item.ql) / BAG_CARRY_QL, item) : 0);
 for (const [id, carry] of Object.entries(BAG_CARRY)) describeFrom(id, { carry });
+
+/** A worn bag's carry limit bonus as a percent to a tenth: "+45.7%". The island's `bag_carry_pct`. */
+export const bagCarryPct = (share: number): string => `${Math.floor(share * 1000 + 0.5) / 10}%`;
+
+/**
+ * A kind's text, said of this one: its room with its rarity, mark and enchantment (`bagRoom`), and a worn bag's carry
+ * limit bonus at its QL and rarity (`bagCarry`), for "Holds 60 things" and "carry limit +50% × QL%". Examine, and the
+ * island's `bag_text`.
+ */
+export function bagText(item: Item, text: string): string {
+  const def = itemDef(item.id);
+  let out = text;
+  if ((def.holds ?? 0) > 0) out = out.replaceAll(`Holds ${Math.round(def.holds ?? 0)} `, `Holds ${bagRoom(item)} `);
+  if (BAG_CARRY[item.id] !== undefined) out = out.replace(/carry limit \+[0-9.]+% × QL%/g, `carry limit +${bagCarryPct(bagCarry(item))}`);
+  return out;
+}
 
 /** Where on the body a blow lands. */
 export type HitPart = 'head' | 'chest' | 'arms' | 'legs' | 'feet';

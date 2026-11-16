@@ -26,7 +26,7 @@ import { SMELTER_ACTIONS } from './smelter';
 import { KILN_ACTIONS } from './kiln';
 import { BUCKET_LITRES, FURNITURE, FURNITURE_ACTIONS, furnitureCentre, isWell, LIQUID_NAME } from './furniture';
 import { crateCentre } from './crates';
-import { GEAR_ACTIONS } from './gear';
+import { bagText, GEAR_ACTIONS } from './gear';
 import { IMPROVE_ACTIONS, improvable } from './improve';
 import { FARM_ACTIONS, glassSays } from './farming';
 import { BUTCHER_ACTIONS } from './butcher';
@@ -2535,7 +2535,8 @@ export const ACTIONS: ActionDef[] = [
       const item = g.inventory.get(t.uid);
       if (!item) return;
       const def = itemDef(item.id);
-      const desc = def.description ? ` ${def.description}` : '';
+      // A bag's room and a worn bag's carry limit bonus, this one's (`bagText`): the island's `bag_text`.
+      const desc = def.description ? ` ${bagText(item, def.description)}` : '';
       // What it is made of is half of what it is, so it is said here.
       const made = materialOfItem(item);
       const stuff = made ? ` ${made.name}: ${made.note}` : '';
