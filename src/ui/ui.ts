@@ -65,6 +65,7 @@ import { LYE_USE } from '../game/placeables';
 import { nearestSide } from '../render/renderer';
 import { CRATE_DEFS, crateHolds, crateKindOfItem, crateName, crateCapacity, crateUnits, rackSpotOf, subtileOf } from '../game/crates';
 import { hoardExamine, hoardHover, hoardRole, type HoardRole, type HoardSeen } from '../game/hoard';
+import { TRASH_RULE, trashSays } from '../game/trash';
 import { NAME_MAX } from '../game/naming';
 import { storeMarkable } from '../game/stores';
 import { trellisFacing } from '../game/vineyard';
@@ -2942,7 +2943,9 @@ export class UI {
       const note = heft ? `${furnitureKg(f).toFixed(0)} / ${heft} kg` : `${furnitureUnits(f)} / ${furnitureCapacity(f)} things`;
       entries.push({ label: 'Open', note, onSelect: () => this.cratePanel.openFurniture(f.id) });
       const role = hoardRole(def, storeMarkable(f.kind, def));
-      if (role) entries.push(this.examineContainer(`${def.name}${f.material ? ` (${f.material.toLowerCase()})` : ''}`, note, f, role));
+      // A trash crate: when it destroys what is put in, and this one's time by its QL (`trash.ts`).
+      const said = role === 'trash' ? `${note} · ${TRASH_RULE} · ${trashSays(f.ql)}` : note;
+      if (role) entries.push(this.examineContainer(`${def.name}${f.material ? ` (${f.material.toLowerCase()})` : ''}`, said, f, role));
     }
     if (def.stall && this.island) entries.push(...this.stallEntries(f));
     /*

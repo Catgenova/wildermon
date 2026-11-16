@@ -1,6 +1,5 @@
 import './craftgates';
 import { Springs, type SpringSave } from './springs';
-import { hoardItems } from './hoard';
 import type { LairSeen } from './lairs';
 import { CHAR_START, DAMAGE_MAX, PLACED_REACH, PROSPECT_MARK_TIME, QL_BARE, QL_LOW, QL_SPAN, QL_TOP, wearPerUse, wornShare } from './limits';
 import { DEED_RADIUS, deedLevel, deedWorkersAt, MAX_DEED_LEVEL } from './deedsize';
@@ -8117,8 +8116,7 @@ export class Game {
 
   /**
    * Everything placed that works by itself: ovens burning down, wells filling,
-   * rubbish rotting where it was thrown, a cart following you about, and a
-   * grave whose hour is up crumbling.
+   * a cart following you about, and a grave whose hour is up crumbling.
    */
   private runPlaceables(dt: number): void {
     // Graves keep real time, like the woods; an island crumbles its own.
@@ -8157,18 +8155,7 @@ export class Game {
           if (Math.floor(f.litres) !== Math.floor(before)) this.events.emit('crate');
         }
       }
-      // Named for an item, a trash crate is a magga's store for it (`hoard.ts`), and what is in it is kept.
-      if (def.trash && f.items.length && !hoardItems(f.name).length) {
-        // A trash crate is built to rot: what goes in it ages many times over.
-        const hours = (dt / 3600) * def.trash;
-        for (let i = f.items.length - 1; i >= 0; i--) {
-          const item = f.items[i];
-          item.dmg = Math.min(100, item.dmg + groundDecayRate(item) * hours);
-          if (item.dmg < 100) continue;
-          f.items.splice(i, 1);
-          this.events.emit('crate');
-        }
-      }
+      // A trash crate's contents are destroyed by the island, each stack a time after it went in (`trash.ts`, `trash_sweep`).
       if (f.hitched) this.dragCart(f);
       // A cart goes at the pace of whoever has its reins: yours as you walked, and still for anybody else's.
       if (def.vehicle && teamOf(f).length) this.haulVehicle(f, dt, (f.driverId ?? this.local.id) === this.local.id ? this.local.stepped : 0);

@@ -161,7 +161,7 @@ const billOf = (bill: Array<[string, number]>): Record<string, number> =>
   Object.fromEntries(bill.map(([id, n]) => [`bill ${id}`, n]));
 for (const f of FURNITURE) {
   const fields = {
-    capacity: f.capacity, heft: f.heft, liquid: f.liquid, well: f.well, hive: f.hive, trash: f.trash,
+    capacity: f.capacity, heft: f.heft, liquid: f.liquid, well: f.well, hive: f.hive,
     crates: f.crates, across: f.w, deep: f.h, yokes: f.vehicle?.yokes, needs: f.vehicle?.needs,
     draught: f.boat?.draught, ...billOf(f.bill),
   };

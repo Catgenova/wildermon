@@ -13,7 +13,8 @@
  *   * never sources: a cart in hand (pulled), and an unnamed trash crate, each with a whetstone;
  *   * targets: a craft material bin "Mortar", one "Marble  Bricks" (two spaces inside), and a trash crate "Ancient
  *     Whetstone": every item goes, the same loads in the same order on both sides, and then nothing to move;
- *   * the named trash crate keeps the whetstones (the browser rots what is in an unnamed one; the island rots none);
+ *   * what goes into the named trash crate is timed for it there (`binned_at`), as anything put into one is
+ *     (`trashdecay.ts`);
  *   * a hatchet with only a craft material bin named for it, "HATCHETS", which takes no hatchet: it stays, and the
  *     idle reason names the item and the bin's own refusal, on both sides, and is sent to its card.
  *
@@ -100,16 +101,11 @@ const state = (): string => [
   `bricks ${n(bricks.items, 'marble_brick')}`,
   `trash ${n(trash.items, 'ancient_whetstone')}`,
 ].join(' ');
-const most = (items: Item[]): number => Math.round(Math.max(0, ...items.map((x) => x.dmg)));
 
 const browser: Record<string, string> = {};
 browser.SEQ = run(1800);
 browser.STATE = state();
 browser.IDLE = idleOf(magga);
-// An hour of the placeables: an unnamed trash crate rots what is in it, the named one keeps it (`runPlaceables`).
-(g as unknown as { runPlaceables(dt: number): void }).runPlaceables(3600);
-browser.KEPT = `${n(trash.items, 'ancient_whetstone')}|${most(trash.items)}`;
-browser.ROTTED = `${n(bin.items, 'ancient_whetstone')}|${most(bin.items)}`;
 // A hatchet in the store, and a craft material bin named for hatchets, which takes none.
 store.items.push(it('hatchet', 1));
 const wrong = g.addFurniture('craft_bin', WRONG[0], WRONG[1], 0, 0, 50, []);
@@ -190,7 +186,7 @@ begin
   insert into said values ('STATE', ${STATE_SQL});
   insert into said select 'IDLE', ${IDLE_SQL} from creature where world_id = w and id = m;
   insert into said values ('RANGE', (select work_range(c)::text from creature c where world_id = w and id = m));
-  insert into said values ('KEPT', (select coalesce(sum(count), 0) || '|' || round(coalesce(max(dmg), 0)) from item where placed = v_trash and def = 'ancient_whetstone'));
+  insert into said values ('KEPT', (select coalesce(sum(count), 0) || '|' || round(coalesce(max(dmg), 0)) || '|' || bool_and(binned_at is not null) from item where placed = v_trash and def = 'ancient_whetstone'));
 
   insert into item (world_id, holder, placed, def, ql, count) values (w, 'furniture', v_store, 'hatchet', 30, 1);
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, name) values (w, ${placed('craft_bin', wrong)}, '${NAMES.wrong}') returning id into v_wrong;
@@ -219,18 +215,16 @@ check('out of "spill", the marked store, the crate and the parked wagon; into "M
 const reach = workRangeOf(magga, SPECIES.magga);
 check('nothing left: nothing to move, on both sides', isle.get('IDLE') === `nomove|${reach}|` && browser.IDLE === `nomove|${reach}|`
   && isle.get('RANGE') === String(reach), `${isle.get('IDLE')} / ${browser.IDLE}`);
-check('the trash crate named for them keeps the 4 whetstones, undamaged, on both sides, after an hour in the browser; an unnamed one there still rots what is in it',
-  isle.get('KEPT') === '4|0' && browser.KEPT === '4|0' && browser.ROTTED !== '1|0', `${isle.get('KEPT')} / ${browser.KEPT}; unnamed ${browser.ROTTED}`);
+check('the trash crate named for them holds the 4 whetstones, undamaged, each timed from put in',
+  isle.get('KEPT') === '4|0|true', isle.get('KEPT'));
 
 const says = (k: string): string => {
   const [why, nn, what] = k.split('|');
   return idleSays({ why: why as IdleWhy, n: Number(nn), ...(what ? { what: what.split(',') } : {}) } as Idle, SPECIES.magga.gathers as GatherKind);
 };
-// The unnamed trash crate's whetstone has rotted away in the browser's hour, and the island rots none: not compared.
-const noBin = (k: string | undefined): string => (k ?? '').replace(/ bin \d+/, '');
 check('a hatchet with only a craft material bin named for it stays where it is, on both sides',
   isle.get('SEQ2') === '' && browser.SEQ2 === '' && isle.get('STATE2') === `${STATE.replace('store 0/0/0', 'store 0/0/1')} wrong 0`
-  && noBin(browser.STATE2) === noBin(isle.get('STATE2')), `${isle.get('SEQ2')} ${isle.get('STATE2')} / ${browser.SEQ2} ${browser.STATE2}`);
+  && browser.STATE2 === isle.get('STATE2'), `${isle.get('SEQ2')} ${isle.get('STATE2')} / ${browser.SEQ2} ${browser.STATE2}`);
 const REFUSED = `namedrefuses|${reach}|hatchet,craft_bin`;
 check(`and says so: "${says(REFUSED)}", on both sides`, isle.get('IDLE2') === REFUSED && browser.IDLE2 === REFUSED,
   `${isle.get('IDLE2')} / ${browser.IDLE2}`);

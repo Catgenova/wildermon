@@ -21,6 +21,7 @@ import { RECIPES } from '../src/game/recipes';
 import '../src/game/craftgates';
 import { GATED_ITEMS, rockGate, SKILL_GATES } from '../src/game/skillgates';
 import { FURNITURE } from '../src/game/furniture';
+import { TRASH_SECS_AT_1, TRASH_SECS_AT_100 } from '../src/game/trash';
 import { FORAGE_TABLE, BOTANIZE_TABLE, BOTANIZE_WATER_TABLE, COIN_FIND_ONE_IN, COIN_FINDS_A_DAY, EMPTY_CHANCE, FIND_CHECK, PER_ROLL } from '../src/game/forage';
 import { STONES_DEPTH, STONES_SLABS } from '../src/game/watergarden';
 import { WATER_PLANTS, WATER_PLANT_DEEPEST, WATER_PLANT_SHALLOWEST, WATER_ROOTING } from '../src/world/waterplants';
@@ -2077,6 +2078,8 @@ for (const [fn, v] of [
   ['class_at', CLASS_AT],
   /* And what a trade is worth in points: nothing under forty, one more every five. */
   ['class_point_floor', CLASS_POINT_FLOOR], ['class_point_step', CLASS_POINT_STEP],
+  /* And how long a stack lasts in a trash crate, in seconds from put in, at QL 1 and at QL 100 (`trash.ts`, `trash_span`). */
+  ['trash_secs_at_1', TRASH_SECS_AT_1], ['trash_secs_at_100', TRASH_SECS_AT_100],
 ] as Array<[string, number]>) {
   out.push(`create or replace function ${fn}() returns double precision language sql immutable as $fn$ select ${q(v)}::double precision $fn$;`);
 }
@@ -2634,7 +2637,8 @@ for (const f of FURNITURE as unknown as A[]) {
   if (f.mossy) out.push(`update furniture_def set mossy = true where id = ${q(f.id)};`);
   if (f.hive !== undefined) out.push(`update furniture_def set hive = ${q(f.hive)} where id = ${q(f.id)};`);
   if (f.pond !== undefined) out.push(`update furniture_def set pond = ${q(f.pond)} where id = ${q(f.id)};`);
-  if (f.trash !== undefined) out.push(`update furniture_def set trash = ${q(f.trash)} where id = ${q(f.id)};`);
+  // A trash crate, as a flag: 1 (`trash.ts` says what it does to what is put in).
+  if (f.trash) out.push(`update furniture_def set trash = 1 where id = ${q(f.id)};`);
   if (f.seats !== undefined) out.push(`update furniture_def set seats = ${q(f.seats)} where id = ${q(f.id)};`);
   if (f.bed !== undefined) out.push(`update furniture_def set bed = ${q(f.bed)} where id = ${q(f.id)};`);
   if (f.den !== undefined) out.push(`update furniture_def set den = ${q(f.den)} where id = ${q(f.id)};`);

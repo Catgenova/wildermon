@@ -2288,7 +2288,16 @@
     "external": [
       "typescript"
     ],
-    "why": "Reported: mortar moved and ancient whetstones and marble bricks did not, the whetstones in a wagon and a trash crate named for them. A parked wagon, a marked settlement store and a crate are sources, a pulled cart and an unnamed trash crate are not; a trash crate named for an item is a target and keeps what goes in; every item goes, the same loads in the same order on both sides; and an item whose only named container takes none of it says so, item and refusal, on its card."
+    "why": "Reported: mortar moved and ancient whetstones and marble bricks did not, the whetstones in a wagon and a trash crate named for them. A parked wagon, a marked settlement store and a crate are sources, a pulled cart and an unnamed trash crate are not; a trash crate named for an item is a target, and what goes in is timed there; every item goes, the same loads in the same order on both sides; and an item whose only named container takes none of it says so, item and refusal, on its card."
+  },
+  {
+    "file": "supabase/test/trashdecay.ts",
+    "title": "A trash crate destroys what is put in it",
+    "shard": 6,
+    "external": [
+      "typescript"
+    ],
+    "why": "Asked for: trash bins destroy what is put in them, 3 h at QL 1 to 30 min at QL 100. Each stack is timed from put in (Trash, a merge onto one already in, a Chestkit's move into a named one) and goes whole at the crate's own time; taken out before, it is kept; the sweep is on the world clock."
   },
   {
     "file": "supabase/test/turnover.ts",

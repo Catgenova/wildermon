@@ -185,6 +185,7 @@ import { AWARE_PER_LEVEL, AWARE_TRAIT_STEP, awareShareAbove, awareTraitEase, DEE
 import { NIGHT_EYES_FROM } from '../../game/learn';
 import { NO_GO, pointAt, windWord, windWorth } from '../../game/wind';
 import { article, capital, finePercent, listed, listedOr, percent, timeWords } from '../../game/words';
+import { TRASH_ENDS } from '../../game/trash';
 import { bridgeLevel, CASTING_SKILLS, CRAFT_FROM, CRAFT_PER, craftLevel, FORMULA_GATE, FORMULA_TWO_ELEMENTS, gemLevel, METAL_GATE, POUR_GATE_SAID, SMELT_SKILL } from '../../game/craftgates';
 import { TREASURE_TIERS } from '../../game/treasure';
 import {
@@ -2436,7 +2437,8 @@ export function helpText(): string {
       <li><b>Seed bin</b>, <b>sprout bin</b>: ${furnitureDef('seed_bin').w * furnitureDef('seed_bin').h} subtile each, ${bill('make_seed_bin')} apiece; weighed.
       Seed bin <b>${SEED_HEFT} kg</b> (${Math.round(SEED_HEFT / itemDef('wheat_seed').weight)} wheat seeds or ${Math.round(SEED_HEFT / itemDef('potato_seed').weight)} seed potatoes): the
       ${CROP_BY_SEED.size} sowable seeds only. Sprout bin <b>${SPROUT_HEFT} kg</b> (${Math.round(SPROUT_HEFT / itemDef('sprout').weight)} sprouts): sprouts only.</li>
-      <li><b>Trash crate</b>: contents rot <b>${mul(furnitureDef('trash_crate').trash ?? 1)} faster</b> than out in the rain; gone in minutes.
+      <li><b>Trash crate</b>: destroys each stack put in, whole: <b>${TRASH_ENDS}</b> after put in, linear between.
+      Timed per stack from put in, by you or a worker; a stack added to one already in it: goes with that one; taken out before its time: kept. Examine: this crate's time.
       <b>Put away</b> never picks it; use <b>Throw it in the trash</b> on the item.</li>
       <li><b>Small cart</b>: holds ${furnitureDef('cart').capacity}. <b>Take hold of it</b>: follows you until you <b>let go</b>. One cart at a time; not into water or over what it cannot roll over.</li>
     </ul>
@@ -3506,7 +3508,7 @@ export function helpText(): string {
       <tr><td><b>${SPECIES.magga.name}</b></td><td>Collects everything dropped on the settlement into the crate. With nothing dropped in range:
       <b>named containers</b> first, then the bins; on its settlement only, not off a work post.<br>
       Named container: a crate, storage piece or ${furnitureDef('trash_crate').name.toLowerCase()} on the settlement named for an item (Give it a name: the item's name or id, or either plural; any case; spaces round it ignored; max ${NAME_MAX} characters).
-      ${furnitureDef('trash_crate').name} so named: contents kept.
+      ${furnitureDef('trash_crate').name} so named: contents destroyed as in any ${furnitureDef('trash_crate').name.toLowerCase()} (${TRASH_ENDS}).
       Moves: that item from the other containers, nearest first: crates, storage pieces, marked settlement stores, and ${['cart', 'large_cart', 'wagon'].map((k) => furnitureDef(k).name.toLowerCase()).join(', ')} parked (not hitched or driven);
       to the nearest named for it with room; a stack a load, split to the room;
       that one full: the next named for it. Never out of a named container, a padlocked one, a vehicle named for an item, an unnamed ${furnitureDef('trash_crate').name.toLowerCase()}, or a locked item; nothing else into a named container.

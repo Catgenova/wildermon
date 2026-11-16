@@ -94,7 +94,7 @@ export interface StoreShape {
   capacity?: number;
   heft?: number;
   stall?: boolean;
-  trash?: number;
+  trash?: boolean;
   cart?: boolean;
   vehicle?: unknown;
   boat?: unknown;

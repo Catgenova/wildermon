@@ -97,7 +97,6 @@ export function hoardExamine(s: HoardSeen, line: string, max: number, role: Hoar
   }
   if (for_) {
     out.push(`Named for: ${for_}`, `${line}: moves ${for_} in from your other containers on the settlement, up to its room; never out`);
-    if (role === 'trash') out.push('Contents kept while named for an item');
     return out;
   }
   if (s.name) out.push('Name: no item');
@@ -110,7 +109,7 @@ export function hoardExamine(s: HoardSeen, line: string, max: number, role: Hoar
 }
 
 /** What it is to the named sort (`HoardRole`) by its kind's shape; null for something it never reads (a boat, a stall). */
-export function hoardRole(def: { trash?: number; cart?: boolean; vehicle?: unknown; boat?: unknown }, markable: boolean): HoardRole | null {
+export function hoardRole(def: { trash?: boolean; cart?: boolean; vehicle?: unknown; boat?: unknown }, markable: boolean): HoardRole | null {
   if (def.boat) return null;
   if (def.vehicle || def.cart) return 'wheels';
   if (def.trash) return 'trash';

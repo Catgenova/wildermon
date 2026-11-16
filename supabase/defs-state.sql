@@ -4929,7 +4929,7 @@ update item_def set description = 'Trophy: set down anywhere. From an ash vent''
 update item_def set description = 'Trophy: set down anywhere. From a magma vent''s hoard only. Does not decay.' where id = 'magma_core';
 update item_def set description = 'Trophy: set down anywhere. From a cinder vent''s hoard only. Does not decay.' where id = 'cinder_alpha_fang';
 update item_def set description = 'Set down on your settlement; one per settlement.' where id = 'altar';
-update item_def set description = 'Contents rot 30× faster than in the rain.' where id = 'trash_crate';
+update item_def set description = 'Destroys contents: 3 h at QL 1, 30 min at QL 100; each stack timed from put in.' where id = 'trash_crate';
 update item_def set description = 'Take hold of it: follows you, carrying 100 things.' where id = 'cart';
 update item_def set description = '2 large wheels. Holds 1000 things of any weight. Moves only with a wildermon hitched.' where id = 'large_cart';
 update item_def set description = '4 wheels, 2 axles. Holds 10000 things of any weight. Moves only with all 4 yokes filled.' where id = 'wagon';
@@ -7321,6 +7321,8 @@ create or replace function wall_height() returns double precision language sql i
 create or replace function class_at() returns double precision language sql immutable as $fn$ select 50::double precision $fn$;
 create or replace function class_point_floor() returns double precision language sql immutable as $fn$ select 40::double precision $fn$;
 create or replace function class_point_step() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
+create or replace function trash_secs_at_1() returns double precision language sql immutable as $fn$ select 10800::double precision $fn$;
+create or replace function trash_secs_at_100() returns double precision language sql immutable as $fn$ select 1800::double precision $fn$;
 create or replace function craft_head() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function smith_gain() returns double precision language sql immutable as $fn$ select 0.5::double precision $fn$;
 create or replace function brew_gain() returns double precision language sql immutable as $fn$ select 0.6::double precision $fn$;
@@ -9147,7 +9149,7 @@ insert into furniture_def values ('sprout_bin', 'Sprout bin', 1, 1, null, false,
 update furniture_def set takes = 'sprout' where id = 'sprout_bin';
 update furniture_def set heft = 100 where id = 'sprout_bin';
 insert into furniture_def values ('trash_crate', 'Trash crate', 1, 1, 30, false, false);
-update furniture_def set trash = 30 where id = 'trash_crate';
+update furniture_def set trash = 1 where id = 'trash_crate';
 insert into furniture_def values ('cart', 'Small cart', 2, 1, 100, false, false);
 update furniture_def set cart = true where id = 'cart';
 insert into furniture_def values ('large_cart', 'Large cart', 3, 2, 1000, false, false);

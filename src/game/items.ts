@@ -18,6 +18,7 @@ export type ItemCategory = 'tool' | 'material' | 'food' | 'plant' | 'misc';
 
 import type { Nutrient } from './nutrition';
 import { GEAR_ITEMS } from './wildgear';
+import { TRASH_RULE } from './trash';
 import { HOARD_SCALE_CAP } from './lairs';
 import { FIRE_STEEL, FIRE_STEEL_CAP, SULFUR, SULFUR_SLATE, summonSays, VOLCANO_KINDS, volcanoName } from './volcano';
 
@@ -812,7 +813,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   cinder_alpha_fang: { name: 'Cinder alpha\'s fang', category: 'misc', weight: 3, decay: 0, trophy: true, description: 'Trophy: set down anywhere. From a cinder vent\'s hoard only. Does not decay.' },
   brazier: { name: 'Brazier', category: 'misc', weight: 30, decay: 3 },
   altar: { name: 'Altar', category: 'misc', weight: 64, decay: 3, description: 'Set down on your settlement; one per settlement.' },
-  trash_crate: { name: 'Trash crate', category: 'misc', weight: 6, decay: 4, description: 'Contents rot {trash}× faster than in the rain.' },
+  trash_crate: { name: 'Trash crate', category: 'misc', weight: 6, decay: 4, description: `${TRASH_RULE}; each stack timed from put in.` },
   cart: { name: 'Small cart', category: 'misc', weight: 26, decay: 4, description: 'Take hold of it: follows you, carrying {capacity} things.' },
   large_cart: { name: 'Large cart', category: 'misc', weight: 180, decay: 4, description: '{bill.large_wheel} large wheels. Holds {capacity} things of any weight. Moves only with a wildermon hitched.' },
   wagon: { name: 'Wagon', category: 'misc', weight: 420, decay: 4, description: '{bill.large_wheel} wheels, {bill.big_axle} axles. Holds {capacity} things of any weight. Moves only with {team} yokes filled.' },

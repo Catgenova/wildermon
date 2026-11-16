@@ -179,6 +179,7 @@ import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
 import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
+import { TRASH_ENDS, TRASH_RULE } from '../../game/trash';
 import { OBSIDIAN_MATERIAL } from '../../game/materials';
 import { METER_BAD, METER_WARN } from '../kit';
 import { DEED_UPGRADES } from '../../game/deed';
@@ -428,6 +429,20 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // A trash crate destroys each stack put in, a time after by its QL (`trash.ts`, `20261120000121_trash_bin_destroys.sql`).
+  {
+    n: 661,
+    day: '2026-11-16',
+    lines: () => {
+      const trash = furnitureDef('trash_crate').name;
+      return [
+        `Changed: ${trash.toLowerCase()}: destroys each stack put in, whole, ${TRASH_ENDS} after put in, linear between; timed per stack from put in; taken out before: kept (was: never destroyed; described as rotting ×30 faster).`,
+        `Changed: ${trash.toLowerCase()} named for an item, a ${SPECIES.magga.name} target: contents destroyed the same (was: kept).`,
+        `Changed: what was in a ${trash.toLowerCase()} before this update: timed from the update.`,
+        `New: Examine on a ${trash.toLowerCase()}: "${TRASH_RULE}" and this one's time by its QL.`,
+      ];
+    },
+  },
   // A worn bag's carry limit bonus by its rarity, as its room is (`rarityShare`, `bagText`, the island's `bag_carry` and `bag_text`).
   {
     n: 657,

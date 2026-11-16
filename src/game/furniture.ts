@@ -115,8 +115,8 @@ export interface FurnitureDef {
    * sentence for each, so the sixth is a row rather than a branch in two files.
    */
   takes?: Takes;
-  /** What is put in rots this many times faster than it would in the open. */
-  trash?: number;
+  /** A trash crate: destroys each stack put in, after a time its QL sets (`trash.ts`). */
+  trash?: boolean;
   /** Can be taken hold of and pulled along behind you. */
   cart?: boolean;
   /** A wheeled thing a team is hitched to and a driver sits on. */
@@ -757,7 +757,7 @@ export const FURNITURE: FurnitureDef[] = [
   piece('sprout_bin', 'Sprout bin', 1, 1, [['plank', 20], ['nail', 20]], 12, 9,
     '',
     undefined, { heft: 100, takes: 'sprout' }),
-  piece('trash_crate', 'Trash crate', 1, 1, [['plank', 12], ['nail', 12]], 8, 5, '', 30, { trash: 30 }),
+  piece('trash_crate', 'Trash crate', 1, 1, [['plank', 12], ['nail', 12]], 8, 5, '', 30, { trash: true }),
   piece('cart', 'Small cart', 2, 1, [['plank', 32], ['shaft', 4]], 18, 14, '', 100, { cart: true }),
   // The two that are driven rather than carried. A wheelwright's bill: wheels
   // on cast axles, a body banded with metal ribbon, and a yoke a wildermon is
