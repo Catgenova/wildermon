@@ -7,10 +7,6 @@ CREATE OR REPLACE FUNCTION public.storey_reached(p_world uuid, p_x integer, p_y 
 AS $function$
 begin
   return (
-select p_level <= 0 or coalesce((
-    select count(distinct s.level) = p_level
-      from floor_tile f join floor_tile s on s.world_id = f.world_id and s.building = f.building
-     where f.world_id = p_world and f.level = p_level and f.x = p_x and f.y = p_y
-       and s.level between 1 and p_level and s.kind = 'stairs' and bill_done(s.needed)), false)
+select case when p_level <= 0 then true else creature_way(p_world, p_x, p_y, 0, p_x, p_y, p_level) is not null end
   );
 end $function$

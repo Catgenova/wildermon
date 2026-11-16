@@ -7,7 +7,8 @@ CREATE OR REPLACE FUNCTION public.hod_unreached(p_world uuid, p_uid uuid, p_cx i
 AS $function$
   with work as materialized (
     select * from hod_work(p_world, p_cx, p_cy, p_range) w
-     where w.level >= 1 and not hod_reached(p_world, w.kind, w.level, w.dir, w.x, w.y)
+     where w.level >= 1 and not hod_reached(p_world, w.kind, w.level, w.dir, w.x, w.y,
+                       (select storey_reach(p_world, p_cx - p_range - 1, p_cy - p_range - 1, p_cx + p_range + 1, p_cy + p_range + 1)))
        and hod_work_mine(p_world, p_uid, w.dir, w.x, w.y)
   ),
   have as materialized (

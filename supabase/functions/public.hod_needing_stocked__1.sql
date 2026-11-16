@@ -12,7 +12,8 @@ AS $function$
     select w.*, e.key, e.value::int as left_
     from work w cross join lateral jsonb_each_text(w.needed) e
     where e.value::int > 0 and hod_work_mine(p_world, p_uid, w.dir, w.x, w.y)
-      and hod_reached(p_world, w.kind, w.level, w.dir, w.x, w.y)
+      and hod_reached(p_world, w.kind, w.level, w.dir, w.x, w.y,
+                    (select storey_reach(p_world, p_cx - p_range - 1, p_cy - p_range - 1, p_cx + p_range + 1, p_cy + p_range + 1)))
   ),
   have as materialized (
     select distinct (s.it).def as def from deed_store_items(p_world, p_uid) s

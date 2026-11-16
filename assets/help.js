@@ -2616,10 +2616,11 @@ import{$D as e,$S as t,$_ as n,$a as r,$b as i,$h as a,$i as ee,$n as o,$t as te
       bare rock with no seam (&ldquo;${A({why:`noseam`,n:l.mola.workRange},`mine`)}&rdquo;); only work above its level in its task's skill, the lowest then the nearest
       (&ldquo;${A({why:`gate`,n:3,what:[`tree`,`willow`]},`woodcut`,null,12)}&rdquo;); no staircase up to its work's storey (&ldquo;${A({why:`stairs`,n:2},`hod`)}&rdquo;); no staircase down from where it stands (&ldquo;${A({why:`stranded`,n:2},`hod`)}&rdquo;): it stays on that storey until one is built.
       Island: no work while its keeper is away or no awake player is near enough; the card says which and how near.</li>
-      <li><b>Storeys</b>: a store, station or planned work a storey up is walked to by the building's finished staircases: wide or ${Mu} onto it from
-      its foot, off at its head, down off its foot; ${Eu} on its own tile. Over finished floors only, and a finished bridge's deck between floors
-      of that storey, end to end; through a door, double door, gate, arch or gap, no
-      hidden door or iron-bound gate; no ladders. Up or down one flight or spiral: 1 tile's walk. A store a storey up with no staircase to it: not used.
+      <li><b>Storeys</b>: a store, station or planned work a storey up is in reach where a worker walks to it from the ground, by the step rule you walk by: finished staircases, wide or
+      ${Mu} onto it from any side with no wall, off onto its storey at any side with a floor, down at its foot or a side with no floor;
+      ${Eu} on its own tile. Over finished floors, any building's, and a finished bridge's deck, end to end: storey to storey, a ramp from a storey
+      to another, a ramp from the ground; through a door, double door, gate, arch or gap, no
+      hidden door or iron-bound gate; no ladders. A hod carrier fits a wall a storey up from a floor beside it on its storey, or on the next tile along it. Up or down one flight or spiral: 1 tile's walk. A store a storey up with no staircase to it: not used.
       Floor removed under it: down to the storey under it; no way down left: down where it stands. Assigned elsewhere, crated or let go: back on the ground.</li>
       <li><b>Ledger</b> (card): this island day and the previous (a day = ${N(Xd)}): cycles at its task, skill gained, the 3 items it handled most
       (up to 8 kinds counted a day).</li>

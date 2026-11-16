@@ -9,15 +9,16 @@ AS $function$
     select b.*, case when b.ay = b.by and b.ax <> b.bx then 0 else 1 end as px,
                 case when b.ay = b.by and b.ax <> b.bx then 1 else 0 end as py
       from bridge b
-     where b.world_id = p_world and b.level >= 1 and coalesce(b.level_b, b.level) = b.level
+     where b.world_id = p_world and greatest(b.level, coalesce(b.level_b, b.level)) >= 1
        and not b.raised and b.kind <> 'aqueduct'
        and not exists (select 1 from bridge_span s where s.world_id = p_world and s.bridge = b.id and not bill_done(s.needed))
   )
-  select b.id, b.level, s.x + l.o * b.px, s.y + l.o * b.py, true
+  select b.id, v.lv, s.x + l.o * b.px, s.y + l.o * b.py, true
     from b cross join lateral bridge_lanes(b.width, b.side) l
     join bridge_span s on s.world_id = p_world and s.bridge = b.id
+    cross join lateral (select distinct u.lv from unnest(array[b.level, coalesce(b.level_b, b.level)]) u(lv)) v
   union all
-  select b.id, b.level, e.x + l.o * b.px, e.y + l.o * b.py, false
+  select b.id, e.lv, e.x + l.o * b.px, e.y + l.o * b.py, false
     from b cross join lateral bridge_lanes(b.width, b.side) l
-    cross join lateral (values (b.ax, b.ay), (b.bx, b.by)) e(x, y)
+    cross join lateral (values (b.ax, b.ay, b.level), (b.bx, b.by, coalesce(b.level_b, b.level))) e(x, y, lv)
 $function$

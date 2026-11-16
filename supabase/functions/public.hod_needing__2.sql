@@ -9,7 +9,8 @@ AS $function$
   from hod_work(p_world, p_cx, p_cy, p_range) w
   where p_holding is not null and coalesce((w.needed->>p_holding)::int, 0) > 0
     and (p_keeper is null or hod_work_mine(p_world, p_keeper, w.dir, w.x, w.y))
-    and hod_reached(p_world, w.kind, w.level, w.dir, w.x, w.y)
+    and hod_reached(p_world, w.kind, w.level, w.dir, w.x, w.y,
+                    (select storey_reach(p_world, p_cx - p_range - 1, p_cy - p_range - 1, p_cx + p_range + 1, p_cy + p_range + 1)))
     and hod_may(p_world, c, w.kind, w.level, w.dir, w.x, w.y)
   order by (w.x - p_cx) ^ 2 + (w.y - p_cy) ^ 2,
            (w.needed->>p_holding)::double precision / greatest(1, coalesce((w.total->>p_holding)::double precision, 0)) desc,
