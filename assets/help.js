@@ -2454,7 +2454,7 @@ import{$D as e,$S as t,$T as n,$_ as r,$a as i,$b as a,$g as ee,$h as o,$i as te
       <li>Another ${y(Ze)}: a whole <b>Bauble of Regret</b> (undoes a class, patron or path; see <b>Trades</b> and <b>Faith</b>).</li>
     </ul>
     <table>
-      ${Ar.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.slots} sockets. ${e.id===`minor`?`1 to 5% less time per action, or 1 to 5% more skill gained, in one of the ${Rr.length} skills an action is done with.`:e.id===`major`?`1 to 5% chance of ${j(2)} yield per action in one of ${tl.length} skills: every crafting-window skill, and ${D(tl.filter(e=>!Po.some(t=>t.skill===e)).map(e=>b.get(e)?.name.toLowerCase()??e))}.`:`One of: ${D(Gc.map(e=>`+1 ${e.said}`))}.`}</td></tr>`).join(`
+      ${Ar.map(e=>`<tr><td><b>${e.name}</b></td><td>${e.slots} sockets. ${e.id===`minor`?`1 to 5% less time per action, or 1 to 5% more skill gained, in one of the ${Rr.length} skills an action is done with.`:e.id===`major`?`1 to 5% chance of ${j(2)} yield per action in one of ${tl.length} skills: every crafting-window skill, and ${D(tl.filter(e=>!Po.some(t=>t.skill===e)).map(e=>b.get(e)?.name.toLowerCase()??e))}.`:`One of ${Gc.length}, each to every yield of its action: ${Gc.map(e=>`<b>${e.id}</b> +1 ${e.said}`).join(`; `)}.`}</td></tr>`).join(`
       `)}
     </table>
     <ul>

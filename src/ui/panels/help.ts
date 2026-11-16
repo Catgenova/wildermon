@@ -3479,7 +3479,7 @@ export function helpText(): string {
       ${BAUBLE_TIERS.map((t) => `<tr><td><b>${t.name}</b></td><td>${t.slots} sockets. ${
         t.id === 'minor' ? `${BAUBLE_LOW} to ${BAUBLE_HIGH}% less time per action, or ${BAUBLE_LOW} to ${BAUBLE_HIGH}% more skill gained, in one of the ${MINOR_SKILLS.length} skills an action is done with.`
         : t.id === 'major' ? `${BAUBLE_LOW} to ${BAUBLE_HIGH}% chance of ${mul(YIELD_TIMES)} yield per action in one of ${MAJOR_SKILLS.length} skills: every crafting-window skill, and ${listed(MAJOR_SKILLS.filter((k) => !RECIPES.some((r) => r.skill === k)).map((k) => SKILL_BY_ID.get(k)?.name.toLowerCase() ?? k))}.`
-        : `One of: ${listed(ANCIENT_EFFECTS.map((e) => `+${ANCIENT_PLUS} ${e.said}`))}.`}</td></tr>`).join('\n      ')}
+        : `One of ${ANCIENT_EFFECTS.length}, each to every yield of its action: ${ANCIENT_EFFECTS.map((e) => `<b>${e.id}</b> +${ANCIENT_PLUS} ${e.said}`).join('; ')}.`}</td></tr>`).join('\n      ')}
     </table>
     <ul>
       <li>Set at an altar of your settlement: <b>Baubles</b> on its menu. ${BAUBLE_TIERS.reduce((n, t) => n + t.slots, 0)} sockets, belonging to the settlement (they stay filled if the altar moves).</li>

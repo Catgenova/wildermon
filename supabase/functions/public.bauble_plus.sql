@@ -7,6 +7,8 @@ CREATE OR REPLACE FUNCTION public.bauble_plus(p_world uuid, p_uid uuid, p_action
 AS $function$
   select coalesce((select round(bauble_sum(p_world, p_uid, 'plus', a.id))::int
                      from bauble_ancient a
-                    -- A Farmer's patch harvest is so many harvests, and a shovel filled off a bed is a dig.
-                    where a.action = case p_action when 'harvest_patch' then 'harvest_crop' when 'collect' then 'dig' else p_action end), 0)
+                    -- A Farmer's patch harvest is so many harvests, a shovel filled off a bed is a dig, and a trellis
+                    -- vine picked is a bush harvested.
+                    where a.action = case p_action when 'harvest_patch' then 'harvest_crop' when 'collect' then 'dig'
+                                                   when 'pick_grapes' then 'harvest_bush' else p_action end), 0)
 $function$

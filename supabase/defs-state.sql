@@ -11903,6 +11903,15 @@ insert into bauble_ancient values ('digging', 2, 'dig', 'output per dig or colle
 insert into bauble_ancient values ('harvest', 3, 'harvest_crop', 'crop and seed per harvest');
 insert into bauble_ancient values ('fishing', 4, 'fish', 'fish per rod catch');
 insert into bauble_ancient values ('foraging', 5, 'forage', 'finds per forage');
+insert into bauble_ancient values ('coppice', 6, 'coppice', 'logs per coppice');
+insert into bauble_ancient values ('pruning', 7, 'prune', 'logs per prune');
+insert into bauble_ancient values ('butchery', 8, 'butcher', 'each part and hoard lump per butchering');
+insert into bauble_ancient values ('shearing', 9, 'shear', 'wool or feathers per shear or pluck');
+insert into bauble_ancient values ('orchard', 10, 'pick_fruit', 'fruit per fruit tree picked');
+insert into bauble_ancient values ('vineyard', 11, 'harvest_bush', 'rose petals, lavender or grapes per bush or vine picked');
+insert into bauble_ancient values ('tapping', 12, 'tap_resin', 'tar per tap');
+insert into bauble_ancient values ('reeds', 13, 'cut_reeds', 'reeds per cut');
+insert into bauble_ancient values ('botany', 14, 'botanize', 'finds per botanize');
 insert into bauble_kind values ('time', 0, '', '% less time', 50);
 insert into bauble_kind values ('learn', 1, '+', '% skill gain', 100);
 insert into bauble_kind values ('double', 2, '', '% chance of twice the yield', 50);
