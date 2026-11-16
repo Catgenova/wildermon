@@ -3463,5 +3463,18 @@
     "title": "An armour stand dressed from its menu, through the island's door",
     "shard": 4,
     "why": "Reported: \"unable to add armor to the armor stand\". The stand's jobs were on both sides, but no menu listed them: a click on a stand offered Pick up and nothing else, and a sundial, a compost bin and curtains the same. Off the island's own ground read and pack, the browser's menu offers Put on stand for a piece of every armour slot, the shawl among them, carried and worn, for the stand's maker and for a citizen of the maker's settlement; the target the row asks with goes through rpc_act and the clock, and the piece is the stand's, out of the pack and off the body, said in the browser's words; Take off brings it back; a slot taken and a rank without the crates are refused in the same words on both sides; and a piece for every slot at once is listed, carried first, and each goes on."
+  },
+  {
+    "file": "supabase/test/bridgezoom.ts",
+    "title": "A bridge zoomed in past ×5: every piece drawn, and drawn the same frame after frame",
+    "shard": 2,
+    "external": [
+      "esbuild",
+      "playwright-core"
+    ],
+    "env": {
+      "BRIDGEZOOM_STRICT": "1"
+    },
+    "why": "Reported: \"bridges flicker and glitch at any further zoom than 5x\". Past zoom 5 a bridge's pictures are baked at the largest scale, and those on the screen came to more than the bridge kit's budget, so each bake let go of one still on the screen: deck and parapet pieces left out and made again every frame. Drawn in Chrome: a marble bridge three lanes wide and a stone brick ramp, each meeting two buildings' storey floors, at zoom 4, 6 and the most on four turns, and wheeled in from 5 while dragged: settled, every still frame draws every piece from its own picture, the same pictures in the same places as the last, with the kept pictures past the budget."
   }
 ]

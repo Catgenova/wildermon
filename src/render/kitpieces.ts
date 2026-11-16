@@ -519,6 +519,8 @@ export function kitFrame(still: boolean): void {
 export const kitMayBake = (): boolean => frameMs < (settled ? FRAME_MS : MOVING_MS);
 export const kitBaked = (ms: number): void => { frameMs += ms; };
 export const kitIsSync = (): boolean => sync;
+/** The frame it is, counted by `kitFrame`: what another baker keeps on-screen pictures by (`bridgekit.ts`). */
+export const kitFrameNow = (): number => frame;
 /** Whether a bake drawn in frame `used` is still on the screen: drawn in this frame or the last. */
 const onScreen = (used: number): boolean => used >= frame - 1;
 
