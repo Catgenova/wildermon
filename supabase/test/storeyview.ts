@@ -314,6 +314,11 @@ if (!options) {
     const down = await look(0, tx, ty, 0);
     const storeys = (l: StoreyLook, building: number): string => [...new Set(l.walls.filter((w) => w.building === building).map((w) => w.level))].sort().join(',') || 'none';
     check('on Auto the hall\'s walls of both storeys are drawn', storeys(auto, 1) === '0,1', storeys(auto, 1));
+    // Of a tower beside a lower shed: the shed's tiles draw the tower's walls on their shared border on every storey of it.
+    const towerAt = (l: StoreyLook, level: number): number => l.walls.filter((w) => w.building === 3 && w.level === level).length;
+    // Its storey 3 two over the shed's top: as many of its walls drawn as of its storey 2 (was: those on the shared border left out).
+    check('on Auto a three-storey tower behind a one-storey shed has as many walls drawn on its storey 3 as on its storey 2',
+      towerAt(auto, 1) > 0 && towerAt(auto, 2) === towerAt(auto, 1), `storeys 1 to 3: ${towerAt(auto, 0)}, ${towerAt(auto, 1)}, ${towerAt(auto, 2)}`);
     check('pinned on storey 2, no wall of the ground floor is drawn, of any building; storey 2\'s are',
       !up.walls.some((w) => w.level === 0) && storeys(up, 1) === '1', `hall ${storeys(up, 1)}, shed ${storeys(up, 2)}`);
     check('nor the chest on the ground floor; the bed on storey 2 is', !up.pieces.includes(at.CHEST) && up.pieces.includes(at.BED), up.pieces.join(','));

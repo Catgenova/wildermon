@@ -61,6 +61,18 @@ for (let y = sy; y < sy + 2; y++) for (let x = sx; x < sx + 2; x++) {
 }
 for (let x = sx; x < sx + 2; x++) { wall(2, 0, x, sy, 'h', 'solid'); wall(2, 0, x, sy + 2, 'h', 'window'); }
 for (let y = sy; y < sy + 2; y++) { wall(2, 0, sx, y, 'v', 'solid'); wall(2, 0, sx + 2, y, 'v', 'solid'); }
+/* A tower of three storeys behind the shed, 2 by 2 from (sx, sy - 2): its walls a storey up on the border it shares with
+   the shed are claimed by the shed's tiles, whose own building stops at storey 1. */
+const tower: string[] = [];
+for (let y = sy - 2; y < sy; y++) for (let x = sx; x < sx + 2; x++) {
+  tower.push(`${x},${y}`);
+  for (const level of [0, 1, 2]) floors.push({ building: 3, level, x, y, material: 'plank', needed: {}, total: {} });
+  floors.push({ building: 3, level: 3, x, y, material: 'thatch', kind: 'roof', needed: {}, total: {} });
+}
+for (const level of [0, 1, 2]) {
+  for (let x = sx; x < sx + 2; x++) { wall(3, level, x, sy - 2, 'h', 'solid'); if (level > 0) wall(3, level, x, sy, 'h', 'solid'); }
+  for (let y = sy - 2; y < sy; y++) { wall(3, level, sx, y, 'v', 'solid'); wall(3, level, sx + 2, y, 'v', 'solid'); }
+}
 let id = 1000;
 const placed: IslandPlaced[] = [];
 const put = (sub: string, x: number, y: number, level: number): number => {
@@ -74,7 +86,7 @@ const CHEST = put('chest', hx + 1, hy + 1, 0);
 const BED = put('bed', hx + 1, hy, 1);
 game.sawGround({
   placed, crates: [], lying: [], crops: [], now: Date.now() / 1000,
-  buildings: { nextId: 3, list: [{ id: 1, name: 'Hall', tiles: hall, levels: 2, roof: 'gable' }, { id: 2, name: 'Shed', tiles: shed, levels: 1, roof: 'hip' }], walls, floors },
+  buildings: { nextId: 4, list: [{ id: 1, name: 'Hall', tiles: hall, levels: 2, roof: 'gable' }, { id: 2, name: 'Shed', tiles: shed, levels: 1, roof: 'hip' }, { id: 3, name: 'Tower', tiles: tower, levels: 3, roof: 'hip' }], walls, floors },
   deed: { name: 'Hallmark', x: cx, y: cy, radius: 10, level: 1, mine: true, role: 'mayor' }, deeds: [],
 } as unknown as IslandGround, undefined, 'me');
 

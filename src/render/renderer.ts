@@ -8601,7 +8601,10 @@ export class Renderer {
     const backA: Border = borderOf(x, y, V.back[0]);
     const backB: Border = borderOf(x, y, V.back[1]);
     const playerLevel = this.game.player.level;
-    const maxLevels = building ? building.levels : Math.max(1, this.maxLevelsAround(x, y));
+    // Its own storeys; and up as far as the tallest building beside it, whose walls on this tile's borders it draws
+    // (a tile of a lower building next to a taller one claims the taller one's walls on their shared border).
+    const ownTop = building ? building.levels : Math.max(1, this.maxLevelsAround(x, y));
+    const maxLevels = building ? Math.max(ownTop, this.maxLevelsAround(x, y)) : ownTop;
     const cutaway = this.cutawayOn();
     // Looking into a cellar, a building with none under it is looked at as its ground floor is.
     const viewLevel = this.game.settings.viewLevel === null ? null : Math.max(0, this.game.settings.viewLevel);
@@ -8672,7 +8675,7 @@ export class Renderer {
       if (level >= maxLevels || this.storeyHidden(level)) {
         late?.();
         // A railing round a flat roof stands on the roof's own level (`frame.ts`).
-        if (level === maxLevels && !gone && !this.storeyHidden(level)) this.drawTerrace(x, y, level, [backA, backB], building ?? jetty, inFront);
+        if (level === ownTop && !gone && !this.storeyHidden(level)) this.drawTerrace(x, y, level, [backA, backB], building ?? jetty, inFront);
         if (level >= maxLevels) break;
         continue;
       }

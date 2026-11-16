@@ -433,6 +433,14 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A wall claimed by a lower building's tile, two or more storeys over its top (`maxLevelsAround`, renderer).
+  {
+    n: 668,
+    day: '2026-11-16',
+    lines: () => [
+      'Fixed: walls of a building two or more storeys above a lower building beside it, on the side they share: drawn (was: finished, not shown).',
+    ],
+  },
   // The crafting window's preview pane, off in Settings (`craftPreview`).
   {
     n: 667,
