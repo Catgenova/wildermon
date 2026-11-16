@@ -428,6 +428,17 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // A hod carrier's reach of its whole range: a tile nothing is stood on, from the floor beside it (`20261120000119_whole_range_reach_beside.sql`).
+  {
+    n: 660,
+    day: '2026-11-16',
+    lines: () => {
+      const stairs = idleSays({ why: 'stairs', n: 4 }, 'hod');
+      return [
+        `Fixed: hod carriers, walls a storey up along an unfinished bridge's deck: in reach, fitted from the floor beside it (was: "${stairs}" every round).`,
+      ];
+    },
+  },
   // A worn bag's carry limit bonus by its rarity, as its room is (`rarityShare`, `bagText`, the island's `bag_carry` and `bag_text`).
   {
     n: 657,

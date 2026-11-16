@@ -312,6 +312,33 @@ check('it goes up to storey 4', a.has('ON_UP'), (a.get('ON_UP') ?? []).slice(0, 
 check('fits every wall planned there', a.get('LEFT')?.[0] === '0', `${a.get('LEFT')?.[0]} of ${PLANNED.length} left`);
 check('and comes back down for more', (a.get('CAME_DOWN') ?? []).length >= 2, (a.get('CAME_DOWN') ?? []).slice(0, 4).join(','));
 
+/* ---- an unfinished bridge off the east building's storey 4: walls fitted from its deck ------ */
+
+/**
+ * Read off the island: walls planned on storey 4 along an unfinished bridge's deck were fitted from that deck
+ * (`hod_stand`), which nobody walks yet: the way there went to the floor beside it, the reach of the whole range at once
+ * had no such tile (`storey_reach`), and the hod carrier said no stairs up to storey 4 every round. Fitted from the floor
+ * beside it, both say the same, and the hod carrier fits them and is not stranded on the deck.
+ */
+const OPEN = { x: 2580 - OX, y0: 3007 - OY, y1: 3011 - OY };
+const openSql = `
+  insert into bridge (world_id, kind, ax, ay, bx, by, height, made_by, level, level_b, width, side, rise)
+    values (w, 'marble', ${OPEN.x}, ${OPEN.y0}, ${OPEN.x}, ${OPEN.y1}, 91, u, ${UP}, null, 1, 1, 0) returning id into v_b;
+  insert into bridge_span (world_id, bridge, n, x, y, needed, total)
+    select w, v_b, y - ${OPEN.y0}, ${OPEN.x}, y, '{"plank": 1}', '{"plank": 1}' from generate_series(${OPEN.y0 + 1}, ${OPEN.y1 - 1}) y;
+  r := storey_reach(w, ${MANOR_BOX.x0}, ${MANOR_BOX.y0}, ${MANOR_BOX.x1}, ${MANOR_BOX.y1});
+  insert into said select 'HOD_REACHED', wl.x || ',' || wl.y || '=' || hod_reached(w, 'wall', wl.level, wl.dir, wl.x, wl.y) || ','
+         || hod_reached(w, 'wall', wl.level, wl.dir, wl.x, wl.y, r) || ',' || coalesce((select s.x || ',' || s.y from hod_stand(w, 'wall', wl.level, wl.dir, wl.x, wl.y) s), 'none')
+    from wall wl where wl.world_id = w and wl.level = ${UP} and not bill_done(wl.needed);`;
+const o = run(estateSql(manor(true), FROM, MANOR_BOX) + plannedSql(5, UP, PLANNED) + openSql + hodSql(STORE, UP));
+const deckWall = (o.get('HOD_REACHED') ?? []).find((s) => s.startsWith(`${OPEN.x},${OPEN.y0 + 1}=`)) ?? '';
+check('an unfinished bridge off storey 4: the wall along its deck is fitted from the floor beside it, not the deck nobody walks', deckWall.endsWith(`,${OPEN.x},${OPEN.y0}`), deckWall || 'not listed');
+const split = (o.get('HOD_REACHED') ?? []).filter((s) => { const [a, b] = s.split('=')[1].split(','); return a !== b; });
+check('each wall planned there is reached the same by its own way (`hod_reached`) and by the whole range at once (`storey_reach`)',
+  (o.get('HOD_REACHED') ?? []).length === PLANNED.length && split.length === 0, split.slice(0, 4).join('; ') || `${(o.get('HOD_REACHED') ?? []).length} of ${PLANNED.length} listed`);
+check('the hod carrier never says no stairs up or no stairs down', !o.has('SAID'), (o.get('SAID') ?? []).slice(0, 4).join(', '));
+check('and fits every wall planned there', o.get('LEFT')?.[0] === '0', `${o.get('LEFT')?.[0]} of ${PLANNED.length} left`);
+
 /* ---- and without it: its storey 4 out of everybody's reach ------------------------- */
 
 const noBridge = playerReach(manor(false), FROM, MANOR_BOX);
