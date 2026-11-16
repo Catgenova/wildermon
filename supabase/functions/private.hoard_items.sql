@@ -8,6 +8,6 @@ CREATE OR REPLACE FUNCTION private.hoard_items(p_name text)
 AS $function$
   select case when coalesce(q.v, '') = '' then null else
     (select array_agg(d.id order by d.id collate "C") from item_def d
-      where lower(d.id) = q.v or lower(d.name) = q.v or private.hoard_plural(d.name) = q.v) end
+      where lower(d.id) = q.v or private.hoard_plural(d.id) = q.v or lower(d.name) = q.v or private.hoard_plural(d.name) = q.v) end
   from (select private.hoard_fold(p_name) as v) q
 $function$

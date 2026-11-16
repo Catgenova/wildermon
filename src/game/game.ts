@@ -1,5 +1,6 @@
 import './craftgates';
 import { Springs, type SpringSave } from './springs';
+import { hoardItems } from './hoard';
 import type { LairSeen } from './lairs';
 import { CHAR_START, DAMAGE_MAX, PLACED_REACH, PROSPECT_MARK_TIME, QL_BARE, QL_LOW, QL_SPAN, QL_TOP, wearPerUse, wornShare } from './limits';
 import { DEED_RADIUS, deedLevel, deedWorkersAt, MAX_DEED_LEVEL } from './deedsize';
@@ -8145,7 +8146,8 @@ export class Game {
           if (Math.floor(f.litres) !== Math.floor(before)) this.events.emit('crate');
         }
       }
-      if (def.trash && f.items.length) {
+      // Named for an item, a trash crate is a magga's store for it (`hoard.ts`), and what is in it is kept.
+      if (def.trash && f.items.length && !hoardItems(f.name).length) {
         // A trash crate is built to rot: what goes in it ages many times over.
         const hours = (dt / 3600) * def.trash;
         for (let i = f.items.length - 1; i >= 0; i--) {
@@ -10138,10 +10140,13 @@ export class Game {
     };
   }
 
-  /** One piece of furniture, the same way; undefined for the ones that hold nothing. */
-  private furnitureStore(f: PlacedFurniture): DeedStore | undefined {
+  /**
+   * One piece of furniture, the same way; undefined for the ones that hold nothing, and for a trash crate unless
+   * `trash` asks for one: a magga fills a trash crate named for an item (`Creatures.hoardBoxes`).
+   */
+  furnitureStore(f: PlacedFurniture, trash = false): DeedStore | undefined {
     const def = furnitureDef(f.kind);
-    if (!furnitureHolds(f) || def.trash) return undefined;
+    if (!furnitureHolds(f) || (def.trash && !trash)) return undefined;
     return {
       x: f.x,
       y: f.y,
