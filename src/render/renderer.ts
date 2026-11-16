@@ -470,6 +470,7 @@ function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: nu
 import { FLOAT_COLOURS, Floaters } from './floaters';
 import { inkOr, WORLD_INK } from './inks';
 import { NameLabels } from './namelabels';
+import { creatureLabel } from '../game/owner';
 import { badgeIds } from '../game/badges';
 import { drawSpeech } from './bubble';
 import { SKILL_BY_ID } from '../game/skills';
@@ -5861,7 +5862,7 @@ export class Renderer {
   private feetAt: { x: number; y: number } | null = null;
 
   /**
-   * A creature's name, handed to the names drawn over the frame (`NameLabels`): every one of them at every zoom, by
+   * A creature's name, and a tamed one's owner after it (`creatureLabel`), handed to the names drawn over the frame (`NameLabels`): every one of them at every zoom, by
    * its colour for whose it is, over its head and over whatever else is drawn there -- its health bar, the bar
    * `drawFight` puts over one after you, the red marker `drawThreats` puts over a hostile one and the ! of a heavy
    * blow coming -- which are kept clear of every other name as well. `tall` is how high its head is at zoom one.
@@ -5885,7 +5886,8 @@ export class Renderer {
       lift = Math.max(lift, 16 * zoom + size);
     }
     this.names.add({
-      text: cr.name,
+      // A tamed one's owner after its name, whoever's it is (`creatureLabel`).
+      text: creatureLabel(cr, this.game.player.name),
       ink: hostile ? 'hostile' : cr.mode === 'wild' ? 'wild' : cr.mine === false ? 'theirs' : 'mine',
       x,
       head,

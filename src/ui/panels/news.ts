@@ -433,6 +433,15 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A tamed wildermon's keeper by name (`ownerOf`, `20261120000132_keeper_named.sql`).
+  {
+    n: 666,
+    day: '2026-11-16',
+    lines: () => [
+      'New: tamed wildermon: owner shown, yours and anybody\'s, online or not: after its name over it ("Bastiondrake · catgenova"); "Owner: catgenova" on hover, in its menu, '
+        + 'on Examine and on a wildermon crate with it in. Settlement workers, companions, mounts and teams in the traces alike. Wild ones: none.',
+    ],
+  },
   // A hod carrier's build gates read its level, whatever the gate's skill (`20261120000130_hod_gated_by_level.sql`,
   // `hodMay`, `hodGate`, `worker_build_open`).
   {

@@ -136,6 +136,7 @@ import { areaAsk, areaCount, areaPieces, areaRefusals, areaTotals, passing, PLAN
 import { PlanBar } from './planbar';
 import { jobEntry, pinEntry, pinnable } from './beltmenu';
 import { creatureLines } from './creatureinfo';
+import { ownerLine } from '../game/owner';
 import { FIRST_TAME_SAYS, firstTameSure } from '../game/firsttame';
 import { MARK_COLOURS } from '../game/marks';
 import type { MapSettlement } from './panels/minimap';
@@ -1922,7 +1923,9 @@ export class UI {
     if (pick.peer !== undefined) return this.personMenu(pick.peer);
     const creature = pick.creature !== undefined ? this.game.creatures.get(pick.creature) : undefined;
     if (creature) {
-      return { title: `${creature.name} (${this.game.creatures.describe(creature)})`, entries: this.creatureEntries(creature.id) };
+      // Whose a tamed one is, under its name (`ownerLine`).
+      const owner = ownerLine(creature, this.game.player.name);
+      return { title: `${creature.name} (${this.game.creatures.describe(creature)})`, facts: owner ? [owner] : undefined, entries: this.creatureEntries(creature.id) };
     }
     const crate = pick.crate !== undefined ? this.game.crates.get(pick.crate) : undefined;
     if (crate) {
@@ -1953,7 +1956,10 @@ export class UI {
       const state = rackSpots(piece) ? `${furnitureState(piece)} · ${this.rackLine(piece)}`
         : piece.kind === CREATURE_CRATE ? `${furnitureState(piece)} · ${crateLine(this.game, piece)}`
         : furnitureState(piece);
-      return { title: `${furnitureName(piece)} (${state})`, entries: [...this.furnitureEntries(piece), ...this.nameEntry({ kind: 'furniture', id: piece.id })] };
+      // A wildermon crate with one in it: whose the wildermon is (`ownerLine`).
+      const inside = piece.kind === CREATURE_CRATE && piece.creature !== undefined ? this.game.creatures.get(piece.creature) : undefined;
+      const owner = inside ? ownerLine(inside, this.game.player.name) : null;
+      return { title: `${furnitureName(piece)} (${state})`, facts: owner ? [owner] : undefined, entries: [...this.furnitureEntries(piece), ...this.nameEntry({ kind: 'furniture', id: piece.id })] };
     }
     const kilnHere = pick.kiln !== undefined ? this.game.kilns.get(pick.kiln) : undefined;
     if (kilnHere) return { title: `Kiln (${kilnState(kilnHere)})`, facts: [stationCondition(this.game, 'kiln', kilnHere)], entries: [...this.kilnEntries(kilnHere), this.examineStation('kiln', kilnHere)] };
