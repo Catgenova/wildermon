@@ -2024,6 +2024,12 @@
     "why": "Asked for: a share of archaeology's finds are baubles, restored like relics and set into a settlement's altar for bonuses to its citizens on its land. Both sides hold the same tiers, skills and words, read each other's baubles, refuse a setting in the same words, and give the same time, skill and yield -- through the clock, on the island."
   },
   {
+    "file": "supabase/test/ancientnine.ts",
+    "title": "Nine more ancient baubles, written, rolled and read the same, and adding to their jobs' yields",
+    "shard": 4,
+    "why": "Asked for: nine new ancient bauble effects (coppice, pruning, butchery, shearing, orchard, vineyard, tapping, reeds, botany) in the form of the six there were. Both sides write and read each at every rarity in the same words, a roll can come out as each, and a citizen on a settlement with one set gets exactly its amount times rarity more of every yield of its job, from the same dice, on the island and in the browser; a trellis vine picked counts as a bush harvested."
+  },
+  {
     "file": "supabase/test/moss.ts",
     "title": "Dirt is collected, moss cut, and moss and grass planted on dirt, the same on both sides",
     "shard": 4,

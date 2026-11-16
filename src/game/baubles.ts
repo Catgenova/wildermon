@@ -3,8 +3,9 @@ import type { Deed, Game } from './game';
 // From `ranks.ts` and not `game.ts`: `game.ts` imports the actions list, which spreads ours.
 import { deedMay, lacks } from './ranks';
 import { furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
-import { describeWith, itemName, rarityOf, rarityStep, type Item } from './items';
-import { times } from './words';
+import { describeWith, itemDef, itemName, rarityOf, rarityStep, type Item } from './items';
+import { listedOr, times } from './words';
+import { BUSH_DEFS } from '../world/tiles';
 
 /**
  * Baubles: small things the old people left in the ground, which a settlement
@@ -212,7 +213,16 @@ export interface AncientEffect {
   said: string;
 }
 
-/** What an ancient bauble adds to: one job each, and one more of what that job gives, every time it gives anything. */
+/** An item's name as a bauble says it: lower case, and "logs" for a count of logs. */
+const named = (id: string): string => itemDef(id).name.toLowerCase();
+const many = (id: string): string => (named(id).endsWith('s') ? named(id) : `${named(id)}s`);
+
+/**
+ * What an ancient bauble adds to: one job each, and one more of what that job gives, every time it gives anything.
+ * The ids are written on the bauble (`extra`) and read back (`readBauble`, `bauble_read`), so they stay as they are;
+ * what follows them is only said, and may change. The words that name items are read off the items, when asked
+ * (a getter, so nothing here waits on the item list to load).
+ */
 export const ANCIENT_EFFECTS: AncientEffect[] = [
   { id: 'mining', action: 'mine', said: 'output per mining action' },
   { id: 'felling', action: 'cut_down', said: 'logs per tree felled' },
@@ -220,6 +230,24 @@ export const ANCIENT_EFFECTS: AncientEffect[] = [
   { id: 'harvest', action: 'harvest_crop', said: 'crop and seed per harvest' },
   { id: 'fishing', action: 'fish', said: 'fish per rod catch' },
   { id: 'foraging', action: 'forage', said: 'finds per forage' },
+  { id: 'coppice', action: 'coppice', get said() { return `${many('log')} per coppice`; } },
+  { id: 'pruning', action: 'prune', get said() { return `${many('log')} per prune`; } },
+  // Every part off the carcass is a yield of its own, and so is each lump of a hoard (`BUTCHER_ACTIONS`).
+  { id: 'butchery', action: 'butcher', said: 'each part and hoard lump per butchering' },
+  // Shear is Pluck on a kind that grows feathers (`shearYield`).
+  { id: 'shearing', action: 'shear', get said() { return `${named('wool')} or ${named('feather')} per shear or pluck`; } },
+  { id: 'orchard', action: 'pick_fruit', said: 'fruit per fruit tree picked' },
+  // A bush's yield, or a trellis vine's grapes (`BAUBLE_JOB_AS`).
+  {
+    id: 'vineyard', action: 'harvest_bush',
+    get said() {
+      const bushes = [...new Set(Object.values(BUSH_DEFS).flatMap((b) => (b.yields ? [named(b.yields)] : [])))];
+      return `${listedOr([...bushes, many('grape')])} per bush or vine picked`;
+    },
+  },
+  { id: 'tapping', action: 'tap_resin', get said() { return `${named('tar')} per tap`; } },
+  { id: 'reeds', action: 'cut_reeds', get said() { return `${many('reed')} per cut`; } },
+  { id: 'botany', action: 'botanize', said: 'finds per botanize' },
 ];
 export const ANCIENT_BY_ID = new Map(ANCIENT_EFFECTS.map((e) => [e.id, e]));
 
@@ -324,10 +352,10 @@ export const baubleTwice = (list: readonly DeedBauble[] | undefined, skill: stri
 
 /** What the baubles add to a yield of this job. */
 /**
- * The job a job counts as for an ancient bauble: a Farmer's patch harvest is so many harvests, and a shovel filled off
- * a bed of sand, clay, peat or tar is a dig. The island's `bauble_plus`.
+ * The job a job counts as for an ancient bauble: a Farmer's patch harvest is so many harvests, a shovel filled off
+ * a bed of sand, clay, peat or tar is a dig, and a trellis vine picked is a bush harvested. The island's `bauble_plus`.
  */
-export const BAUBLE_JOB_AS: Record<string, string> = { harvest_patch: 'harvest_crop', collect: 'dig' };
+export const BAUBLE_JOB_AS: Record<string, string> = { harvest_patch: 'harvest_crop', collect: 'dig', pick_grapes: 'harvest_bush' };
 export const baublePlus = (list: readonly DeedBauble[] | undefined, action: string | undefined): number => {
   const job = action ? BAUBLE_JOB_AS[action] ?? action : undefined;
   const effect = job ? ANCIENT_EFFECTS.find((e) => e.action === job) : undefined;

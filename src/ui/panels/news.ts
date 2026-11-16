@@ -428,6 +428,18 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // Nine more ancient bauble effects, after the six (`ANCIENT_EFFECTS`, `20261120000124_nine_ancient_baubles.sql`).
+  {
+    n: 662,
+    day: '2026-11-16',
+    lines: () => {
+      const nine = ANCIENT_EFFECTS.slice(ANCIENT_EFFECTS.findIndex((e) => e.id === 'coppice'));
+      return [
+        `New: ${num(nine.length)} ancient bauble effects, each ${mult(baubleTimes(0))} to ${mult(baubleTimes(RARITIES.length - 1))} by rarity: `
+          + `${nine.map((e) => `${e.id}: +${ANCIENT_PLUS} ${e.said}`).join('; ')}.`,
+      ];
+    },
+  },
   // A hod carrier's reach of its whole range: a tile nothing is stood on, from the floor beside it (`20261120000119_whole_range_reach_beside.sql`).
   {
     n: 660,
