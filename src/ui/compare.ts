@@ -1,6 +1,6 @@
 import { activeInfusion, infuseSays } from '../game/infusion';
 import type { Game } from '../game/game';
-import { ARMOUR_BY_ID, ARMOUR_CLASSES, hitChance, pieceBurden, pieceSoak, SHIELDS, SLOT_NAMES, slotOf, WEAPON_BY_ID, weaponDamage } from '../game/gear';
+import { ARMOUR_BY_ID, ARMOUR_CLASSES, BAG_CARRY, bagCarry, bagCarryPct, hitChance, pieceBurden, pieceSoak, SHIELDS, SLOT_NAMES, slotOf, WEAPON_BY_ID, weaponDamage } from '../game/gear';
 import { armourSwingKg, blockChance, blockNote, reachOf, SWING_FLOOR, swingByOf, swingKgOf, THROWN_PAST } from '../game/fight';
 import { bagRoom, bagUnits, DRINK_LITRES, isBag, itemDef, itemWeight, litresOf, unitWeight, type Item } from '../game/items';
 import { finePercent, listed, percent } from '../game/words';
@@ -212,6 +212,8 @@ export function itemCard(g: Game, item: Item): TipLine[] {
   }
   if (isBag(item)) {
     lines.push({ text: `Holds ${bagRoom(item)} things; ${bagUnits(item)} in it now` });
+    // And a worn bag's carry limit bonus, at its QL and rarity (`bagCarry`).
+    if (BAG_CARRY[item.id] !== undefined) lines.push({ text: `Worn: carry limit +${bagCarryPct(bagCarry(item))}` });
     if (def.shelter !== undefined) lines.push(`Rot rate of contents on the ground ×${def.shelter}.`);
   }
   if (def.charges) lines.push({ text: `Holds ${def.charges} L; ${litresOf(item)} L in it${def.drink ? `; ${DRINK_LITRES} L a drink` : ''}` });

@@ -2335,6 +2335,15 @@
     "why": "Asked for: \"Equipping a backpack increases weight held by up to 50%, a sack 25%. Both can be equipped and QL determines what % bonus they apply.\" Back and Side slots on both sides, the carry limit times one and each worn bag's share times its QL / 100, and nothing for one carried and not worn."
   },
   {
+    "file": "supabase/test/bagrarity.ts",
+    "title": "A bag's rarity: more room, and more carry limit bonus worn",
+    "shard": 4,
+    "external": [
+      "typescript"
+    ],
+    "why": "Asked for: \"backpack rarity should increase storage capacity like with containers\", and of the carry limit bonus a worn bag gives: \"Yes it should raise carry capacity\". A backpack's and a sack's room and carry limit bonus at each rarity, the same on both sides; a rare backpack's Examine text with its own room and bonus; a supreme backpack worn lifting the carry limit by its bonus × 1.10 on both sides."
+  },
+  {
     "file": "supabase/test/stepcost.ts",
     "title": "What a step costs the island, and that it is the same step",
     "shard": 4,

@@ -3352,7 +3352,7 @@ export class Game {
     // And whatever a trade's perks add to it: a Terraformer's Strong Back.
     // And Power's Pack Mule.
     // And a Packmule on each pack carried (`pack_mule`).
-    // And all of it by a backpack on the back and a sack at the side, by their QL (`bagCarry`).
+    // And all of it by a backpack on the back and a sack at the side, by their QL and rarity (`bagCarry`).
     return (CARRY_BASE + this.skills.get('body_strength') * CARRY_PER_STRENGTH + this.perk('carry', 0) + this.pathFx('mule', 0)
       + this.inventory.items.reduce((n, it) => n + swingEnchant(it, 'mule'), 0)) * (1 + bagCarry(this.worn('back')) + bagCarry(this.worn('side')));
   }

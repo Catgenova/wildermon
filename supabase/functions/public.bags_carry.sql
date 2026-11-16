@@ -8,9 +8,7 @@ AS $function$
 #variable_conflict use_column
 begin
   return (
-
-  select coalesce(sum(case i.def when 'backpack' then bag_carry_backpack() when 'sack' then bag_carry_sack() else 0 end
-                      * least(100, i.ql) / 100), 0)
+  select coalesce(sum(bag_carry(i)), 0)
     from player p
     join item i on i.world_id = p.world_id and i.holder = 'player' and i.holder_uid = p.uid
      and i.id in ((p.equipped->>'back')::bigint, (p.equipped->>'side')::bigint)

@@ -1344,6 +1344,15 @@ export function roomFor(base: number, thing: { rare?: number }): number {
   // A measure the thing has none of stays none: a rare larder counts things, and never gains a kilo of heft.
   return step && plain > 0 ? plain + Math.max(step, Math.round(plain * RARITY_ROOM * step)) : plain;
 }
+/**
+ * A share a thing adds, by its rarity: `RARITY_ROOM` more of it a step, unrounded. Asked for: "backpack rarity should
+ * increase storage capacity like with containers"; "Yes it should raise carry capacity". A worn bag's carry limit bonus
+ * (`bagCarry`). The island's `rarity_share`.
+ */
+export function rarityShare(share: number, thing: { rare?: number }): number {
+  const step = Math.max(0, Math.min(RARITIES.length - 1, thing.rare ?? 0));
+  return share * (1 + RARITY_ROOM * step);
+}
 
 /**
  * Which step a rarity's word is, for reading the island back.

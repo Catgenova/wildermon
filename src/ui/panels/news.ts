@@ -100,7 +100,7 @@ import { TURNS } from '../../render/view';
 import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, SAFE_RING, START_GAP, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
-import { BAG_CARRY as BAG_CARRY_293 } from '../../game/gear';
+import { BAG_CARRY as BAG_CARRY_293, BAG_CARRY_QL, bagCarry, bagCarryPct } from '../../game/gear';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { AROUND_LEASH as AROUND_LEASH_602, AROUND_LEFT as AROUND_LEFT_602 } from '../../game/creatures';
 import { PIER_SHOO as PIER_SHOO_602 } from '../../game/piers';
@@ -202,7 +202,7 @@ import { MUTE_FOR, MUTE_SHUTS, NEW_BODIES_A_DAY, REPORT_REASONS, REPORTS_A_DAY }
 import { awayFor } from '../../game/away';
 import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, ARMOUR, ARMOUR_CLASSES, BANE_BONUS, OBSIDIAN_PIECES, SHIELDS, SLOT_NAMES, SLOTS, WEAPON_BY_ID, WEAPONS } from '../../game/gear';
 import { JEWEL_PIECES } from '../../game/gems';
-import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, unmendableSays } from '../../game/items';
+import { foodFill, itemDef, RARITIES, rarityBands, rarityChance, rareInputSaid, roomFor, unmendableSays } from '../../game/items';
 import { SIGHT_FORM_AT, SIGHT_RARITY_AT } from '../../game/sighted';
 import { improvable, IMPROVE_DAMAGE as MEND_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
@@ -425,6 +425,19 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // A worn bag's carry limit bonus by its rarity, as its room is (`rarityShare`, `bagText`, the island's `bag_carry` and `bag_text`).
+  {
+    n: 657,
+    day: '2026-11-16',
+    lines: () => {
+      const pack = (rare: number): string => `+${bagCarryPct(bagCarry({ id: 'backpack', ql: BAG_CARRY_QL, rare }))}`;
+      return [
+        `Changed: worn bags: carry limit bonus +${percent(RARITY_ROOM)} of it a rarity step. Backpack at QL ${BAG_CARRY_QL}: ${pack(0)}, rare ${pack(1)}, supreme ${pack(2)}, fantastic ${pack(3)}.`,
+        `Changed: Examine on a bag: its own room and worn carry limit bonus, with QL and rarity (supreme backpack: holds ${roomFor(itemDef('backpack').holds ?? 0, { rare: 2 })} things).`,
+        'Added: bag tooltip: worn carry limit bonus.',
+      ];
+    },
+  },
   // A bridge's pictures on the screen kept past the budget (`bridgekit.ts`, `keep`): at the largest bake scale they were more than it.
   {
     n: 652,

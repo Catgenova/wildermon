@@ -21,7 +21,8 @@ begin
   if d.category = 'tool' and abs(v_worth - it.ql) >= 0.05 then
     v_out := v_out || ' Works as Quality ' || to_char(v_worth, 'FM990.0') || ' now.';
   end if;
-  if d.description is not null then v_out := v_out || ' ' || d.description; end if;
+  -- A bag's room and a worn bag's carry limit bonus, this one's (`bag_text`).
+  if d.description is not null then v_out := v_out || ' ' || bag_text(it, d.description); end if;
   -- What dye is in it, or what colour it was dyed (`dyestuffs.ts`).
   v_out := v_out || dye_item_says(it);
   if r.id is not null then

@@ -2,7 +2,7 @@ import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
 import { OUTFITS } from '../creator';
 import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
 import { MAP_LEGEND, MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
-import { BAG_CARRY } from '../../game/gear';
+import { BAG_CARRY, BAG_CARRY_QL, bagCarry, bagCarryPct } from '../../game/gear';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { CELL, CLEAR_CELLS } from '../snapgrid';
@@ -139,7 +139,7 @@ import { ANCIENT_HELM, ANCIENT_HELM_SIGHT, ANCIENT_SWORD, ANCIENT_SWORD_SWING, A
 import { ODDS_BAND, ODDS_BANDS_AT, ODDS_EXACT_AT, ODDS_LIKELY, ODDS_PLACES, PAIR_RANGE, TIER_LEVEL } from '../../game/husbandry';
 import { IMPROVE_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD, IMPROVE_FLOOR } from '../../game/improve';
 import { JOB_GOES_MOST } from '../../game/mending';
-import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, CHARGE_PER_QL, CHARGE_QL, chargesFor, RARITIES, RARITY_ROOM, rarityBands, rarityChance, TAN_LYE, UNMENDABLE, unmendableSays } from '../../game/items';
+import { billWords, countOf, DEED_DECAY, DRINK_LITRES, foodFill, HOARD_METALS, itemDef, ITEM_DEFS, LITRE_KG, CHARGE_PER_QL, CHARGE_QL, chargesFor, RARITIES, RARITY_ROOM, rarityBands, roomFor, rarityChance, TAN_LYE, UNMENDABLE, unmendableSays } from '../../game/items';
 import { ALL_GOALS, JOURNAL, LEGEND_AT } from '../../game/journal';
 import { entryTameLevel, guideEntries, guidePages, keepable } from '../../game/guide';
 import { TRACK_BANDS, TRACK_RANGE_BASE, TRACK_RANGE_PER, TRACK_SHOW, trackBandsSays, trackErrSays, trackRange } from '../../game/tracking';
@@ -3016,6 +3016,8 @@ export function helpText(): string {
       <li>Carry limit: <b>${CARRY_BASE} kilos</b> + <b>${CARRY_PER_STRENGTH} kilos</b> per point of <b>body strength</b>
       (${CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH} at the start, ${CARRY_BASE + TOP_SKILL * CARRY_PER_STRENGTH} at ${TOP_SKILL}).</li>
       <li>Worn bags, the whole limit: <b>backpack</b> (Back) +${percent(BAG_CARRY.backpack)}, <b>sack</b> (Side) +${percent(BAG_CARRY.sack)}, each × QL%; both at once.</li>
+      <li>Worn bag rarity: carry limit bonus <b>+${percent(RARITY_ROOM)}</b> of it a step. At QL ${BAG_CARRY_QL}, ordinary, rare, supreme, fantastic:
+      ${Object.keys(BAG_CARRY).map((id) => `${itemDef(id).name.toLowerCase()} ${[0, ...RARE_STEPS].map((n) => `<b>+${bagCarryPct(bagCarry({ id, ql: BAG_CARRY_QL, rare: n }))}</b>`).join(', ')}`).join('; ')}.</li>
       <li>Over it: slower, and more wind per action, rising with the excess, as armour does. ${OVER_EXAMPLE} kilos over a starting limit drags like about
       ${Math.round(overDrag(OVER_EXAMPLE, CARRY_BASE + CHAR_START * CARRY_PER_STRENGTH) / PLATE_SUIT)} full suits of iron plate.</li>
       <li>Past <b>${mul(CARRY_STOP)}</b> the limit: <b>${frac(CARRY_CRAWL)} pace (speed multiplier)</b>. Any amount over: every swing or draw <b>${percent(OVERBURDEN_SWING)} longer</b>.</li>
@@ -3131,6 +3133,8 @@ export function helpText(): string {
       ${listed(RARE_STEPS.map((step) => String(RARITIES[step].ceiling))).replace(/ and ([^,]*)$/, ' or $1')}.</li>
       <li>Containers (bag, crate, cupboard, weight bin): +${percent(RARITY_ROOM)} capacity a step (${RARE_STEPS.map((n) => `<b>${percent(RARITY_ROOM * n)}</b>`).join(', ')}
       for rare, supreme and fantastic), at least <b>one more unit a step</b>. Kept when set down and picked up.</li>
+      <li>Bag room, ordinary, rare, supreme, fantastic: ${['backpack', 'sack', 'satchel'].map((id) => `${itemDef(id).name.toLowerCase()} ${[0, ...RARE_STEPS].map((n) => `<b>${roomFor(itemDef(id).holds ?? 0, { rare: n })}</b>`).join(', ')}`).join('; ')}.</li>
+      <li>Worn bags (${listed(Object.keys(BAG_CARRY).map((id) => itemDef(id).name.toLowerCase()))}): carry limit bonus +${percent(RARITY_ROOM)} of it a step.</li>
       <li>Smelter and kiln charges: <b>× ${listed(RARE_STEPS.map((n) => String(RARITIES[n].charge))).replace(/ and ([^,]*)$/, ' or $1')}</b> for rare, supreme or fantastic
       (QL ${CHARGE_QL}: ${listed([0, ...RARE_STEPS].map((n) => String(chargesFor({ ql: CHARGE_QL, rare: n }))))}).</li>
       <li>Shown in their own colour in the pack; on the ground they glow (rare: a few motes; supreme: more over a bloom; fantastic: a gold bloom under a star).</li>
