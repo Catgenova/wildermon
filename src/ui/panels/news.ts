@@ -424,6 +424,23 @@ const VEINS = VEIN_LOOKS.filter((l): l is VeinLook => l !== null);
 const veinsOf = (family: VeinLook['family']): string => listed(VEINS.filter((l) => l.family === family).map((l) => l.name.toLowerCase()));
 
 export const NEWS: News[] = [
+  // A worker's reach a storey up is its own way there, by the player's step (`20261120000114_a_worker_reaches_what_the_player_reaches.sql`).
+  {
+    n: 655,
+    day: '2026-11-16',
+    lines: () => {
+      const stairs = idleSays({ why: 'stairs', n: 4 }, 'hod');
+      return [
+        `Fixed: settlement workers, storeys reached over a bridge from another building: in reach (was: "${stairs}").`,
+        `Fixed: settlement workers, storeys reached across the floor of the building next door: in reach (was: "${stairs}").`,
+        `Fixed: hod carriers, work on a storey with a staircase on every storey under it and no way between them: not taken (was: taken, then "${stairs}" every round).`,
+        'Changed: settlement workers on a flight: on from any side with no wall; off onto its storey at any side with a floor; down at its foot, or at a side with no floor (was: on at its foot, off at its head).',
+        'Added: settlement workers, ramp bridges: storey to another storey, and the ground to a storey.',
+        `Changed: hod carriers, a wall a storey up with no floor on either side at its storey: fitted from a floor on the next tile along it (was: "${stairs}").`,
+        'Unchanged: settlement workers, ladders: not climbed.',
+      ];
+    },
+  },
   // Every container named for an item read, not only crates and stores (`20261120000108_named_containers_every_item.sql`, `hoard.ts`).
   {
     n: 651,
