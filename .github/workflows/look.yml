@@ -347,6 +347,35 @@ jobs:
                dd as (select md.* from c cross join lateral my_deed(c.world_id, c.keeper) md where md.world_id is not null),
                r as materialized (select storey_reach(c.world_id, dd.x - work_range(c) - 1, dd.y - work_range(c) - 1, dd.x + work_range(c) + 1, dd.y + work_range(c) + 1) as j from c, dd)
           select split_part(k, ',', 3)::int + 1 as storey, count(*) as cells from r cross join lateral jsonb_object_keys(r.j) k group by 1 order by 1"
+          ask "hod workers idle on stock: each piece of work wanting what the stores hold, and why it is not handed out" "with c as (select c.* from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+                 where $me and c.job = 'hod' and c.mode = 'deed' and c.idle_why = 'stock' order by c.id limit 1),
+               dd as (select md.* from c cross join lateral my_deed(c.world_id, c.keeper) md where md.world_id is not null),
+               r as materialized (select storey_reach(c.world_id, dd.x - work_range(c) - 1, dd.y - work_range(c) - 1, dd.x + work_range(c) + 1, dd.y + work_range(c) + 1) as j from c, dd),
+               have as materialized (select distinct (s.it).def as def from c cross join lateral deed_store_items(c.world_id, c.keeper) s
+                                      where (s.it).count > 0 and not coalesce((s.it).locked, false))
+          select c.id, w.kind, w.level + 1 as storey, w.dir, w.x, w.y, left(w.needed::text, 40) as needed,
+                 hod_work_mine(c.world_id, c.keeper, w.dir, w.x, w.y) as mine,
+                 hod_reached(c.world_id, w.kind, w.level, w.dir, w.x, w.y, r.j) as reached,
+                 hod_may(c.world_id, c, w.kind, w.level, w.dir, w.x, w.y) as may,
+                 (select string_agg(e.key, ' ') from jsonb_each_text(w.needed) e where e.value::int > 0 and e.key in (select def from have)) as stocked_keys
+            from c, dd, r cross join lateral hod_work(c.world_id, dd.x, dd.y, work_range(c)) w
+           where exists (select 1 from jsonb_each_text(w.needed) e where e.value::int > 0)
+           order by w.level, w.x, w.y limit 80"
+          ask "the build gates of that work, and the worker's levels" "with c as (select c.* from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+                 where $me and c.job = 'hod' and c.mode = 'deed' and c.idle_why = 'stock' order by c.id limit 1),
+               dd as (select md.* from c cross join lateral my_deed(c.world_id, c.keeper) md where md.world_id is not null),
+               k as (select distinct w.kind, coalesce(ch.material, wl.material, f.material) as material, coalesce(ch.type, wl.type) as wtype, f.kind as fkind, f.hand
+                       from c, dd cross join lateral hod_work(c.world_id, dd.x, dd.y, work_range(c)) w
+                       left join wall wl on w.kind = 'wall' and wl.world_id = c.world_id and wl.level = w.level and wl.dir = w.dir and wl.x = w.x and wl.y = w.y
+                       left join wall_change ch on w.kind = 'wall' and ch.world_id = c.world_id and ch.level = w.level and ch.dir = w.dir and ch.x = w.x and ch.y = w.y
+                       left join floor_tile f on w.kind = 'floor' and f.world_id = c.world_id and f.level = w.level and f.x = w.x and f.y = w.y)
+          select k.kind, k.material, k.wtype, k.fkind, b.skill, b.level as needs, worker_level(c, b.skill) as has
+            from c, k cross join lateral build_gates(k.material, k.wtype, k.fkind, k.hand) b order by 1, 2, 3, 4, 5"
+          ask "the stores' stock of what the work wants" "with c as (select c.* from creature c join player p on p.world_id = c.world_id and p.uid = c.keeper
+                 where $me and c.job = 'hod' and c.mode = 'deed' order by c.id limit 1)
+          select (s.it).def as def, sum((s.it).count) as count, bool_or(coalesce((s.it).locked, false)) as any_locked, string_agg(distinct s.kind, ' ') as store_kinds
+            from c cross join lateral deed_store_items(c.world_id, c.keeper) s
+           where (s.it).def in ('glass', 'timber', 'glass_panel', 'plank', 'mortar', 'marble_brick', 'clay_brick') group by 1 order by 1"
           ask "floors, stairs, ladders and roofs per building and storey" "select f.building, b.name, f.level + 1 as storey,
                  count(*) filter (where f.kind = 'floor' and bill_done(f.needed)) as floors,
                  count(*) filter (where f.kind = 'floor' and not bill_done(f.needed)) as floors_planned,
