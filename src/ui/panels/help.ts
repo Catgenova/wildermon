@@ -1189,8 +1189,12 @@ function artifactHelp(): string {
 /** A short sword, and the ancient one restored from an old blade, for the relic list above. */
 const SWORD_PLAIN = WEAPON_BY_ID.get('short_sword') as WeaponDef;
 const SWORD_ANCIENT = WEAPON_BY_ID.get(ANCIENT_SWORD) as WeaponDef;
-/** The gear nothing improves or repairs (`UNMENDABLE`), as the help's lists say it: "an ancient helm or an ancient short sword". */
-const unmendableSaid = (): string => listedOr([...UNMENDABLE].map((id) => `${article(lowName(id))} ${lowName(id)}`));
+/**
+ * What nothing improves or repairs (`unmendable`), as the help's lists say it: "an ancient helm, an ancient short
+ * sword or a trophy"; without the trophy where only restored gear is in question.
+ */
+const unmendableSaid = (trophy = true): string =>
+  listedOr([...[...UNMENDABLE].map((id) => `${article(lowName(id))} ${lowName(id)}`), ...(trophy ? ['a trophy'] : [])]);
 
 /** A relic's restored item and the relic it comes from, for the lists above. */
 function fromRelic(id: string): string {
@@ -3465,7 +3469,7 @@ export function helpText(): string {
       <li><b>Investigate</b> (right-click soil, sand or a trail): <b>trowel</b>, <b>Archaeology</b>; sometimes a <b>fragment</b>. A searched tile is empty for a while.</li>
       <li>A fragment names its relic and piece (<i>${LAST_RELIC.name} ${LAST_RELIC.parts - 1}/${LAST_RELIC.parts}</i>); found at ${FIND_DAMAGE} to ${FIND_DAMAGE + FIND_DAMAGE_SPREAD} damage.</li>
       <li><b>Fragments and tarnished baubles cannot be repaired until restored</b> (no Repair, repair kit or worker mending). Damage only rises (failed restoring, weather);
-      at ${DAMAGE_MAX} it breaks. Restored, it mends like anything else, but for ${unmendableSaid()}.</li>
+      at ${DAMAGE_MAX} it breaks. Restored, it mends like anything else, but for ${unmendableSaid(false)}.</li>
       <li>${RELICS.length} relics, from ${article(RELICS[0].name)} <b>${RELICS[0].name}</b> in ${RELICS[0].parts} pieces to ${article(LAST_RELIC.name)} <b>${LAST_RELIC.name}</b> in ${LAST_RELIC.parts};
       each recognised only at enough archaeology. Common ones turn up far more often; pieces you lack are favoured.</li>
       <li><b>Investigate</b>: with a trowel. <b>Restore</b> (all pieces in hand, right-click one): with a brush; <b>Restoration</b>, at any damage short of breaking. Failure: ${RESTORE_HARM} to ${RESTORE_HARM + RESTORE_HARM_SPREAD} more damage on

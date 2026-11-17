@@ -434,6 +434,15 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Trophies `unmendable`, and the stock an Improve pass took said in its line (migration 139).
+  {
+    n: 682,
+    day: '2026-11-17',
+    lines: () => [
+      'Changed: trophies cannot be improved or repaired (Improve, Repair, repair kit, ancient whetstone, a worker mending the stores).',
+      'Added: Improve event line: the stock used, e.g. "Improved: long sword, QL 41.2. Used: 1 iron lump." The same on a failed pass.',
+    ],
+  },
   // The Improve window's rows: what can be worked on first (mend.ts).
   {
     n: 681,

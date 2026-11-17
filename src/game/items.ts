@@ -1518,9 +1518,11 @@ export const NOT_RESTORED = 'Not restored: cannot be repaired. Gone if it breaks
  *
  * And every mould (`isMould`), which wears a filling at a time and was always said to be past mending: reported,
  * "Moulds should not be able to be repaired". Moulds were never improvable (`canImprove`).
+ *
+ * And every trophy (`ItemDef.trophy`): "trophies should not be able to be improved or repaired".
  */
 export const UNMENDABLE: ReadonlySet<string> = new Set(['ancient_helm', 'ancient_short_sword']);
-export const unmendable = (item: { id: string }): boolean => UNMENDABLE.has(item.id) || isMould(item.id);
+export const unmendable = (item: { id: string }): boolean => UNMENDABLE.has(item.id) || isMould(item.id) || !!ITEM_DEFS[item.id]?.trophy;
 /** Why, in the island's words (`unmendable_says`): "Ancient helm: cannot be improved or repaired." */
 export const unmendableSays = (item: { id: string }): string => `${itemDef(item.id).name}: cannot be improved or repaired.`;
 

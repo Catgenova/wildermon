@@ -7,7 +7,7 @@ AS $function$
 declare v_ok boolean; v_it item; v_what improvable_def; v_mat improve_material_def; v_stock item;
         v_made text; v_ceiling double precision; v_tool_ql double precision;
         v_healed double precision; v_lost double precision; v_skill double precision;
-        v_favour text; v_full text; v_name text; v_p player; v_lift text; v_keep double precision;
+        v_favour text; v_full text; v_used text; v_name text; v_p player; v_lift text; v_keep double precision;
         v_up double precision; v_hurt jsonb; v_out jsonb; v_one jsonb; v_said text; v_circlet item; v_gem text; v_was double precision;
 begin
   if p_action = 'drink' then
@@ -180,7 +180,9 @@ begin
     v_stock := private.improve_stock(p_world, p_uid, v_mat.id, v_made, p_target);
     -- A bar is broken into for the lump a pass takes (a Smith's Ingots).
     if v_stock.id is not null then v_stock := unbar(p_world, p_uid, v_stock.id, 1); end if;
-    if v_stock.id is null or not spend_stack(p_world, p_uid, v_stock.id, 1) then return; end if;
+    if v_stock.id is null then return; end if;
+    v_used := ' Used: 1 ' || lower(item_name(v_stock)) || '.';
+    if not spend_stack(p_world, p_uid, v_stock.id, 1) then return; end if;
     perform wear_tool(held_tool(p_world, p_uid, t.tool)) from improve_tool t where t.material = v_mat.id order by t.ord;
     v_tool_ql := coalesce((select max(tool_ql(p_world, p_uid, t.tool)) from improve_tool t
                            where t.material = v_mat.id), 0);
@@ -195,7 +197,7 @@ begin
     if not v_ok then
       perform damage_item(v_it.id, 3 + random() * 5);
       perform tell(p_world, p_uid, 'Improve failed: ' || v_name || ', '
-        || to_char((select dmg from item where id = v_it.id), 'FM990.0') || ' damage.' || fail_why(v_it.extra, skill_of(p_world, p_uid, 'mind_logic')), 'event');
+        || to_char((select dmg from item where id = v_it.id), 'FM990.0') || ' damage.' || v_used || fail_why(v_it.extra, skill_of(p_world, p_uid, 'mind_logic')), 'event');
       return;
     end if;
     v_was := v_it.ql;
@@ -234,7 +236,7 @@ begin
     -- And a thing this pass took past `improved_to`, once a thing.
     if v_was < improved_to() and v_it.ql >= improved_to() then perform journal_note(p_world, p_uid, 'improved70'); end if;
     perform tell(p_world, p_uid, 'Improved: ' || v_name || ', QL '
-      || to_char(v_it.ql, 'FM990.0') || '.', 'event');
+      || to_char(v_it.ql, 'FM990.0') || '.' || v_used, 'event');
 
   elsif p_action = 'quench_item' then
     -- A Smith's Temper Bath: the quench its maker put into it, once.

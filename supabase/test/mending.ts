@@ -32,6 +32,7 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { IMPROVE_DAMAGE, improvable, lockFor, lockTakes, outOfSaid, stockFor, stockKinds } from '../../src/game/improve';
 import { cyclePlan, cycleTarget, heldEquipment, honeQueue, passesAhead, pieceJob, piecePlans, piecesThatFit, queueRoom, repairGoes, repairQueue } from '../../src/game/mending';
 import { psql, check, finish } from './harness';
+import { unmendable, unmendableSays } from '../../src/game/items';
 
 /* ---- the browser's rules ------------------------------------------------------------------------- */
 
@@ -196,6 +197,11 @@ begin
   insert into said select 'B_USED', (40 - coalesce(sum(count), 0))::text from item where world_id = w and holder = 'player' and holder_uid = u and def = 'tin_lump';
   insert into said select 'B_PASSES', count(*)::text from event where world_id = w and uid = u and n > m0
      and (text like 'Improved: long sword%' or text like 'Improve failed: long sword%');
+  -- Each pass's line says the stock it took: one tin lump.
+  insert into said select 'B_SAYS', count(*)::text from event where world_id = w and uid = u and n > m0
+     and (text like 'Improved: long sword%' or text like 'Improve failed: long sword%') and text like '%. Used: 1 tin lump.%';
+  -- A trophy: neither improved nor repaired, in the browser's words.
+  insert into said select 'TROPHY', coalesce(item_refusal(w, u, 'improve_item', jsonb_build_object('kind', 'item', 'uid', give(w, u, 'chief_ear', 1, 50, null))), 'none');
   insert into said select 'B_FAILS', count(*)::text from event where world_id = w and uid = u and n > m0 and text like 'Improve failed: long sword%';
   insert into said select 'B_REPAIRED', count(*)::text from event where world_id = w and uid = u and n > m0 and text like 'Fully repaired: long sword%';
   -- The damage after each failed pass, and whether any pass was taken with the piece over 10.
@@ -294,6 +300,9 @@ check('island: refused in the browser\'s words', at('A_REFUSE') === out, `island
 
 check('island: 12 cycles taken', at('B_ASK') === 'true', at('B_ASK'));
 check('island: 12 lumps used, 12 passes, however many repairs between', at('B_USED') === '12' && at('B_PASSES') === '12', `used ${at('B_USED')}, passes ${at('B_PASSES')}, run ${at('B_RUN')} goes`);
+check('island: each pass\'s line says "Used: 1 tin lump."', at('B_SAYS') === '12', at('B_SAYS'));
+check('both sides: a trophy cannot be improved or repaired', at('TROPHY') === unmendableSays({ id: 'chief_ear' }) && unmendable({ id: 'chief_ear' }),
+  `island "${at('TROPHY')}", browser "${unmendableSays({ id: 'chief_ear' })}"`);
 const failDmg = at('B_FAILDMG').split(',').filter(Boolean).map(Number);
 check('island: a failed pass that left it over 10 was followed by a repair', Number(at('B_REPAIRED')) >= 1 && failDmg.some((d) => d > IMPROVE_DAMAGE),
   `fails ${at('B_FAILS')}, damage after each ${at('B_FAILDMG')}, repaired ${at('B_REPAIRED')}`);

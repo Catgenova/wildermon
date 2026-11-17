@@ -5,5 +5,7 @@ CREATE OR REPLACE FUNCTION public.unmendable(p_def text)
  LANGUAGE sql
  STABLE
 AS $function$
-  select p_def in ('ancient_helm', 'ancient_short_sword') or exists (select 1 from mould_def m where m.id = p_def)
+  select p_def in ('ancient_helm', 'ancient_short_sword')
+      or exists (select 1 from mould_def m where m.id = p_def)
+      or coalesce((select d.trophy from item_def d where d.id = p_def), false)
 $function$
