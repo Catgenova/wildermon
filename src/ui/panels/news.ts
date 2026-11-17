@@ -434,6 +434,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The Improve window's rows: what can be worked on first (mend.ts).
+  {
+    n: 681,
+    day: '2026-11-17',
+    lines: () => ['Changed: Improve window: items Improve, Repair or Hone can start on listed first; items none of them can start on listed last. Each group: most damaged first.'],
+  },
   // A worker's search for its next tile asked over the square it needs (`find_work_tile`, migration 138).
   {
     n: 680,

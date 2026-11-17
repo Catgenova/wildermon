@@ -135,10 +135,18 @@ export class MendPanel {
     // What had the keys, to have them again on the same control once it is drawn afresh.
     const active = document.activeElement;
     const focus = active instanceof HTMLElement && this.body.contains(active) ? active.dataset.mendFocus : undefined;
+    // Rows Improve, Repair or Hone would start on first, the rest last; each lot most damaged first.
+    const improve = ACTION_BY_ID.get('improve_item');
+    const whet = whetstonesHeld(g);
+    const can = new Map(rows.map((it) => [it.uid,
+      (!!improve && !improve.check?.({ kind: 'item', uid: it.uid }, g)) || (it.dmg > 0 && !repairRefusal(g, it)) || (honeable(it) && whet > 0)]));
+    const live = (it: Item): number => Number(!can.get(it.uid));
+    rows.sort((a, b) => live(a) - live(b) || byDamage(a, b));
+    const shown = pieces.sort((a, b) => live(a) - live(b) || byDamage(a, b));
     this.body.replaceChildren();
     this.inHand();
-    this.repairSection(rows, pieces.map((it) => it.uid));
-    this.improveSection(pieces, chosen);
+    this.repairSection(rows, shown.map((it) => it.uid));
+    this.improveSection(shown, chosen.sort((a, b) => live(a) - live(b) || byDamage(a, b)));
     this.win.body.scrollTop = scroll;
     this.body.scrollTop = scrolled;
     if (focus) this.body.querySelector<HTMLElement>(`[data-mend-focus="${focus}"]`)?.focus();
