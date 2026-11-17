@@ -2061,8 +2061,29 @@ function kitFor(look: Look, lod = 1): Kit {
     k = kitOf(look, lod);
     kits.set(key, k);
     if (kits.size > 160) kits.delete(kits.keys().next().value as string);
+    kitAhead(look, lod === 1 ? 0.5 : 1);
   }
   return k;
+}
+
+/**
+ * The same body's kit at the other cut (`kitFor`'s `lod`), made while the page is idle: the first zoom of a session past
+ * one and a half made every body's other kit in the one frame, 170 ms of meshes in a frame of 250.
+ */
+const kitsAhead = new Set<string>();
+function kitAhead(look: Look, lod: number): void {
+  const key = `${look.gender}|${look.hair}|${lod}`;
+  if (kits.has(key) || kitsAhead.has(key)) return;
+  kitsAhead.add(key);
+  const copy = { ...look };
+  const make = (): void => {
+    kitsAhead.delete(key);
+    if (kits.has(key)) return;
+    kits.set(key, kitOf(copy, lod));
+    if (kits.size > 160) kits.delete(kits.keys().next().value as string);
+  };
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(make, { timeout: 2000 });
+  else setTimeout(make, 0);
 }
 
 /* ---- posing ------------------------------------------------------------------- */

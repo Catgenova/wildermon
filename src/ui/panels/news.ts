@@ -434,6 +434,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A body's kit at the other cut made while the page is idle (`kitAhead` in figure.ts).
+  {
+    n: 677,
+    day: '2026-11-17',
+    lines: () => ['Fixed: the first zoom out of a session past 1.5×: one frame of about 240 ms on a crowd, now about 80 ms (bodies\' coarser models made ahead while the page is idle).'],
+  },
   // Every worker on its settlement: a load to a container named for it first (`worker_store`, migration 137).
   {
     n: 676,
