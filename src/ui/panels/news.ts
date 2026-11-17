@@ -433,6 +433,14 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A container's name read by index (`private.hoard_items`); a Chestkit asks each kind once (`private.hoard_move`).
+  {
+    n: 671,
+    day: '2026-11-17',
+    lines: () => [
+      'Fixed: lag on the whole island while a Hoardback or Chestkit idled on a full store: its think from 12 s to under 0.2 s.',
+    ],
+  },
   // Remove floor: never the roof (`removeFloorLevel`); a floor under walls held up otherwise (`wallLeftStanding`).
   {
     n: 670,

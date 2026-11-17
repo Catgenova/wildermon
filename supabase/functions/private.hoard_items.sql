@@ -7,7 +7,10 @@ CREATE OR REPLACE FUNCTION private.hoard_items(p_name text)
  SET search_path TO 'public'
 AS $function$
   select case when coalesce(q.v, '') = '' then null else
-    (select array_agg(d.id order by d.id collate "C") from item_def d
-      where lower(d.id) = q.v or private.hoard_plural(d.id) = q.v or lower(d.name) = q.v or private.hoard_plural(d.name) = q.v) end
+    (select array_agg(distinct m.id collate "C" order by m.id collate "C") from (
+       select d.id from item_def d where lower(d.id) = q.v
+       union all select d.id from item_def d where private.hoard_plural(d.id) = q.v
+       union all select d.id from item_def d where lower(d.name) = q.v
+       union all select d.id from item_def d where private.hoard_plural(d.name) = q.v) m) end
   from (select private.hoard_fold(p_name) as v) q
 $function$

@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.hoard_move(p_world uuid, c creature, p_fx dou
  SET search_path TO 'public'
 AS $function$
 declare v_boxes jsonb; v_targets jsonb; r record; t record; v_ok jsonb := '{}'; v_key text; v_seen boolean := false; v_room int;
-        v_into int; v_refuse boolean; v_first text; v_refused text[];
+        v_into int; v_refuse boolean; v_first text; v_refused text[]; v_asked jsonb := '{}';
 begin
   select coalesce(jsonb_agg(to_jsonb(b)), '[]'::jsonb) into v_boxes from private.hoard_boxes(p_world, c) b;
   select coalesce(jsonb_agg(e), '[]'::jsonb) into v_targets from jsonb_array_elements(v_boxes) e where jsonb_typeof(e->'ids') = 'array';
@@ -37,6 +37,9 @@ begin
     if not v_ok ? v_key then v_ok := v_ok || jsonb_build_object(v_key, private.hoard_ok(p_world, c, r.kind, r.sid)); end if;
     if not (v_ok->>v_key)::boolean then continue; end if;
     v_seen := true;
+    -- A kind already found no room for: the same for this stack of it.
+    if v_asked ? r.def then continue; end if;
+    v_asked := v_asked || jsonb_build_object(r.def, true);
     v_into := 0; v_refuse := true; v_first := null;
     for t in
       select tt.kind, tt.sid, tt.sub from jsonb_to_recordset(v_targets)

@@ -3571,5 +3571,11 @@
     "title": "Remove floor: never the roof, and a floor under walls that stand on something else",
     "shard": 6,
     "why": ""
+  },
+  {
+    "file": "supabase/test/hoardspeed.ts",
+    "title": "A Hoardback on a full store: the same names, and a think in under a second",
+    "shard": 5,
+    "why": "One Hoardback on a full store took 12 s a think on the island and held the clock's round, and every player's move and act behind it."
   }
 ]
