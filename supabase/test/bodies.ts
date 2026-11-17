@@ -89,6 +89,12 @@ try {
     await run(tab, 30, i % 2 ? 'off' : 'on', 'busy');
     await tab.waitForTimeout(300);
   }
+  /*
+   * And a whole zoom round each way. The first time a session's zoom goes under one and a half, every body's coarser kit
+   * is made (`kitFor`), once: a frame of 140 ms or more, which fell on the zoom's first round, On's, and never on Off's
+   * after it, and was held against how long a frame of the bodies alone took.
+   */
+  for (const a of ['on', 'off'] as const) await run(tab, FRAMES, a, 'zoom');
   const shots = process.env.BODIES_SHOTS;
   if (shots) {
     // The same frames before and after a change: the quality held at its best, every body given time to be drawn.

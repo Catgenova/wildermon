@@ -5186,6 +5186,15 @@ interface Held {
   blade?: number;
   /** Which way the elbow of the arm putting a weapon away or taking it out was last drawn out, in the hips' frame: see `stowHand`. */
   stowPole?: V3;
+  /**
+   * Held steady (`settle`'s `lite`): the last full settle had nothing changing, the blend done and the feet still. Since
+   * when frames have gone by without one, and the pose they were for, which a blend out of it starts from.
+   */
+  steady?: boolean;
+  liteSince?: number;
+  litePose?: FigurePose;
+  /** The weapon in hand at the last full settle, and the gait walked at. */
+  arm?: string;
 }
 
 const held = new Map<string, Held>();
@@ -5307,10 +5316,32 @@ function swivel(sh: V3, wr: V3, a: V3, b: V3, v: number, most = 180): V3 {
  * the pose (`rigAt`) asked for at that: posed at the way it was turning to, a carry or a wave set by facing went round in one
  * frame while the body was still drawn the old way.
  */
-function settle(id: string, p: FigurePose, rigAt: (facing: number, left: boolean, kept: Kept) => Rig, now: number): { rig: Rig; facing: number; changing: boolean } {
+function settle(id: string, p: FigurePose, rigFor: (q: FigurePose, facing: number, left: boolean, kept: Kept) => Rig, now: number, lite = false): { rig: Rig | null; facing: number; changing: boolean } {
+  const rigAt = (f: number, left: boolean, kept: Kept): Rig => rigFor(p, f, left, kept);
   // One of the eight ways; or, sat in something, square along it however it is turned (`FigurePose.seat`).
   const goal = (((p.seat ? p.facing : Math.round(p.facing)) % 8) + 8) % 8;
   let h = held.get(id);
+  /*
+   * Held steady, and nothing asked that would change that: no pose worked out (`lite`), the caller asking for it only
+   * when a picture of it is to be made. Everything this keeps time by is at rest -- the turn, the head's lead, the
+   * weapon's side and facing, the mallet hand, a wave -- so a frame gone by without it changes nothing it would have.
+   */
+  if (lite && h && h.steady && now - h.seen <= 0.5 && now >= h.seen && goal === h.goal && h.facing === goal && h.lead === 0
+    && !p.emote && !p.cast && h.wave === undefined && h.left === lefty(goal) && (!p.working || h.far === 0)
+    && h.side === (overLeft(goal) ? 0 : 1) && (h.blade === undefined || h.blade === h.facing)
+    && (p.gear?.weapon?.id ?? '') === (h.arm ?? '') && (doing(p) !== 'walk' || h.gait === Math.max(0, Math.min(1, p.gait ?? 0)))
+    && doingAt(p, h.left, h.wave) === h.doing) {
+    h.seen = now;
+    h.liteSince ??= now;
+    h.litePose = p;
+    return { rig: null, facing: h.facing, changing: false };
+  }
+  // Out of being held steady: the feet planted afresh from the pose, and the pose it was in worked out, for a blend from it.
+  if (h && h.liteSince !== undefined) {
+    h.feet = h.hips = undefined;
+    if (h.litePose) h.rig = rigFor(h.litePose, h.facing, h.left, { side: h.side, farLeft: h.left });
+    h.liteSince = h.litePose = undefined;
+  }
   // A body not drawn for a while -- off screen, or just arrived -- starts where it is.
   if (!h || now - h.seen > 0.5) {
     const left = lefty(goal), side = overLeft(goal) ? 0 : 1, wave = p.emote === 'wave' ? waveArm(goal, busyOf(p, goal, side)) : undefined;
@@ -5470,6 +5501,8 @@ function settle(id: string, p: FigurePose, rigAt: (facing: number, left: boolean
     bladeTurning = Math.abs(d) > most;
   }
   if (h.blade !== h.facing) rig.bladeFacing = h.blade;
+  h.steady = !(changing || busy || bladeTurning) && x >= 1 && !h.stowPole;
+  h.arm = p.gear?.weapon?.id ?? '';
   return { rig, facing: h.facing, changing: changing || busy || bladeTurning };
 }
 
@@ -11664,10 +11697,14 @@ export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number
   // Cut coarser at the sizes the island is played at: under one and a half, a lock of hair is a pixel or two.
   const kit = kitFor(look, zoom < 1.5 ? 0.5 : 1);
   const now = performance.now() / 1000;
+  // A body held steady is posed only when a picture of it is to be made (`settle`'s `lite`): `rr` works the pose out then.
+  const rigFor = (q: FigurePose, f: number, left?: boolean, kept?: Kept): Rig => rigOf({ ...q, facing: f }, kit.fr, left, kept);
+  const lite = !!pose.id && !still && opts.ink === undefined;
   const settled = pose.id && !still
-    ? settle(pose.id, pose, (f, left, kept) => rigOf({ ...pose, facing: f }, kit.fr, left, kept), now)
+    ? settle(pose.id, pose, rigFor, now, lite)
     : { rig: rigOf(pose, kit.fr), facing: (((pose.seat ? pose.facing : Math.round(pose.facing)) % 8) + 8) % 8, changing: false };
-  const { rig: r } = settled;
+  let posed = settled.rig;
+  const rr = (): Rig => (posed ??= settle(pose.id as string, pose, rigFor, now, false).rig as Rig);
   // Turning while the bodies are over their budget (`bodiesBehind`): in whole eighths, a picture each, rather than one a frame.
   const facing = settled.changing && pose.id && !pose.seat && !Number.isInteger(settled.facing) && bodiesBehind() ? Math.round(settled.facing) % 8 : settled.facing;
   // A cast moves every frame it lasts, so it is drawn every frame, as a blend or a turn is, and never from a stride's pictures.
@@ -11675,11 +11712,11 @@ export function drawFigure(ctx: CanvasRenderingContext2D, sx: number, sy: number
   // Most of a pixel however far out, and never more than three and a half however far in.
   const ink = opts.ink !== undefined ? opts.ink / zoom : Math.max(0.9 / zoom, 0.7);
   if (pose.id && opts.ink === undefined) {
-    drawStill(ctx, sx, sy, zoom, pose, kit, r, facing, changing, ink, now, still);
+    drawStill(ctx, sx, sy, zoom, pose, kit, rr, facing, changing, ink, now, still);
     return;
   }
   figureStats.redraws++;
-  drawLive(ctx, sx, sy, zoom, pose, kit, r, facing, ink, now);
+  drawLive(ctx, sx, sy, zoom, pose, kit, rr(), facing, ink, now);
 }
 
 /* ---- what a driver holds, and the water round a swimmer ------------------------ */
@@ -12709,8 +12746,8 @@ const SMALL = 120, NEAR = 10, FAR = 20, MIN_RATE = 6;
 export const BODY_RATES = { work: STILL_RATE.work, small: SMALL, near: NEAR, far: FAR, least: MIN_RATE };
 /** Where your own body was last put down, in device pixels of the canvas it went on. */
 const mine = { x: 0, y: 0, canvas: null as unknown };
-function rateShare(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, dev: number, id: string): number {
-  const t = ctx.getTransform(), x = t.a * sx + t.c * sy + t.e, y = t.b * sx + t.d * sy + t.f;
+function rateShare(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, dev: number, id: string, m?: DOMMatrix): number {
+  const t = m ?? ctx.getTransform(), x = t.a * sx + t.c * sy + t.e, y = t.b * sx + t.d * sy + t.f;
   if (id === 'player') {
     mine.x = x;
     mine.y = y;
@@ -12798,7 +12835,7 @@ export function figurePicture(id: string): { ctx: CanvasRenderingContext2D; canv
   return s?.pic.live ? { ...s.put, canvas: s.pic.src, sx: s.pic.x, sy: s.pic.y, sw: s.pic.w, sh: s.pic.h, key: s.pic, ver: s.pic.ver } : null;
 }
 
-function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean, ink: number, now: number, still = false): void {
+function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, rr: () => Rig, facing: number, changing: boolean, ink: number, now: number, still = false): void {
   const id = pose.id as string;
   const t = ctx.getTransform();
   /*
@@ -12824,8 +12861,8 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
     lately.since = now;
   }
   lately.ids.add(id);
-  if (idleLoop(ctx, sx, sy, zoom, pose, kit, r, facing, changing, ink, now, key, dev, id)) return;
-  if (clipLoop(ctx, sx, sy, zoom, pose, kit, r, facing, changing, ink, now, key, dev, id)) return;
+  if (idleLoop(ctx, sx, sy, zoom, pose, kit, rr, facing, changing, ink, now, key, dev, id)) return;
+  if (clipLoop(ctx, sx, sy, zoom, pose, kit, rr, facing, changing, ink, now, key, dev, id)) return;
   let st = stills.get(id);
   if (!st) {
     st = { pic: null, key: '', at: 0, seen: now, dev };
@@ -12841,7 +12878,7 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   st.dev = dev;
   st.seen = now;
   // Something rare on them is drawn often enough for its glint to cross it smoothly.
-  const rate = Math.max(MIN_RATE, rateShare(ctx, sx, sy, zoom, dev, id)
+  const rate = Math.max(MIN_RATE, rateShare(ctx, sx, sy, zoom, dev, id, t)
     * Math.min(Math.max(pose.emote ? 30 : STILL_RATE[doing(pose)] ?? 30, gearShines(pose.gear) ? SHINE_RATE : 0), lately.count > CROWD ? CROWD_RATE : Infinity));
   const sized = `${zoom.toFixed(3)}|${dev}`;
   /*
@@ -12858,10 +12895,10 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
    * a frame's share, drawn again whole later); then one put down stretched from another size (not while the zoom is still
    * moving: none is made for a size gone next frame); then those due, the most overdue first.
    */
-  if (fresh) placeholder(ctx, sx, sy, id, pose, kit, r, facing, ink, now, zoom, dev);
+  if (fresh) placeholder(ctx, sx, sy, id, pose, kit, rr, facing, ink, now, zoom, dev);
   else if ((resized && zoomSettled()) || (!resized && due)) {
     const s = st;
-    ask(bodyJob(`s|${id}`, id === 'player' ? 0 : resized ? 2 : 3, resized ? -fromMiddle(ctx, sx, sy) : (now - s.at) * rate, pose, kit, r, facing, ink, now, zoom, dev, (pic) => {
+    ask(bodyJob(`s|${id}`, id === 'player' ? 0 : resized ? 2 : 3, resized ? -fromMiddle(ctx, sx, sy, t) : (now - s.at) * rate, pose, kit, rr(), facing, ink, now, zoom, dev, (pic) => {
       picDrop(s.pic);
       s.pic = pic;
       s.key = key;
@@ -12875,8 +12912,8 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
 }
 
 /** How far body at (sx, sy) on `ctx` is from the middle of the canvas, in device pixels. */
-function fromMiddle(ctx: CanvasRenderingContext2D, sx: number, sy: number): number {
-  const t = ctx.getTransform();
+function fromMiddle(ctx: CanvasRenderingContext2D, sx: number, sy: number, m?: DOMMatrix): number {
+  const t = m ?? ctx.getTransform();
   return Math.hypot(t.a * sx + t.c * sy + t.e - ctx.canvas.width / 2, t.b * sx + t.d * sy + t.f - ctx.canvas.height / 2);
 }
 
@@ -12885,10 +12922,10 @@ function fromMiddle(ctx: CanvasRenderingContext2D, sx: number, sy: number): numb
  * size where a whole one would cost more than the budget's share of a frame (`bodyCost`), and drawn again whole later as
  * one put down at another size.
  */
-function placeholder(ctx: CanvasRenderingContext2D, sx: number, sy: number, id: string, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, now: number, zoom: number, dev: number): void {
+function placeholder(ctx: CanvasRenderingContext2D, sx: number, sy: number, id: string, pose: FigurePose, kit: Kit, rr: () => Rig, facing: number, ink: number, now: number, zoom: number, dev: number): void {
   const b = boxAt(zoom * dev);
   const d = id !== 'player' && bodyCost(b.w, b.h, pose.swimming ? 2 : 1) > BODY_BUDGET_MS ? dev / 2 : dev;
-  ask(bodyJob(`s|${id}`, id === 'player' ? 0 : 1, -fromMiddle(ctx, sx, sy), pose, kit, r, facing, ink, now, zoom, d, (pic) => {
+  ask(bodyJob(`s|${id}`, id === 'player' ? 0 : 1, -fromMiddle(ctx, sx, sy), pose, kit, rr(), facing, ink, now, zoom, d, (pic) => {
     let st = stills.get(id);
     if (!st) stills.set(id, (st = { pic: null, key: '', at: now, seen: now, dev }));
     picDrop(st.pic);
@@ -12909,7 +12946,7 @@ const NOWHERE = { drawImage: () => {} } as unknown as CanvasRenderingContext2D;
  * meanwhile a frame beside it in the loop, else what the body last had, else a picture of its own (`placeholder`).
  */
 function fromLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, id: string, now: number, kept: KeptPics, base: string, i: number, count: number,
-  make: (key: string) => Job | null, pose: FigurePose, kit: Kit, r: Rig, facing: number, ink: number, dev: number): boolean {
+  make: (key: string) => Job | null, pose: FigurePose, kit: Kit, rr: () => Rig, facing: number, ink: number, dev: number): boolean {
   const key = `${base}|${i}`;
   const f = kept.get(key);
   if (f) {
@@ -12930,7 +12967,7 @@ function fromLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
       return true;
     }
   }
-  if (!putShown(ctx, id, sx, sy, zoom, now)) placeholder(ctx, sx, sy, id, pose, kit, r, facing, ink, now, zoom, dev);
+  if (!putShown(ctx, id, sx, sy, zoom, now)) placeholder(ctx, sx, sy, id, pose, kit, rr, facing, ink, now, zoom, dev);
   return true;
 }
 
@@ -13056,7 +13093,7 @@ function loopShape(id: string, now: number, count: number, w: number, h: number)
 const IDLE_LOOP = 16;
 
 /** Put down a body standing about from its loop's pictures, asking for the one it needs if it is new; false when it is not to be. */
-function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean,
+function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, rr: () => Rig, facing: number, changing: boolean,
   ink: number, now: number, still: string, dev: number, id: string): boolean {
   if (changing || doing(pose) !== 'idle' || pose.emote || pose.seat || !Number.isInteger(facing) || gearShines(pose.gear) || pose.down !== undefined || pose.climb || pose.flinch) return false;
   const b = boxAt(zoom * dev);
@@ -13067,7 +13104,7 @@ function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   const t = (((pose.phase / 6) % IDLE_LOOP) + IDLE_LOOP) % IDLE_LOOP;
   const i = Math.min(n - 1, Math.floor((t / IDLE_LOOP) * n));
   return fromLoop(ctx, sx, sy, zoom, id, now, idles, `${still}|idle|${n}|${scale}`, i, n,
-    (key) => bodyJob(key, id === 'player' ? 0 : 3, 0, pose, kit, r, facing, ink, now, zoom, dev * scale, (pic) => idles.set(key, pic)), pose, kit, r, facing, ink, dev);
+    (key) => bodyJob(key, id === 'player' ? 0 : 3, 0, pose, kit, rr(), facing, ink, now, zoom, dev * scale, (pic) => idles.set(key, pic)), pose, kit, rr, facing, ink, dev);
 }
 
 /*
@@ -13085,7 +13122,7 @@ function idleLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
  * a still. Kept at fewer pictures or smaller ones as the stand of it is
  * (`loopShape`).
  */
-function clipLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, r: Rig, facing: number, changing: boolean,
+function clipLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, kit: Kit, rr: () => Rig, facing: number, changing: boolean,
   ink: number, now: number, still: string, dev: number, id: string): boolean {
   if (changing || !pose.working || pose.moving || pose.swimming || pose.driving || pose.seat || pose.emote || pose.cast || pose.block !== undefined || pose.flinch
     || !Number.isInteger(facing) || gearShines(pose.gear) || !SCULPT.clipNow) return false;
@@ -13099,7 +13136,7 @@ function clipLoop(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: n
   // What is held is drawn too: the tool, in its metal.
   const held = pose.tool ? `${pose.tool.id}.${pose.tool.material ?? ''}.${pose.tool.enchanted ? 1 : 0}` : '';
   return fromLoop(ctx, sx, sy, zoom, id, now, loops, `${still}|clip|${c.name}|${held}|${n}|${scale}`, i, n,
-    (key) => bodyJob(key, id === 'player' ? 0 : 3, 0, pose, kit, r, facing, ink, now, zoom, dev * scale, (pic) => loops.set(key, pic)), pose, kit, r, facing, ink, dev);
+    (key) => bodyJob(key, id === 'player' ? 0 : 3, 0, pose, kit, rr(), facing, ink, now, zoom, dev * scale, (pic) => loops.set(key, pic)), pose, kit, rr, facing, ink, dev);
 }
 
 /** Put down a walking body from its stride's pictures, asking for the picture it needs if it is new; false when it is not walking steadily. */
@@ -13115,7 +13152,7 @@ function stride(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: num
     // The middle of its sixteenth, at its step of gait.
     const at: FigurePose = { ...pose, phase: (n + (i + 0.5) / WALK_FRAMES) * TAU, gait };
     return bodyJob(key, id === 'player' ? 0 : 3, 0, at, kit, rigOf(at, kit.fr), facing, ink, 0, zoom, dev, (pic) => strides.set(key, pic));
-  }, pose, kit, rigOf(pose, kit.fr), facing, ink, dev);
+  }, pose, kit, () => rigOf(pose, kit.fr), facing, ink, dev);
 }
 
 /*

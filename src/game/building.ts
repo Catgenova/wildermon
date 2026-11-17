@@ -868,7 +868,7 @@ export interface NoPlan extends Border {
 
 export const tileKey = (x: number, y: number): string => `${x},${y}`;
 /** Tiles `buildingAt` and `jettyAt` keep their answers for before starting again. */
-const MEMO_MOST = 65_536;
+const MEMO_MOST = 262_144;
 const wallKey = (level: number, b: Border): string => `${level}:${b.dir}:${b.x},${b.y}`;
 const floorKey = (level: number, x: number, y: number): string => `${level}:${x},${y}`;
 const columnKey = (level: number, x: number, y: number): string => `${level}:${x},${y}`;
@@ -976,12 +976,20 @@ export class Buildings {
    */
   private readonly atMemo = new Map<number, Building | null>();
   private readonly jettyMemo = new Map<number, Building | null>();
+  /** And `floor`, `wallOnBorder` and `column` the same way, by storey, side and tile. */
+  private readonly floorMemo = new Map<number, FloorTile | null>();
+  private readonly wallMemo = new Map<number, Wall | null>();
+  private readonly columnMemo = new Map<number, Column | null>();
   private memoRev = -1;
   private memoKey(x: number, y: number): number {
-    if (this.memoRev !== this.revision || this.atMemo.size + this.jettyMemo.size > MEMO_MOST) {
+    if (this.memoRev !== this.revision
+      || this.atMemo.size + this.jettyMemo.size + this.floorMemo.size + this.wallMemo.size + this.columnMemo.size > MEMO_MOST) {
       this.memoRev = this.revision;
       this.atMemo.clear();
       this.jettyMemo.clear();
+      this.floorMemo.clear();
+      this.wallMemo.clear();
+      this.columnMemo.clear();
     }
     return (x + 32768) * 65536 + (y + 32768);
   }
@@ -1086,7 +1094,12 @@ export class Buildings {
   }
 
   wallOnBorder(level: number, b: Border): Wall | undefined {
-    return this.walls.get(wallKey(level, b));
+    const n = this.memoKey(b.x, b.y) + ((level + 8) * 2 + (b.dir === 'v' ? 1 : 0)) * 4294967296;
+    const had = this.wallMemo.get(n);
+    if (had !== undefined) return had ?? undefined;
+    const w = this.walls.get(wallKey(level, b));
+    this.wallMemo.set(n, w ?? null);
+    return w;
   }
 
   /**
@@ -1180,7 +1193,12 @@ export class Buildings {
   }
 
   floor(level: number, x: number, y: number): FloorTile | undefined {
-    return this.floors.get(floorKey(level, x, y));
+    const n = this.memoKey(x, y) + (level + 8) * 4294967296;
+    const had = this.floorMemo.get(n);
+    if (had !== undefined) return had ?? undefined;
+    const f = this.floors.get(floorKey(level, x, y));
+    this.floorMemo.set(n, f ?? null);
+    return f;
   }
 
   setFloor(b: Building, level: number, x: number, y: number, material: string, kind: FloorKind = 'floor', facing?: Side, hand?: StairHand): FloorTile {
@@ -1785,7 +1803,12 @@ export class Buildings {
   }
 
   column(level: number, x: number, y: number): Column | undefined {
-    return this.columns.get(columnKey(level, x, y));
+    const n = this.memoKey(x, y) + (level + 8) * 4294967296;
+    const had = this.columnMemo.get(n);
+    if (had !== undefined) return had ?? undefined;
+    const c = this.columns.get(columnKey(level, x, y));
+    this.columnMemo.set(n, c ?? null);
+    return c;
   }
 
   setColumn(b: Building, level: number, x: number, y: number, material: string): Column {

@@ -60,6 +60,8 @@ const LEADER_FROM = 5;
 const MAX_STEPS = 400;
 
 const PLATE = 'rgba(18, 16, 14, 0.74)';
+/** Plate pictures kept (`NameLabels.plate`) before all are let go and made afresh. */
+const PLATES_MOST = 400;
 const RIM = 'rgba(255, 255, 255, 0.16)';
 /** A moved plate's line to its head: dark, in a pale edge, so it shows on snow and on grass at night alike. */
 const LEADER = 'rgba(18, 16, 14, 0.75)';
@@ -158,6 +160,67 @@ export class NameLabels {
     return false;
   }
 
+  /** Plate pictures by everything drawn on them and the device pixels a unit (`plate`); let go all at once past `PLATES_MOST`. */
+  private plates = new Map<string, HTMLCanvasElement>();
+
+  /** A plate's picture at `dpr` device pixels a unit, made the first time it is asked for as it reads now. */
+  private plate(ctx: CanvasRenderingContext2D, lab: NameLabel, dpr: number, w: number, h: number, padY: number, nameH: number, noteH: number,
+    icon: number, iconsW: (n: number) => number): HTMLCanvasElement {
+    const rim = lab.ink === 'hostile' ? inkOr('bad', '#e2553c', 0.75) : RIM;
+    const key = `${dpr}|${w}|${h}|${this.font}|${this.noteFont}|${inkFor(lab.ink)}|${rim}|${lab.icons?.join(',') ?? ''}|${lab.note ?? ''}|${lab.text}`;
+    let cv = this.plates.get(key);
+    if (cv) return cv;
+    if (this.plates.size >= PLATES_MOST) this.plates.clear();
+    cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.ceil(w * dpr));
+    cv.height = Math.max(1, Math.ceil(h * dpr));
+    const g = cv.getContext('2d') as CanvasRenderingContext2D;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.drawPlate(g, lab, 0, 0, w, h, padY, nameH, noteH, icon, iconsW);
+    this.plates.set(key, cv);
+    return cv;
+  }
+
+  /** A plate and its writing, its top left at (l, t). */
+  private drawPlate(ctx: CanvasRenderingContext2D, lab: NameLabel, l: number, t: number, w: number, h: number, padY: number, nameH: number, noteH: number,
+    icon: number, iconsW: (n: number) => number): void {
+    const s = this.scale;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.beginPath();
+    ctx.roundRect(l + 0.5, t + 0.5, w - 1, h - 1, RADIUS * s);
+    ctx.lineWidth = 1;
+    ctx.fillStyle = PLATE;
+    ctx.fill();
+    ctx.strokeStyle = lab.ink === 'hostile' ? inkOr('bad', '#e2553c', 0.75) : RIM;
+    ctx.stroke();
+    const cx = l + w / 2;
+    const ink = inkFor(lab.ink);
+    if (lab.note) {
+      ctx.font = this.noteFont;
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = ink;
+      ctx.fillText(lab.note, cx, t + padY + noteH / 2 + 0.5);
+      ctx.globalAlpha = 1;
+    }
+    ctx.font = this.font;
+    ctx.fillStyle = ink;
+    const mid = t + h - padY - nameH / 2;
+    // The icons first, the name after them: the two together centred on the plate.
+    const n = lab.icons?.length ?? 0;
+    if (n) {
+      const lead = iconsW(n);
+      let x = cx - (lead + this.width(ctx, this.font, lab.text)) / 2;
+      for (const id of lab.icons!) {
+        drawEmblem(ctx, id, badgeShape(id), x, mid - icon / 2, icon);
+        x += icon + ICON_GAP * s;
+      }
+      ctx.fillText(lab.text, cx + lead / 2, mid + 0.5);
+    } else {
+      ctx.fillText(lab.text, cx, mid + 0.5);
+    }
+  }
+
   /** Lay out every name handed in this frame and draw them, over everything already on `ctx`. */
   flush(ctx: CanvasRenderingContext2D): void {
     const list = this.list;
@@ -224,43 +287,18 @@ export class NameLabels {
       ctx.fillStyle = LEADER;
       ctx.fill(dots);
     }
-    // Then the plates and their writing.
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // Then the plates and their writing: each from a picture of it (`plate`), made once while it reads the same.
+    const m = ctx.getTransform();
+    const square = m.b === 0 && m.c === 0 && m.a === m.d && m.a > 0;
     for (let i = 0; i < list.length; i++) {
       const p = at[i];
       const lab = list[i];
-      ctx.beginPath();
-      ctx.roundRect(p.l + 0.5, p.t + 0.5, p.w - 1, p.h - 1, RADIUS * s);
-      ctx.fillStyle = PLATE;
-      ctx.fill();
-      ctx.strokeStyle = lab.ink === 'hostile' ? inkOr('bad', '#e2553c', 0.75) : RIM;
-      ctx.stroke();
-      const cx = p.l + p.w / 2;
-      const ink = inkFor(lab.ink);
-      if (lab.note) {
-        ctx.font = this.noteFont;
-        ctx.globalAlpha = 0.72;
-        ctx.fillStyle = ink;
-        ctx.fillText(lab.note, cx, p.t + padY + noteH / 2 + 0.5);
-        ctx.globalAlpha = 1;
+      if (!square) {
+        this.drawPlate(ctx, lab, p.l, p.t, p.w, p.h, padY, nameH, noteH, icon, iconsW);
+        continue;
       }
-      ctx.font = this.font;
-      ctx.fillStyle = ink;
-      const mid = p.t + p.h - padY - nameH / 2;
-      // The icons first, the name after them: the two together centred on the plate.
-      const n = lab.icons?.length ?? 0;
-      if (n) {
-        const lead = iconsW(n);
-        let x = cx - (lead + this.width(ctx, this.font, lab.text)) / 2;
-        for (const id of lab.icons!) {
-          drawEmblem(ctx, id, badgeShape(id), x, mid - icon / 2, icon);
-          x += icon + ICON_GAP * s;
-        }
-        ctx.fillText(lab.text, cx + lead / 2, mid + 0.5);
-      } else {
-        ctx.fillText(lab.text, cx, mid + 0.5);
-      }
+      const cv = this.plate(ctx, lab, m.a, p.w, p.h, padY, nameH, noteH, icon, iconsW);
+      ctx.drawImage(cv, p.l, p.t, cv.width / m.a, cv.height / m.a);
     }
     ctx.restore();
     for (let i = 0; i < list.length; i++) list[i].over?.(at[i].l + at[i].w / 2, at[i].t);

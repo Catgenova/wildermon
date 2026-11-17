@@ -1107,6 +1107,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!b) return;
       b.levels += 1;
       b.workLevel = b.levels - 1;
+      g.buildings.changed();
       glassResync(g);
       g.logMsg(`Planned: ${b.name} storey ${b.levels}. Next: floor tiles, then walls.`, 'event');
       g.events.emit('world', t.x, t.y);
@@ -1340,6 +1341,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       if (!b || b.levels <= 1) return;
       b.levels -= 1;
       b.workLevel = b.levels - 1;
+      g.buildings.changed();
       // Its sides marked No plan go with it.
       g.buildings.dropNoPlans(b.id, b.levels);
       glassResync(g);

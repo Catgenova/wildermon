@@ -8922,6 +8922,8 @@ export class Renderer {
    * pixel into this one, and that half pixel is laid again by the tile that
    * covered it.
    */
+  /** `groundShade`'s picture keys, by storey and tile, with the heights they were made for. */
+  private readonly shadeKeys = new Map<number, [number, number, number, number, string]>();
   private groundShade(x: number, y: number, level: number, V: View): void {
     /*
      * From a picture of it (`baked`): the path and the clip cut to the tile,
@@ -8951,11 +8953,19 @@ export class Renderer {
     const h0 = deck ?? world.getHeight(x, y), h1 = deck ?? world.getHeight(x + 1, y);
     const h2 = deck ?? world.getHeight(x + 1, y + 1), h3 = deck ?? world.getHeight(x, y + 1);
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const [u, v, h] of [[0, 0, h0], [1, 0, h1], [1, 1, h2], [0, 1, h3]]) {
+    for (let k = 0; k < 4; k++) {
+      const u = k === 1 || k === 2 ? 1 : 0, v = k >= 2 ? 1 : 0, h = k === 0 ? h0 : k === 1 ? h1 : k === 2 ? h2 : h3;
       const sx = cam.worldToScreenX(x + u, y + v), sy = cam.worldToScreenY(x + u, y + v, h + rise);
       x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
     }
-    this.baked(`s|${level}|${x},${y}|${h0},${h1},${h2},${h3}`, cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h0 + rise), [x0 - 2, y0 - 2, x1 + 2, y1 + 2],
+    // Its key made once while the ground under it holds (`shadeKeys`), not a string a tile a frame.
+    let kept = this.shadeKeys.get(at);
+    if (!kept || kept[0] !== h0 || kept[1] !== h1 || kept[2] !== h2 || kept[3] !== h3) {
+      kept = [h0, h1, h2, h3, `s|${level}|${x},${y}|${h0},${h1},${h2},${h3}`];
+      if (this.shadeKeys.size > 50_000) this.shadeKeys.clear();
+      this.shadeKeys.set(at, kept);
+    }
+    this.baked(kept[4], cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h0 + rise), [x0 - 2, y0 - 2, x1 + 2, y1 + 2],
       () => this.groundShadeNow(x, y, level, V), this.structs.version(x, y, x, y), SHADE_BAKE);
   }
 
@@ -9901,18 +9911,26 @@ export class Renderer {
 
   /** Storeys of any building touching a tile's borders, for tiles just outside a footprint. */
   private maxLevelsAround(x: number, y: number): number {
+    // Kept a tile while the buildings hold (`levelsAround`): asked for every tile near a building, every frame.
+    const bld = this.game.buildings;
+    if (this.levelsRev !== bld.revision || this.levelsAround.size > 50_000) {
+      this.levelsRev = bld.revision;
+      this.levelsAround.clear();
+    }
+    const at = (x + 32768) * 65536 + (y + 32768);
+    const had = this.levelsAround.get(at);
+    if (had !== undefined) return had;
     let m = 0;
-    for (const [dx, dy] of [
-      [0, -1],
-      [-1, 0],
-      [1, 0],
-      [0, 1],
-    ]) {
-      const b = this.game.buildings.buildingAt(x + dx, y + dy) ?? this.game.buildings.jettyAt(x + dx, y + dy);
+    for (let k = 0; k < 4; k++) {
+      const dx = k === 1 ? -1 : k === 2 ? 1 : 0, dy = k === 0 ? -1 : k === 3 ? 1 : 0;
+      const b = bld.buildingAt(x + dx, y + dy) ?? bld.jettyAt(x + dx, y + dy);
       if (b && b.levels > m) m = b.levels;
     }
+    this.levelsAround.set(at, m);
     return m;
   }
+  private readonly levelsAround = new Map<number, number>();
+  private levelsRev = -1;
 
   /**
    * A slab poured over a tile, or the shuttering waiting for it.
@@ -10155,6 +10173,8 @@ export class Renderer {
    * the camera can see its edge: at the edge of the storey, and round the
    * well a flight comes up through. A ladder's hatch cuts its own.
    */
+  /** `drawFloor`'s picture keys, by floor, with the revision, ground and tile they were made at. */
+  private readonly floorKeys = new WeakMap<FloorTile, [number, number, number, number, string]>();
   private drawFloor(floor: FloorTile, x: number, y: number, base: number, alpha: number): void {
     /*
      * Seen through: as it always was. Otherwise a picture (`baked`), after dark
@@ -10169,13 +10189,19 @@ export class Renderer {
     const cam = this.camera;
     const h = base + floor.level * WALL_HEIGHT;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (const [u, v] of [[-0.4, -0.4], [1.4, -0.4], [1.4, 1.4], [-0.4, 1.4]]) {
-      for (const z of [h - WALL_HEIGHT * 0.4, h + WALL_HEIGHT * 0.25]) {
-        const sx = cam.worldToScreenX(x + u, y + v), sy = cam.worldToScreenY(x + u, y + v, z);
-        x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
-      }
+    for (let k = 0; k < 8; k++) {
+      const c = k >> 1, u = c === 1 || c === 2 ? 1.4 : -0.4, v = c >= 2 ? 1.4 : -0.4, z = k & 1 ? h + WALL_HEIGHT * 0.25 : h - WALL_HEIGHT * 0.4;
+      const sx = cam.worldToScreenX(x + u, y + v), sy = cam.worldToScreenY(x + u, y + v, z);
+      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
     }
-    const key = `f|${floor.level}|${x},${y}|${floor.material}|${floor.kind ?? ''}|${floor.dye ?? ''}|${isDone(floor) ? 1 : 0}|${base}`;
+    // Its key made once while the buildings and its ground hold (`floorKeys`): a floor is changed in place only with the revision.
+    const rev = this.game.buildings.revision;
+    let fk = this.floorKeys.get(floor);
+    if (!fk || fk[0] !== rev || fk[1] !== base || fk[2] !== x || fk[3] !== y) {
+      fk = [rev, base, x, y, `f|${floor.level}|${x},${y}|${floor.material}|${floor.kind ?? ''}|${floor.dye ?? ''}|${isDone(floor) ? 1 : 0}|${base}`];
+      this.floorKeys.set(floor, fk);
+    }
+    const key = fk[4];
     this.baked(key, cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h), [x0, y0, x1, y1], () => this.drawFloorNow(floor, x, y, base, alpha),
       this.structs.version(x, y, x, y), FLOOR_BAKE);
   }

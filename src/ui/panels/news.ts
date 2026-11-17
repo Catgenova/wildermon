@@ -434,6 +434,16 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The sculpted models a file each (vite.config.ts `sculptAssets`); bodies posed only for a picture; name plates kept as pictures.
+  {
+    n: 675,
+    day: '2026-11-17',
+    lines: () => [
+      'Changed: body and gear models: 192 files, each downloaded again only when it changes (was: one 7.2 MB download after every update to any of them).',
+      'Changed: a body standing, walking or working steadily is posed only when its picture is redrawn (was: every frame).',
+      'Changed: name plates drawn from a kept picture of each (was: plate and text drawn afresh every frame).',
+    ],
+  },
   // Render scale (src/engine/autoscale.ts); the ground at night under a rune's light, and beside buildings, laid from its pictures (`layRun`, `StructureWatch.onAny`).
   {
     n: 674,

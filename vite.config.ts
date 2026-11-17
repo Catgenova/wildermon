@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -63,6 +63,48 @@ function trees3d(): string {
  */
 const deployed = deploy();
 
+/**
+ * The sculpted models (src/sculpt/assets, 191 of them, 25 MB) as files of their own rather than as code in the sculpted
+ * bodies' chunk: that chunk was 24.5 MB, 7.2 MB gzipped, and changed with any change to a model or to the code beside
+ * them -- 57 times in a week -- each time fetched whole again by every browser. Each model is now
+ * `assets/sculpt/<name>.json`, asked for at `?v=` its own hash and checked against it (`integrity`), so a browser fetches
+ * again only the models that changed. A build only: the dev server and the tests import the JSON as ever. Fetched as the
+ * chunk is first evaluated (its top-level `await`), so nothing in it sees a model before it is in.
+ */
+function sculptAssets(): Plugin {
+  const IMPORT = /^import (\w+) from '\.\/assets\/([\w-]+)\.json';\n/gm;
+  return {
+    name: 'sculpt-assets',
+    apply: 'build',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!/[\\/]src[\\/]sculpt[\\/][\w-]+\.ts$/.test(id) || !code.includes("from './assets/")) return null;
+      const found: Array<[string, string]> = [];
+      let first = -1;
+      const rest = code.replace(IMPORT, (line, name: string, file: string, at: number) => {
+        if (first < 0) first = at;
+        found.push([name, file]);
+        return '';
+      });
+      if (!found.length) return null;
+      const asks = found.map(([, file]) => {
+        const text = JSON.stringify(JSON.parse(readFileSync(resolve(dirname(id), 'assets', `${file}.json`), 'utf8')));
+        this.emitFile({ type: 'asset', fileName: `assets/sculpt/${file}.json`, source: text });
+        const v = createHash('sha256').update(text).digest('hex').slice(0, 8);
+        const sri = `sha384-${createHash('sha384').update(text).digest('base64')}`;
+        return `__sculptAsset(${JSON.stringify(file)}, ${JSON.stringify(v)}, ${JSON.stringify(sri)})`;
+      });
+      // The chunk's own address through a name of its own: \`new URL(..., import.meta.url)\` is Vite's to rewrite as an asset.
+      const load = `const __sculptBase = import.meta.url;
+const __sculptAsset = (f, v, i) => fetch(new URL('./sculpt/' + f + '.json?v=' + v, __sculptBase), { integrity: i })
+  .then((r) => { if (!r.ok) throw new Error(\`model \${f}: \${r.status}\`); return r.json(); });
+const [${found.map(([name]) => name).join(', ')}] = await Promise.all([${asks.join(', ')}]);
+`;
+      return { code: rest.slice(0, first) + load + rest.slice(first), map: null };
+    },
+  };
+}
+
 export default defineConfig({
   root: 'src',
   base: './',
@@ -78,6 +120,8 @@ export default defineConfig({
       this.emitFile({ type: 'asset', fileName: 'assets/version.json', source: `${JSON.stringify({ deploy: deployed ?? null })}\n` });
     },
   },
+  // The sculpted models, each a file of its own (`sculptAssets`).
+  sculptAssets(),
   // Property names renamed, the wire code in src/net obfuscated, and the build's hash (scripts/harden.mjs).
   harden()],
   server: { port: 5173, host: true },
