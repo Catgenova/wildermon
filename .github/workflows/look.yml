@@ -631,6 +631,38 @@ jobs:
               end loop;
               raise exception 'READS%', v_out;
             end \$\$"
+          ask "each awake player's ground read: its parts' sizes, whole and since, and which placed rows a since read sends again" "set statement_timeout = '15min'; do \$\$
+            declare p player; r jsonb; r2 jsonb; v_out text := ''; v_at text; k text;
+            begin
+              for p in select * from player where world_id::text like 'f3a88670%' and not away and seen_at > now() - interval '10 minutes' order by name loop
+                begin
+                  perform set_config('request.jwt.claims', json_build_object('sub', p.uid, 'role', 'authenticated')::text, true);
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; r := rpc_ground(p.world_id, 40, true, null);
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; r2 := rpc_ground(p.world_id, 40, false, r->>'at');
+                  v_out := v_out || E'\n' || p.name || ' whole:';
+                  for k in select key from jsonb_each(r) order by length(value::text) desc limit 12 loop
+                    v_out := v_out || format(' %s %s', k, length((r->k)::text));
+                  end loop;
+                  for k in select key from jsonb_each(r->'buildings') order by length(value::text) desc loop
+                    v_out := v_out || format(' b.%s %s', k, length((r->'buildings'->k)::text));
+                  end loop;
+                  v_out := v_out || E'\n' || p.name || ' since:';
+                  for k in select key from jsonb_each(r2) order by length(value::text) desc loop
+                    v_out := v_out || format(' %s %s', k, length((r2->k)::text));
+                  end loop;
+                  v_out := v_out || E'\n' || p.name || ' placed sent again: ' || coalesce((select string_agg(format('%s/%s x%s %s B', q.kind, q.sub, q.n, q.b), ', ')
+                    from (select e->>'kind' as kind, e->>'sub' as sub, count(*) as n, sum(length(e::text)) as b
+                            from jsonb_array_elements(r2->'placed') e group by 1, 2 order by 4 desc limit 10) q), '');
+                  v_out := v_out || E'\n' || p.name || ' biggest placed rows: ' || coalesce((select string_agg(format('%s %s things %s B', q.sub, q.id, q.t, q.b), ', ')
+                    from (select e->>'sub' as sub, e->>'id' as id, jsonb_array_length(coalesce(e->'things', '[]')) as t, length(e::text) as b
+                            from jsonb_array_elements(r->'placed') e order by length(e::text) desc limit 8) q), '');
+                  raise exception 'undo';
+                exception when others then
+                  if sqlerrm <> 'undo' then v_out := v_out || ' | ERR ' || left(sqlerrm, 100); end if;
+                end;
+              end loop;
+              raise exception 'SIZES%', v_out;
+            end \$\$"
           ask "the clock's rounds, last 15 minutes, by stage" "select count(*) as rounds, round(avg(ms)::numeric) as ms_avg, round(max(ms)::numeric) as ms_worst,
                  (select string_agg(k || ' ' || round(v::numeric, 1), ', ' order by v desc) from (select e.key as k, avg((e.value::text)::numeric) as v
                     from tick_time t2, jsonb_each(t2.stages) e where t2.at > now() - interval '15 minutes' group by 1) q) as stages
