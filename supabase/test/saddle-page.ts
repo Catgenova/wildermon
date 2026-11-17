@@ -13,6 +13,7 @@ import { Game, type IslandGround, type IslandPlaced } from '../../src/game/game'
 import type { IslandCreature } from '../../src/game/creatures';
 import type { PeerState } from '../../src/net/protocol';
 import { Renderer } from '../../src/render/renderer';
+import { NameLabels, type NameLabel } from '../../src/render/namelabels';
 import { FullscreenCanvas } from '../../src/engine/canvas';
 import { TileType } from '../../src/world/tiles';
 import { DAY_SECONDS } from '../../src/game/pace';
@@ -71,13 +72,13 @@ document.body.appendChild(canvasEl);
 const canvas = new FullscreenCanvas(canvasEl);
 const renderer = new Renderer(canvas, game);
 
-// Every time the name is written: once for every body drawn.
+// Every time the name is put over a head: once for every body drawn. Counted as it is handed to the names (`NameLabels.add`),
+// which write each plate once and put the picture down after (`NameLabels.plate`).
 let names = 0;
-const fill = CanvasRenderingContext2D.prototype.fillText;
-CanvasRenderingContext2D.prototype.fillText = function (this: CanvasRenderingContext2D, text: string, x: number, y: number, w?: number): void {
-  if (text === NAME) names++;
-  if (w === undefined) fill.call(this, text, x, y);
-  else fill.call(this, text, x, y, w);
+const add = NameLabels.prototype.add;
+NameLabels.prototype.add = function (this: NameLabels, label: NameLabel): void {
+  if (label.text === NAME) names++;
+  add.call(this, label);
 };
 
 /**
