@@ -601,7 +601,7 @@ jobs:
                 v_out := v_out || E'\n' || p.name;
                 begin
                   perform set_config('request.jwt.claims', json_build_object('sub', p.uid, 'role', 'authenticated')::text, true);
-                  update public.caller set paced = null, calls = 0 where uid = p.uid; t0 := clock_timestamp(); r := rpc_ground(p.world_id, 40, true, null);
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; t0 := clock_timestamp(); r := rpc_ground(p.world_id, 40, true, '');
                   v_at := r->>'at';
                   v_out := v_out || format(' | ground whole %s ms %s kB (placed %s, lying %s, crates %s)', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000),
                     length(r::text) / 1024, jsonb_array_length(r->'placed'), jsonb_array_length(r->'lying'), jsonb_array_length(coalesce(r->'crates', '[]')));
@@ -637,7 +637,7 @@ jobs:
               for p in select * from player where world_id::text like 'f3a88670%' and not away and seen_at > now() - interval '10 minutes' order by name loop
                 begin
                   perform set_config('request.jwt.claims', json_build_object('sub', p.uid, 'role', 'authenticated')::text, true);
-                  update public.caller set paced = null, calls = 0 where uid = p.uid; r := rpc_ground(p.world_id, 40, true, null);
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; r := rpc_ground(p.world_id, 40, true, '');
                   update public.caller set paced = null, calls = 0 where uid = p.uid; r2 := rpc_ground(p.world_id, 40, false, r->>'at');
                   v_out := v_out || E'\n' || p.name || ' whole:';
                   for k in select key from jsonb_each(r) order by length(value::text) desc limit 12 loop
@@ -650,10 +650,16 @@ jobs:
                   for k in select key from jsonb_each(r2) order by length(value::text) desc loop
                     v_out := v_out || format(' %s %s', k, length((r2->k)::text));
                   end loop;
+                  perform pg_sleep(1.2);
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; r2 := rpc_ground(p.world_id, 40, false, r2->>'at');
+                  v_out := v_out || E'\n' || p.name || ' since again, 1.2 s on:';
+                  for k in select key from jsonb_each(r2) order by length(value::text) desc loop
+                    v_out := v_out || format(' %s %s', k, length((r2->k)::text));
+                  end loop;
                   v_out := v_out || E'\n' || p.name || ' placed sent again: ' || coalesce((select string_agg(format('%s/%s x%s %s B', q.kind, q.sub, q.n, q.b), ', ')
                     from (select e->>'kind' as kind, e->>'sub' as sub, count(*) as n, sum(length(e::text)) as b
                             from jsonb_array_elements(r2->'placed') e group by 1, 2 order by 4 desc limit 10) q), '');
-                  v_out := v_out || E'\n' || p.name || ' biggest placed rows: ' || coalesce((select string_agg(format('%s %s things %s B', q.sub, q.id, q.t, q.b), ', ')
+                  v_out := v_out || E'\n' || p.name || ' biggest placed rows: ' || coalesce((select string_agg(format('%s #%s %s things %s B', q.sub, q.id, q.t, q.b), ', ')
                     from (select e->>'sub' as sub, e->>'id' as id, jsonb_array_length(coalesce(e->'things', '[]')) as t, length(e::text) as b
                             from jsonb_array_elements(r->'placed') e order by length(e::text) desc limit 8) q), '');
                   raise exception 'undo';
