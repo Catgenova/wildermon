@@ -21,6 +21,9 @@ on:
       workers_of:
         description: 'A player by name: their settlement workers idle on stairs, their work a storey up and the way to it (blank skips it)'
         default: ''
+      think_costs:
+        description: 'Anything: time one think of every kept wildermon, each rolled back (blank skips it)'
+        default: ''
 
 # Reads the repository and nothing else; the project is reached with the AI environment's secrets.
 permissions:
@@ -407,6 +410,50 @@ jobs:
           ask "their last 20 worker lines naming stairs" "select to_char(e.at, 'MM-DD HH24:MI:SS') as at, e.kind, left(e.text, 160) as text
             from event e join player p on p.world_id = e.world_id and p.uid = e.uid
            where $me and e.text ilike '%stairs%' order by e.n desc limit 20"
+
+      - name: What one think of each kept wildermon costs
+        # Asked about: "Players are reporting low fps and high ms lag", the clock's stir stage at 800 ms a round and a
+        # round of 12 s about every 30 s. Every kept wildermon in deed or active mode, made due and settled once
+        # (`creature_settle`), each in a subtransaction undone at once (its row locks let go with it): how long each
+        # took, slowest first, with its kind, keeper, job, phase and idle reason. Writes nothing.
+        if: inputs.think_costs != ''
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          ask "kept wildermon by keeper and mode" "select coalesce(p.name, left(c.keeper::text, 8)) as keeper, c.mode, count(*) as n,
+                 count(*) filter (where c.until <= now()) as due
+             from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
+            where c.keeper is not null and c.mode in ('deed', 'active') group by 1, 2 order by 3 desc"
+          ask "one think of each, undone: slowest first" "set statement_timeout = '15min'; do \$\$
+            declare r record; t0 timestamptz; v_ms double precision; v_err text; res jsonb := '[]'; v_out text;
+            begin
+              for r in select c.id, c.world_id, c.species, stage_of(c) as st, c.mode, c.job, c.phase, c.idle_why,
+                              coalesce(p.name, left(c.keeper::text, 8)) as keeper
+                         from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
+                        where c.keeper is not null and c.mode in ('deed', 'active') order by c.id loop
+                t0 := clock_timestamp(); v_err := null;
+                begin
+                  update creature set until = now() where world_id = r.world_id and id = r.id;
+                  perform creature_settle(r.world_id, r.id);
+                  raise exception using errcode = 'P0001', message = 'undo';
+                exception when others then
+                  if sqlerrm <> 'undo' then v_err := left(sqlerrm, 80); end if;
+                end;
+                v_ms := extract(epoch from clock_timestamp() - t0) * 1000;
+                res := res || jsonb_build_object('ms', round(v_ms::numeric, 1), 'id', r.id, 'kind', r.species || '/' || r.st,
+                  'keeper', r.keeper, 'mode', r.mode, 'job', r.job, 'phase', r.phase, 'idle', left(coalesce(r.idle_why, ''), 60), 'err', v_err);
+              end loop;
+              select string_agg(format(E'\n%s ms  #%s %s (%s) %s job %s phase %s idle %s %s', e->>'ms', e->>'id', e->>'kind', e->>'keeper',
+                       e->>'mode', e->>'job', e->>'phase', e->>'idle', coalesce('ERR ' || (e->>'err'), '')), '' order by (e->>'ms')::numeric desc)
+                into v_out from (select e from jsonb_array_elements(res) e order by (e->>'ms')::numeric desc limit 60) q;
+              raise exception 'THINK total % ms over % kept%', (select round(sum((e->>'ms')::numeric)) from jsonb_array_elements(res) e),
+                jsonb_array_length(res), v_out;
+            end \$\$"
 
       - name: Look
         env:
