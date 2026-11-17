@@ -30,7 +30,7 @@ import type { DeedRole, PowerId, RankDef } from '../game/ranks';
 import type { StoreLogEntry } from '../game/stores';
 import type { DeedWatch } from '../game/visitors';
 import type { PathBeat, PathSaid } from '../game/meditation';
-import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_NEAR, LAND_STEP, LAND_UNFOGGED_EVERY, MOBS_EVERY, MOBS_RANGE, NEAR_WHOLE_EVERY, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
+import { AWAY_SLOWER, BODY_EVERY, BODY_FRESH, FORAGED_EVERY, SPRINGS_EVERY, SWIRLS_EVERY, GATE_FOLK_EVERY, CHANGE_PAGE, FOG_EVERY, FOUND_MAX, GROUND_EVERY, BUILD_WHOLE_EVERY, GROUND_IDLE, GROUND_RANGE, GUIDE_BATCH, GUIDE_EVERY, HEARTBEAT, LAND_NEAR, LAND_STEP, LAND_UNFOGGED_EVERY, MOBS_EVERY, MOBS_RANGE, NEAR_WHOLE_EVERY, RECONCILE_EVERY, REGION, SNAP_GAP } from '../game/keep';
 import type { GuideBook } from '../game/guide';
 import { packFog, unpackFog } from './fogpack';
 import { chartedSquare } from '../game/cartography';
@@ -464,6 +464,8 @@ interface GroundAsk {
   asked: number;
   plain: { p_world: string; p_range: number; p_slow: boolean };
   since: string;
+  /** The walls-and-floors cursor (`GroundHeld.bat`) for a slow read, or null for them whole. */
+  build: string | null;
 }
 
 /**
@@ -1303,6 +1305,10 @@ export class Island {
    */
   private ground = new GroundHeld();
   private groundOld = new Lacked();
+  /** An island without `p_keep` (`groundsync.ts`), asked the ground the way before it for a while. */
+  private groundKeepOld = new Lacked();
+  /** When a slow read last asked for every wall and floor (`buildCursor`). */
+  private buildWholeAt = -Infinity;
   /** An island without `rpc_near`, asked the creatures and the ground apart for a while (`askdown.ts`). */
   private nearOld = new Lacked();
   private groundAsked = 0;
@@ -1647,6 +1653,7 @@ export class Island {
     this.mobsLoose.clear();
     this.ground.clear();
     this.groundOld.clear();
+    this.groundKeepOld.clear();
     this.nearOld.clear();
     this.landFrom = Number(got.world.changes_from ?? 0) || 0;
     // The hour, straight away, so the first frame is drawn in the island's
@@ -3153,11 +3160,12 @@ export class Island {
     const ground = this.groundAsk(now, mobs ? NEAR_EARLY : 0);
     if (ground && !mobs) mobs = this.mobsAsk(now, NEAR_EARLY);
     const at = performance.now() / 1000;
-    if (mobs && ground && ![this.nearOld, this.mobsOld, this.mobsLoose, this.groundOld].some((l) => l.on(at))) {
+    if (mobs && ground && ![this.nearOld, this.mobsOld, this.mobsLoose, this.groundOld, this.groundKeepOld].some((l) => l.on(at))) {
       const { data, error } = await rpc('rpc_near', {
         ...mobs.since, p_pack: true, p_ground_range: ground.plain.p_range, p_slow: ground.plain.p_slow, p_ground_since: ground.since,
+        p_ground_keep: true, p_ground_build_since: ground.build,
       });
-      if (!lacks(error, /rpc_near|p_ground_since/)) {
+      if (!lacks(error, /rpc_near|p_ground_since|p_ground_keep|p_ground_build_since/)) {
         const both = (data ?? null) as { creatures?: unknown; ground?: unknown } | null;
         this.layMobs(mobs, both?.creatures ?? null, error);
         this.layGround(ground, both?.ground ?? null, error);
@@ -3300,14 +3308,26 @@ export class Island {
       slow, seq: ++this.groundAsked, asked: this.acted,
       plain: { p_world: this.info.id, p_range: GROUND_RANGE, p_slow: slow },
       since: whole ? '' : this.ground.at ?? '',
+      build: slow ? this.buildCursor(now) : null,
     };
+  }
+
+  /** The walls-and-floors cursor for a slow read: none, for every one of them, every `BUILD_WHOLE_EVERY` seconds. */
+  private buildCursor(now: number): string | null {
+    if (this.ground.bat === null || now - this.buildWholeAt >= BUILD_WHOLE_EVERY) {
+      this.buildWholeAt = now;
+      return null;
+    }
+    return this.ground.bat;
   }
 
   /** The ground read on its own. */
   private async groundCall(ask: GroundAsk): Promise<{ data: unknown; error: { code?: string; message: string } | null }> {
     // An island a migration behind this page has no `p_since` (PostgREST: no such function): asked as it used to be,
     // and the newer way again `RETRY_NEWER` seconds on (`askdown.ts`).
+    // And one with no `p_keep` (`groundsync.ts`): asked without it, as the read before.
     return askDown<RpcArgs<'rpc_ground'>>([
+      { args: { ...ask.plain, p_since: ask.since, p_keep: true, p_build_since: ask.build }, lacked: this.groundKeepOld, says: /p_keep|p_build_since/ },
       { args: { ...ask.plain, p_since: ask.since }, lacked: this.groundOld, says: /p_since/ },
       { args: ask.plain, lacked: null, says: /$^/ },
     ], performance.now() / 1000, (args) => rpc('rpc_ground', args));

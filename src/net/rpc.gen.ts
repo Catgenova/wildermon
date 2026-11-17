@@ -35,7 +35,7 @@ export interface Rpc {
   rpc_fog: { args: { p_world: string; p_seen: string }; returns: unknown };
   rpc_found: { args: { p_name: string; p_seed: number; p_size: number; p_spawn_x: number; p_spawn_y: number; p_lasts?: number | null }; returns: string | null };
   rpc_friend: { args: { p_world: string; p_uid: string }; returns: unknown };
-  rpc_ground: { args: { p_world: string; p_range?: number; p_slow?: boolean; p_since?: string | null }; returns: unknown };
+  rpc_ground: { args: { p_world: string; p_range?: number; p_slow?: boolean; p_since?: string | null; p_keep?: boolean; p_build_since?: string | null }; returns: unknown };
   rpc_guide: { args: { p_world: string }; returns: unknown };
   rpc_guide_seen: { args: { p_world: string; p_species: Array<string> }; returns: unknown };
   rpc_hold: { args: { p_world: string }; returns: unknown };
@@ -57,7 +57,7 @@ export interface Rpc {
   rpc_my_name: { args: {}; returns: string | null };
   rpc_name_case: { args: { p_display: string }; returns: string | null };
   rpc_name_free: { args: { p_name: string }; returns: boolean | null };
-  rpc_near: { args: { p_world: string; p_range?: number; p_since?: string | null; p_have?: Array<number> | null; p_pack?: boolean; p_ground_range?: number; p_slow?: boolean; p_ground_since?: string | null }; returns: unknown };
+  rpc_near: { args: { p_world: string; p_range?: number; p_since?: string | null; p_have?: Array<number> | null; p_pack?: boolean; p_ground_range?: number; p_slow?: boolean; p_ground_since?: string | null; p_ground_keep?: boolean; p_ground_build_since?: string | null }; returns: unknown };
   rpc_notice_drop: { args: { p_world: string; p_founder: string; p_n: number }; returns: unknown };
   rpc_notice_post: { args: { p_world: string; p_founder: string; p_text: string }; returns: unknown };
   rpc_notices_ashore: { args: { p_world: string }; returns: unknown };

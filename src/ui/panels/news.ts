@@ -166,7 +166,7 @@ import { RELICS } from '../../game/archaeology';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../../game/creatures';
 import { cropYield, RIPE, seedSays, STAGE_NAMES } from '../../game/farming';
 import { SEAT_ELSEWHERE, SEAT_STALE_S } from '../../net/supabase';
-import { HEARTBEAT, IDLE_LOGOUT, LAND_STEP, LAND_UNFOGGED_EVERY, NEAR_WHOLE_EVERY, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
+import { BUILD_WHOLE_EVERY, HEARTBEAT, IDLE_LOGOUT, LAND_STEP, LAND_UNFOGGED_EVERY, NEAR_WHOLE_EVERY, RECONCILE_EVERY, WORKER_REST_EVERY, WORKER_REST_FIRST, WORKER_REST_MOST, UNSTICK_REACH, UNSTICK_SEARCH } from '../../game/keep';
 import { REPORTS_A_SESSION } from '../../net/errors';
 import { ACT_MANY_MOST, VIA_MAX } from '../../net/island';
 import { SAID_LAG_MS } from '../../net/heardlines';
@@ -433,6 +433,15 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The ground read kept by the browser (`GroundHeld`): contents and walls and floors only as they change.
+  {
+    n: 672,
+    day: '2026-11-17',
+    lines: () => [
+      'Changed: a driven wagon or cart\'s contents: sent when they change (was: every second; 33 kB for 171 stacks).',
+      `Changed: walls and floors in range: only those changed are sent, all of them every ${BUILD_WHOLE_EVERY / 60} minutes (was: all of them every ${NEAR_WHOLE_EVERY} s and after every building job; 267 kB on Solara).`,
+    ],
+  },
   // A container's name read by index (`private.hoard_items`); a Chestkit asks each kind once (`private.hoard_move`).
   {
     n: 671,

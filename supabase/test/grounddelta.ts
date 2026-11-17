@@ -143,7 +143,7 @@ const CUTS: Array<[string, string]> = [
 ];
 const sameSaid = psql(`${as(ME)}begin;
 do $t$
-declare d text := pg_get_functiondef('public.rpc_ground(uuid,double precision,boolean,text)'::regprocedure); c text[]; n int;
+declare d text := pg_get_functiondef('public.rpc_ground(uuid,double precision,boolean,text,boolean,text)'::regprocedure); c text[]; n int;
 begin
   d := replace(d, 'FUNCTION public.rpc_ground(', 'FUNCTION pg_temp.rpc_ground_whole(');
   foreach c slice 1 in array array[${CUTS.map(([a, b]) => `array[$c$${a}$c$, $c$${b}$c$]`).join(', ')}] loop

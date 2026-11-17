@@ -7,7 +7,8 @@
  * calls answered by a stand-in island through `fetch`:
  *
  *   * an island without the new forms: the page tries the one round trip (`rpc_near`), the packed creatures, the
- *     creatures with a cursor and the ground with a cursor, is told each is missing, and is answered the old way;
+ *     ground kept (`p_keep`), the creatures with a cursor and the ground with a cursor, is told each is missing, and
+ *     is answered the old way;
  *   * asked again soon after, it asks only the old way: no request spent on what was just found missing;
  *   * the island takes its migrations; `RETRY_NEWER` seconds on, the page asks the new way again, the cursor and all,
  *     in one round trip, and the next ask hands back the cursor it was given;
@@ -67,7 +68,7 @@ const round = async (secs: number): Promise<string> => {
 
 const first = await round(0);
 check('an island without the new forms: each is tried, found missing, and the old way answers',
-  asked.length === 6 && asked[0].door === 'rpc_near' && asked.filter((a) => !('p_since' in a.args) && a.door !== 'rpc_near').length === 2
+  asked.length === 7 && asked[0].door === 'rpc_near' && asked.some((x) => x.door === 'rpc_ground' && x.args.p_keep === true) && asked.filter((a) => !('p_since' in a.args) && a.door !== 'rpc_near').length === 2
     && mobsLaid === 1 && groundLaid === 1, first);
 
 const soon = await round(4);

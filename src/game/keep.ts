@@ -225,6 +225,12 @@ export const RECONCILE_EVERY = 20;
  * \`RECONCILE_EVERY\` it was a fifth of every browser's reads.
  */
 export const NEAR_WHOLE_EVERY = 60;
+/**
+ * Seconds between slow ground reads that ask for every wall and floor in range, not only what changed since the
+ * browser's cursor for them (`GroundHeld.bat`): what a wall says that is not its row (a tile scrubbed of its ivy, a
+ * padlock's keys) is that late at worst.
+ */
+export const BUILD_WHOLE_EVERY = 600;
 
 /* ---- Reading the land rather than replaying how it got that way --------- */
 
