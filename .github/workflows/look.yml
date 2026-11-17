@@ -416,15 +416,68 @@ jobs:
         # round of 12 s about every 30 s. Every kept wildermon in deed or active mode, made due and settled once
         # (`creature_settle`), each in a subtransaction undone at once (its row locks let go with it): how long each
         # took, slowest first, with its kind, keeper, job, phase and idle reason. Writes nothing.
+        # Given creature ids (`think_costs` as 1,2,3), the parts of each one's think timed apart, each undone.
         if: inputs.think_costs != ''
         continue-on-error: true
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          IDS: ${{ inputs.think_costs }}
         run: |
           supabase link --project-ref "$PROJECT_REF"
           ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          if [[ "$IDS" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
+          ask "the ones named: body, belly, lessons" "select c.id, c.species, c.mode, c.job, c.phase, c.idle_why, round(extract(epoch from now() - c.settled_at)::numeric, 1) as since_settled_s,
+                 round(c.hunger::numeric, 3) as hunger, graze_hungry() as hungry_at, round(c.care::numeric, 3) as care, d.learns, d.learns_by,
+                 c.rider, c.hitched_to, c.post, c.around, c.carrying::text as carrying
+             from creature c join species_def d on d.id = c.species where c.id = any(string_to_array('$IDS', ',')::int[])"
+          ask "the ones named: each part of a think, undone" "set statement_timeout = '15min'; do \$\$
+            declare r creature; t0 timestamptz; v_out text := ''; v_n bigint;
+            begin
+              for r in select * from creature where id = any(string_to_array('$IDS', ',')::int[]) order by id loop
+                v_out := v_out || E'\n#' || r.id || ' ' || r.species || ' ' || r.mode;
+                t0 := clock_timestamp();
+                begin perform creature_settle(r.world_id, r.id); raise exception 'undo';
+                exception when others then v_out := v_out || format(' | settle as it stands %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000)); end;
+                t0 := clock_timestamp();
+                begin update creature set until = now() where world_id = r.world_id and id = r.id; perform creature_settle(r.world_id, r.id); raise exception 'undo';
+                exception when others then v_out := v_out || format(' | settle made due %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000)); end;
+                t0 := clock_timestamp();
+                begin perform worker_feed(r.world_id, r.id, r.care); raise exception 'undo';
+                exception when others then v_out := v_out || format(' | worker_feed %s ms (%s)', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000), left(sqlerrm, 40)); end;
+                if r.mode = 'active' then
+                  t0 := clock_timestamp();
+                  begin update creature set until = now() where world_id = r.world_id and id = r.id; perform companion_settle(r.world_id, r.id); raise exception 'undo';
+                  exception when others then v_out := v_out || format(' | companion_settle %s ms (%s)', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000), left(sqlerrm, 40)); end;
+                end if;
+                if r.mode = 'deed' then
+                  t0 := clock_timestamp();
+                  begin update creature set until = now() where world_id = r.world_id and id = r.id; perform worker_settle(r.world_id, r.id); raise exception 'undo';
+                  exception when others then v_out := v_out || format(' | worker_settle %s ms (%s)', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000), left(sqlerrm, 40)); end;
+                  t0 := clock_timestamp();
+                  select count(*) into v_n from private.hoard_boxes(r.world_id, r);
+                  v_out := v_out || format(' | hoard_boxes %s rows %s ms', v_n, round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  t0 := clock_timestamp();
+                  perform * from private.hoard_move(r.world_id, r, r.to_x, r.to_y);
+                  v_out := v_out || format(' | hoard_move %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  t0 := clock_timestamp();
+                  perform * from sort_stack(r.world_id, r, r.to_x, r.to_y);
+                  v_out := v_out || format(' | sort_stack %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                end if;
+                t0 := clock_timestamp();
+                begin perform faith_owed_pay(r.world_id, r.id); raise exception 'undo';
+                exception when others then v_out := v_out || format(' | faith_owed_pay %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000)); end;
+              end loop;
+              raise exception 'PARTS%', v_out;
+            end \$\$"
+          ask "the ones named that hoard: the stacks in unnamed boxes their named boxes want, and those boxes' room" "select b.kind, b.sid, b.ids is not null as named, b.shut,
+                 case when b.kind = 'crate' then (select count(*) from item i where i.world_id = c.world_id and i.holder = 'crate' and i.crate = b.sid::int)
+                      else (select count(*) from item i where i.placed = b.sid and i.holder = 'furniture') end as stacks,
+                 left(array_to_string(b.ids, ','), 80) as ids
+             from creature c cross join lateral private.hoard_boxes(c.world_id, c) b
+            where c.id = any(string_to_array('$IDS', ',')::int[]) and c.mode = 'deed' order by b.ids is null, b.kind, b.sid limit 80"
+          fi
           ask "kept wildermon by keeper and mode" "select coalesce(p.name, left(c.keeper::text, 8)) as keeper, c.mode, count(*) as n,
                  count(*) filter (where c.until <= now()) as due
              from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
