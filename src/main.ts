@@ -3,7 +3,8 @@ import './page-guard';
 import { sameWorn, wornWire, type WornWire } from './game/worn';
 import type { CastAt } from './game/events';
 import { ALL_SPELL_IDS } from './render/spells/info';
-import { dprCapOf, frameCapOf } from './game/settings';
+import { dprCapOf, frameCapOf, renderScaleOf } from './game/settings';
+import { AUTO_SCALES, AutoScale, autoLeast } from './engine/autoscale';
 import { onPhone } from './engine/device';
 import { mountPhone } from './ui/phone';
 import { FullscreenCanvas } from './engine/canvas';
@@ -296,10 +297,19 @@ const canvas = new FullscreenCanvas(canvasEl);
 /** Logged off asleep in a bed (`island.hooks.asleep`): nothing runs again until Wake. */
 let loggedOff = false;
 // The fast graphics, and Low power on a phone, draw a pixel for every screen pixel (`dprCapOf`); sized again whenever either changes.
+// And of those, the share Render scale draws: fixed, or Auto's (`AutoScale`), started again at all of them when it is chosen.
+const autoScale = new AutoScale();
+let scaleSet = game.settings.renderScale;
 const fitGraphics = (): void => {
+  if (game.settings.renderScale !== scaleSet) {
+    scaleSet = game.settings.renderScale;
+    autoScale.reset(performance.now());
+  }
   const most = dprCapOf(game.settings, onPhone());
-  if (canvas.maxDpr !== most) {
+  const scale = renderScaleOf(game.settings, AUTO_SCALES[autoScale.level]);
+  if (canvas.maxDpr !== most || canvas.scale !== scale) {
     canvas.maxDpr = most;
+    canvas.scale = scale;
     canvas.resize();
   }
 };
@@ -599,6 +609,8 @@ input.onKey = (code, ev) => {
 /** Seconds between calls of `island.move` when it has no word to say: ten a second, for its reads and what is worn. */
 const MOVE_ROUND = 0.1;
 let moveRound = 0;
+/** When the last frame began drawing, for Auto's measure of how far apart they come. */
+let drawnAt = 0;
 let wearing: WornWire = {};
 const loop = new GameLoop(
   (dt) => {
@@ -675,9 +687,17 @@ const loop = new GameLoop(
     ui.hoverFrame(input.pointer, input.dragging, dropOver);
   },
   (dt) => {
+    const t0 = performance.now();
     renderer.render(dt);
     ui.update(loop.fps);
     loop.maxFps = frameCapOf(game.settings, onPhone());
+    if (game.settings.renderScale === 'auto') {
+      const t1 = performance.now();
+      const was = autoScale.level;
+      const least = autoLeast(Math.min(window.devicePixelRatio || 1, canvas.maxDpr));
+      if (autoScale.frame(t1, t0 - drawnAt, t1 - t0, 1000 / (loop.maxFps || 60), least) !== was) fitGraphics();
+    }
+    drawnAt = t0;
   },
 );
 loop.start();

@@ -83,6 +83,8 @@ export class StructureWatch {
   private readonly patches = new Map<number, number>();
   /** Every tile within `REACH` of a wall, a floor, a column, a cellar or a building's tile. */
   private readonly near = new Set<number>();
+  /** Every tile something built stands on or on the border of: a wall's two, a column's four, a floor's, a cellar's, a building's own. */
+  private readonly on = new Set<number>();
   /** Whether something has come or gone, or a building's footprint changed, so `near` is to be made again. */
   private moved = true;
   /**
@@ -131,6 +133,11 @@ export class StructureWatch {
   /** Whether anything built stands within `REACH` of a tile, so that drawing what is built there can draw anything at all. */
   nearAny(x: number, y: number): boolean {
     return this.near.has(tileNumber(x, y));
+  }
+
+  /** Whether anything built stands on a tile or its borders, rather than only throwing its shade on it (`onAny`'s set). */
+  onAny(x: number, y: number): boolean {
+    return this.on.has(tileNumber(x, y));
   }
 
   /**
@@ -264,9 +271,12 @@ export class StructureWatch {
   private index(bld: Buildings): void {
     this.moved = false;
     const near = this.near;
+    const on = this.on;
     near.clear();
+    on.clear();
     const mark = (x0: number, y0: number, x1: number, y1: number): void => {
       for (let x = x0 - REACH; x <= x1 + REACH; x++) for (let y = y0 - REACH; y <= y1 + REACH; y++) near.add(tileNumber(x, y));
+      for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) on.add(tileNumber(x, y));
     };
     for (const w of bld.walls.values()) mark(w.dir === 'v' ? w.x - 1 : w.x, w.dir === 'h' ? w.y - 1 : w.y, w.x, w.y);
     for (const fl of bld.floors.values()) mark(fl.x, fl.y, fl.x, fl.y);

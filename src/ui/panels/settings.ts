@@ -15,7 +15,7 @@ import { FIGHT_BACK_STILL, FIGHT_QUIET } from '../../game/fight';
 import { LAYOUT_SLOTS, type UIWindow, type WindowManager } from '../windows';
 import { fixed, html, setMarkup, type Markup } from '../html';
 import { setUiSize, UI_SIZE_MAX, UI_SIZE_MIN, UI_SIZE_PRESETS, uiSizeShown } from '../screen';
-import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, type Animations, type Effects, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
+import { FAST_DPR, FRAME_CAPS, FULL_DPR, LOW_POWER_FPS, RENDER_SCALES, type RenderScale, type Animations, type Effects, type Graphics, type UiColours, type UiFrames, type UiLight, type UiStyle } from '../../game/settings';
 import { ACTION_LIGHTS, ACTION_SHARE, FAR_SHARE, FEWER_SHARE, HIT_STOP_HEAVY, NEAR_TILES } from '../../render/fx/actions';
 import { MOST_PARTICLES } from '../../render/spells/kit';
 import type { Motion } from '../../engine/motion';
@@ -24,6 +24,7 @@ import { FRAME_REACH, FRAME_REACHES, FRAME_RIM, FRAMES, frameLabel, frameOdditie
 import { lifeWords } from '../runecut-life';
 import { LAYERS, TIMING_WINDOW, TRIAL_SECONDS } from '../../render/timings';
 import { BODY_BUDGET_MS } from '../../render/bodybudget';
+import { AUTO_GAIN, AUTO_HOLD_MS, AUTO_LEAST_DPR, AUTO_OVER, AUTO_ROOM, AUTO_SCALES, AUTO_WINDOW_MS } from '../../engine/autoscale';
 import { QUALITY_STEPS } from '../../render/bodies';
 import { burnsFor, listed, percent } from '../../game/words';
 import { DONE_AFTER, NOTICE_MS } from '../notices';
@@ -478,6 +479,20 @@ export class SettingsPanel {
       () => game.settings.graphics,
       (v) => {
         game.settings.graphics = v;
+        game.graphicsChanged?.();
+      },
+    );
+    // Of the pixels Graphics allows, the share drawn (`renderScaleOf`); Auto steps it by the frames (src/engine/autoscale.ts).
+    choose<RenderScale>(
+      'Render scale',
+      `Share of Graphics' pixels drawn. Auto: ${listed(AUTO_SCALES.map((k) => percent(k)))}, never under ${AUTO_LEAST_DPR} pixel per screen pixel; `
+        + `one step down after ${(2 * AUTO_WINDOW_MS) / 1000} s of frames over ${AUTO_OVER}× the frame limit's interval (no limit: 1/60 s), `
+        + `kept only if frames come ${percent(AUTO_GAIN)} quicker, else not tried for ${AUTO_HOLD_MS / 60_000} min; `
+        + `one step up after ${(3 * AUTO_WINDOW_MS) / 1000} s of drawing under ${percent(AUTO_ROOM)} of it.`,
+      RENDER_SCALES.map((k): [RenderScale, string] => [k, k === 'auto' ? 'Auto' : `${k}%`]),
+      () => game.settings.renderScale,
+      (v) => {
+        game.settings.renderScale = v;
         game.graphicsChanged?.();
       },
     );

@@ -867,6 +867,8 @@ export interface NoPlan extends Border {
 }
 
 export const tileKey = (x: number, y: number): string => `${x},${y}`;
+/** Tiles `buildingAt` and `jettyAt` keep their answers for before starting again. */
+const MEMO_MOST = 65_536;
 const wallKey = (level: number, b: Border): string => `${level}:${b.dir}:${b.x},${b.y}`;
 const floorKey = (level: number, x: number, y: number): string => `${level}:${x},${y}`;
 const columnKey = (level: number, x: number, y: number): string => `${level}:${x},${y}`;
@@ -958,8 +960,30 @@ export class Buildings {
   }
 
   buildingAt(x: number, y: number): Building | undefined {
+    const n = this.memoKey(x, y);
+    const had = this.atMemo.get(n);
+    if (had !== undefined) return had ?? undefined;
     const id = this.tileIndex.get(tileKey(x, y));
-    return id === undefined ? undefined : this.list.get(id);
+    const b = id === undefined ? undefined : this.list.get(id);
+    this.atMemo.set(n, b ?? null);
+    return b;
+  }
+
+  /**
+   * `buildingAt` and `jettyAt` asked by number rather than by a string made
+   * each time: the drawing asks them several times a tile a frame. Kept while
+   * the revision holds; every change to the indexes moves it.
+   */
+  private readonly atMemo = new Map<number, Building | null>();
+  private readonly jettyMemo = new Map<number, Building | null>();
+  private memoRev = -1;
+  private memoKey(x: number, y: number): number {
+    if (this.memoRev !== this.revision || this.atMemo.size + this.jettyMemo.size > MEMO_MOST) {
+      this.memoRev = this.revision;
+      this.atMemo.clear();
+      this.jettyMemo.clear();
+    }
+    return (x + 32768) * 65536 + (y + 32768);
   }
 
   /** A new plan on one tile: on its ground, or on piers under a deck at `deck`. */
@@ -1660,10 +1684,14 @@ export class Buildings {
    */
   jettyAt(x: number, y: number): Building | undefined {
     if (!this.jettyIndex.size) return undefined;
+    const n = this.memoKey(x, y);
+    const had = this.jettyMemo.get(n);
+    if (had !== undefined) return had ?? undefined;
     const key = tileKey(x, y);
     const id = this.jettyIndex.get(key);
-    if (id === undefined || this.tileIndex.has(key)) return undefined;
-    return this.list.get(id);
+    const b = id === undefined || this.tileIndex.has(key) ? undefined : this.list.get(id);
+    this.jettyMemo.set(n, b ?? null);
+    return b;
   }
 
   /** Work that out again for one tile, after a floor on it has gone. */

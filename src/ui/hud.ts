@@ -950,7 +950,7 @@ export class Hud {
     const timed = !this.game.settings.timings ? ''
       : (t.line && fps > 0 ? `\nframe ${(1000 / fps).toFixed(1)} ms · ${t.line}` : '') + (bodiesLine() ? `\n${bodiesLine()}` : '')
         + (t.measuring ?? t.measured ? `\n${t.measuring ?? t.measured}` : '');
-    this.say(this.fpsEl, `${VERSION} · ${fps} fps · ${renderer.tilesDrawn} tiles${watched} · ${renderer.camera.zoom.toFixed(2)}×${timed}`);
+    this.say(this.fpsEl, `${VERSION} · ${fps} fps · ${renderer.tilesDrawn} tiles${watched} · ${renderer.camera.zoom.toFixed(2)}×${this.game.settings.timings ? ` · ${+renderer.pixelRatio.toFixed(2)} px/px` : ''}${timed}`);
     const svg = this.compass.firstElementChild as HTMLElement | null;
     if (svg) svg.style.transform = `rotate(${renderer.camera.northAngle().toFixed(1)}deg)`;
     // What is in your hands and how much armour is on you.

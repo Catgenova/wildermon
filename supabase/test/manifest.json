@@ -3595,5 +3595,11 @@
     "title": "A fence on a slope stands on it",
     "shard": 2,
     "why": "Reported: fences on slopes aren't adhering to the slope properly."
+  },
+  {
+    "file": "supabase/test/autoscale.ts",
+    "title": "Render scale on Auto steps down only where it helps",
+    "shard": 1,
+    "why": "Players' frames slow at two pixels to a screen pixel; fewer pixels help only a frame held up by them."
   }
 ]

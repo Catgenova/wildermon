@@ -7,6 +7,8 @@ export class FullscreenCanvas {
   dpr = 1;
   /** The most device pixels drawn to a CSS pixel: two, or one for the fast graphics. */
   maxDpr = 2;
+  /** The share of those drawn (Render scale): one for all of them. */
+  scale = 1;
   private listeners: Array<() => void> = [];
 
   constructor(el: HTMLCanvasElement) {
@@ -23,7 +25,7 @@ export class FullscreenCanvas {
   }
 
   resize(): void {
-    this.dpr = Math.min(window.devicePixelRatio || 1, this.maxDpr);
+    this.dpr = Math.min(window.devicePixelRatio || 1, this.maxDpr) * this.scale;
     this.width = Math.max(1, window.innerWidth);
     this.height = Math.max(1, window.innerHeight);
     this.el.width = Math.round(this.width * this.dpr);

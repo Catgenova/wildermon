@@ -118,6 +118,8 @@ export const SETTING_DEFAULTS = {
    * no wakes or dust.
    */
   graphics: 'full' as Graphics,
+  /** The share of the pixels Graphics allows that is drawn (`renderScaleOf`): Auto (`AutoScale`), or a fixed share. */
+  renderScale: 'auto' as RenderScale,
   /**
    * Motion (`src/engine/motion.ts`): as the system asks (`prefers-reduced-motion`),
    * always less, or always full. Less: no sway in trees, bushes and flowers,
@@ -217,6 +219,13 @@ export type Animations = (typeof ANIMATIONS)[number];
 /** Whether Low power is on, which it only ever is on a phone. */
 export const lowPowerOn = (s: { lowPower: boolean }, phone: boolean): boolean => phone && s.lowPower;
 
+/** Render scale (`SETTING_DEFAULTS.renderScale`): Auto, or the percent of the pixels allowed. */
+export const RENDER_SCALES = ['auto', '100', '75', '50'] as const;
+export type RenderScale = (typeof RENDER_SCALES)[number];
+/** The share of the allowed pixels drawn at a fixed Render scale; on Auto, `auto`'s. */
+export const renderScaleOf = (s: { renderScale: RenderScale }, auto: number): number =>
+  s.renderScale === 'auto' ? auto : Number(s.renderScale) / 100;
+
 /** The graphics presets, best first: Full, Fast and Low-end. */
 export const GRAPHICS = ['full', 'fast', 'low'] as const;
 export type Graphics = (typeof GRAPHICS)[number];
@@ -291,6 +300,7 @@ function read(): Partial<typeof SETTING_DEFAULTS> {
     // A stance is one of three words, not any word.
     if (!['aggressive', 'balanced', 'defensive'].includes(out.fightStance as string)) delete out.fightStance;
     if (!(GRAPHICS as readonly string[]).includes(out.graphics as string)) delete out.graphics;
+    if (!(RENDER_SCALES as readonly string[]).includes(out.renderScale as string)) delete out.renderScale;
     if (!(MOTIONS as readonly string[]).includes(out.motion as string)) delete out.motion;
     if (!(EFFECTS as readonly string[]).includes(out.effects as string)) delete out.effects;
     if (!(ANIMATIONS as readonly string[]).includes(out.animations as string)) delete out.animations;

@@ -26,7 +26,8 @@ import { RELEASE_MOTES, RELEASE_SECS } from '../../render/fx/cast';
 import { FALL_SECS } from '../../game/fell';
 import { CLIMB_RUN, RUNG } from '../../game/ladderclimb';
 import { MAP_LEGEND, SETTLEMENT_BORDER_PX, MAP_ZOOM_MIN } from './minimap';
-import { FAST_DPR, LOW_POWER_FPS, SETTING_DEFAULTS } from '../../game/settings';
+import { FAST_DPR, LOW_POWER_FPS, RENDER_SCALES, SETTING_DEFAULTS } from '../../game/settings';
+import { AUTO_GAIN, AUTO_LEAST_DPR, AUTO_OVER, AUTO_SCALES } from '../../engine/autoscale';
 import { BLOSSOM } from '../../audio/music/tracks/blossom';
 import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
@@ -433,6 +434,18 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Render scale (src/engine/autoscale.ts); the ground at night under a rune's light, and beside buildings, laid from its pictures (`layRun`, `StructureWatch.onAny`).
+  {
+    n: 674,
+    day: '2026-11-17',
+    lines: () => [
+      `New: Settings, Performance, Render scale: Auto, ${RENDER_SCALES.filter((k) => k !== 'auto').map((k) => `${k}%`).join(', ')} of Graphics' pixels. `
+        + `Auto: ${listed(AUTO_SCALES.slice(1).map((k) => percent(k)))} (never under ${AUTO_LEAST_DPR} pixel per screen pixel) while frames run over ${AUTO_OVER}× the frame limit's interval; `
+        + `kept only if frames come ${percent(AUTO_GAIN)} quicker.`,
+      'Changed: at night, ground in front of a lit runestone, rune lantern, plinth, anvil, work post or totem: laid from its pictures (was: tile by tile; ground and buildings 16.5 ms a frame on the Solara test settlement, now 8.4 ms).',
+      'Changed: ground with only a wall\'s shade on it: laid with the ground round it (614 ground pieces a frame on the Solara test settlement, now 350).',
+    ],
+  },
   // A fence on a slope follows it (`WallPainter.slopeRise`).
   {
     n: 673,

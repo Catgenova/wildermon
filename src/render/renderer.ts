@@ -1912,6 +1912,11 @@ export class Renderer {
     };
   }
 
+  /** Device pixels drawn to a screen pixel now (Graphics and Render scale). */
+  get pixelRatio(): number {
+    return this.canvas.dpr;
+  }
+
   get tilesDrawn(): number {
     return this.drawnTiles;
   }
@@ -4532,8 +4537,8 @@ export class Renderer {
       const stoneLit = this.runeNight.keeping;
       // The ground is laid under one transform: read once a line, not once a tile (`occludeGround`).
       if (stoneLit) this.groundMatrix = ctx.getTransform();
-      // Which of this line's tiles are laid from a block's picture (`chunkLine`): none where a runestone is keeping the ground off it.
-      const lineRuns = this.gf !== null && this.chunkLine(d, eMin, eMax) && !stoneLit;
+      // Which of this line's tiles are laid from a block's picture (`chunkLine`); under a runestone's keeping, the picture is kept off it as laid (`layRun`).
+      const lineRuns = this.gf !== null && this.chunkLine(d, eMin, eMax);
       if (grain) {
         this.grainN = 0;
         this.grainM = 0;
@@ -4584,7 +4589,7 @@ export class Renderer {
             ctx.fillStyle = voidInk;
             ctx.fill();
           }
-          if (stoneLit) this.occludeGround(ctx, pts, minY, maxY);
+          if (stoneLit && !run) this.occludeGround(ctx, pts, minY, maxY);
           continue;
         }
         const lit = fog === VISIBLE;
@@ -4629,7 +4634,7 @@ export class Renderer {
           ctx.fillStyle = color;
           ctx.fill();
         }
-        if (stoneLit) this.occludeGround(ctx, pts, minY, maxY);
+        if (stoneLit && !run) this.occludeGround(ctx, pts, minY, maxY);
         // Remembered ground's wash comes this far down the screen; ground in sight that comes up past it takes it off what it covers.
         this.wallLift = null;
         // A column in sight takes it off as well, whichever tile round its corner puts it up (`liftColumn`).
@@ -5424,7 +5429,8 @@ export class Renderer {
     const near = this.structs.nearAny(x, y);
     if (near && gf.piers) return 0;
     let k = BAKED | (lit ? LIT : 0);
-    if (near || this.hingeTiles.has(x * 65536 + y) || (lit && this.game.foundations.size > 0 && this.game.foundationAt(x, y))) k |= AFTER;
+    // Only what stands on it or its borders: the shade of a wall nearby is cut to the tile (`groundShade`), and keeps the run going.
+    if (this.structs.onAny(x, y) || this.hingeTiles.has(x * 65536 + y) || (lit && this.game.foundations.size > 0 && this.game.foundationAt(x, y))) k |= AFTER;
     if (lit && gf.paved && PAVED.has(t0)) this.classMoss = this.mossStage(x, y);
     return k;
   }
@@ -5559,12 +5565,16 @@ export class Renderer {
     y += t; sy += t; h -= t + cut(y + h - t - this.canvas.el.height);
     if (w > 0 && h > 0) {
       // Under a scale of one, two or four a device pixel is a whole number of the canvas's units over it, and the transform can stay.
+      const keep = this.runeNight.keeping;
       if (gf.a === 1 || gf.a === 2 || gf.a === 4) {
         const a = gf.a;
-        ctx.drawImage(run.cv, sx, sy, w, h, (x - gf.te) / a, (y - gf.tf) / a, w / a, h / a);
+        const dx = (x - gf.te) / a, dy = (y - gf.tf) / a;
+        ctx.drawImage(run.cv, sx, sy, w, h, dx, dy, w / a, h / a);
+        if (keep) this.runeNight.occludeDraw(ctx, dx, dy, w / a, h / a, (g) => g.drawImage(run.cv, sx, sy, w, h, dx, dy, w / a, h / a));
       } else {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.drawImage(run.cv, sx, sy, w, h, x, y, w, h);
+        if (keep) this.runeNight.occludeDraw(ctx, x, y, w, h, (g) => g.drawImage(run.cv, sx, sy, w, h, x, y, w, h));
         ctx.setTransform(at);
       }
     }
