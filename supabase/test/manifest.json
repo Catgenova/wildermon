@@ -3601,5 +3601,11 @@
     "title": "Render scale on Auto steps down only where it helps",
     "shard": 1,
     "why": "Players' frames slow at two pixels to a screen pixel; fewer pixels help only a frame held up by them."
+  },
+  {
+    "file": "supabase/test/namedfirst.ts",
+    "title": "A load to a container named for it first, for every worker on its settlement",
+    "shard": 4,
+    "why": "Asked for: fragments can be sorted into a box named \"fragment\", all of them."
   }
 ]

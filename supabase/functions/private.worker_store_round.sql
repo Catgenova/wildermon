@@ -27,15 +27,16 @@ begin
     order by q.s_bin desc, q.s_own desc, (q.s_cx - v_x) ^ 2 + (q.s_cy - v_y) ^ 2
   loop
     if private.hoard_other(c, coalesce((r.s_cr).name, (r.s_pl).name), p_def) then continue; end if;
+    -- Room first, then whether a worker may use it, and last whether its storey is reached (a way up the stairs).
     if r.s_kind = 'crate' then
+      if not coalesce(crate_units(p_world, (r.s_cr).id) + p_count <= crate_capacity(r.s_cr), false) then continue; end if;
       if not coalesce(private.worker_crate_ok(p_world, c.keeper, r.s_cr), false) then continue; end if;
       if (r.s_cr).level > 0 and not coalesce(storey_reached(p_world, (r.s_cr).x, (r.s_cr).y, (r.s_cr).level), false) then continue; end if;
-      if not coalesce(crate_units(p_world, (r.s_cr).id) + p_count <= crate_capacity(r.s_cr), false) then continue; end if;
     else
       if not coalesce(furniture_holds(r.s_pl), false) or furniture_refuses(r.s_pl, p_def) is not null then continue; end if;
+      if not coalesce(p_count <= furniture_room(r.s_pl, p_def), false) then continue; end if;
       if not coalesce(private.worker_piece_ok(p_world, c.keeper, r.s_pl), false) then continue; end if;
       if (r.s_pl).level > 0 and not coalesce(storey_reached(p_world, (r.s_pl).x, (r.s_pl).y, (r.s_pl).level), false) then continue; end if;
-      if not coalesce(p_count <= furniture_room(r.s_pl, p_def), false) then continue; end if;
     end if;
     kind := r.s_kind; id := r.s_id; cx := r.s_cx; cy := r.s_cy;
     return next;

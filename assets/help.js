@@ -2718,7 +2718,7 @@ import{$D as e,$E as t,$S as n,$_ as r,$b as i,$c as a,$f as o,$m as s,$n as ee,
       <li>Each tile: a 4 by 4 grid of spots.</li>
       <li><b>Log crate</b>: ${z(`make_log_crate`)} (no nails). <b>Plank crate</b>: ${z(`make_plank_crate`)} (mallet). Right-click a spot to place; snaps to the grid.
       Hold ${tc.log.capacity} and ${tc.plank.capacity}. Open, empty, pick up when empty. The settlement crate beside the totem is one.</li>
-      <li>Workers fill the settlement crate first, then the nearest store on the settlement that takes the load (crate, raw material bin, chest, larder, cart); never a <b>trash crate</b>.</li>
+      <li>Workers on the settlement: the nearest container <b>named for the load</b> with room first (name: the item's name or id, or either plural, e.g. <b>fragment</b> for every relic fragment); then the bin built for it; then the settlement crate; then the nearest store on the settlement that takes the load (crate, raw material bin, chest, larder, cart); never a <b>trash crate</b>.</li>
       <li><b>All full</b>: the worker holds its load near the totem and says so once; resumes when room appears.</li>
       <li>Seed for sowing and wood for stoking come from any store on the settlement.</li>
       <li><b>Dragging</b> between the inventory and an open container: must be beside it, and it must accept the item (raw bin: unworked only; craft bin: worked only; larder: food, drink, flour;

@@ -434,6 +434,15 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Every worker on its settlement: a load to a container named for it first (`worker_store`, migration 137).
+  {
+    n: 676,
+    day: '2026-11-17',
+    lines: () => [
+      'Changed: every settlement worker, not only the Hoardback: a load to the nearest container named for it with room first (was: nearest store with room). Name a box "fragment" for every relic fragment.',
+      'Changed: a worker finding a store for its load asks room first (was: a way up the stairs to every store upstairs first; a Snout\'s think 1.1 to 1.3 s on Solara).',
+    ],
+  },
   // The sculpted models a file each (vite.config.ts `sculptAssets`); bodies posed only for a picture; name plates kept as pictures.
   {
     n: 675,

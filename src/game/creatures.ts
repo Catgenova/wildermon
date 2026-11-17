@@ -11290,10 +11290,10 @@ export class Creatures {
    * and the sprout bin, joined the rule without a clause each.
    */
   storeFor(game: Game, c: Creature, item: Item): DeedStore | null {
-    // A magga on its settlement: a container named for the item first (`hoardStore`), and never one named for another
-    // (`hoardOther`), as the island's `worker_store` off `private.hoard_into` and `private.hoard_other`.
+    // Any worker on its settlement: a container named for the item first (`hoardStore`), as the island's `worker_store`
+    // off `private.hoard_into`; a magga never into one named for another (`hoardOther`, `private.hoard_other`).
     const hoarding = (c.trade ?? this.species(c).gathers) === 'fetch' && c.post === null && !c.around;
-    if (hoarding) {
+    if (c.post === null && !c.around) {
       const named = this.hoardStore(game, c, item);
       if (named) return named;
     }

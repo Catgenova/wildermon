@@ -34,7 +34,7 @@ begin
     if found then return; end if;
   end if;
   -- A Chestkit on its settlement: a container named for the load first (`private.hoard_into`).
-  if private.hoard_trade(c) then
+  if c.post is null and c.around is null then
     return query select * from private.hoard_into(p_world, c, p_def, p_count);
     if found then return; end if;
   end if;
