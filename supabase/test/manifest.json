@@ -3607,5 +3607,11 @@
     "title": "A load to a container named for it first, for every worker on its settlement",
     "shard": 4,
     "why": "Asked for: fragments can be sorted into a box named \"fragment\", all of them."
+  },
+  {
+    "file": "supabase/test/worksearch.ts",
+    "title": "A worker's search for its next tile, asked over the square it needs and no more",
+    "shard": 5,
+    "why": "A Snout's think of 1.1 to 1.3 s every minute or two on the island: its search asked about all 64,009 tiles of its settlement before every dig."
   }
 ]

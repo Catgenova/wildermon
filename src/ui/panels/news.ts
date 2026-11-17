@@ -434,6 +434,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A worker's search for its next tile asked over the square it needs (`find_work_tile`, migration 138).
+  {
+    n: 680,
+    day: '2026-11-17',
+    lines: () => ['Changed: a settlement worker looking for its next tile asks about the nearest 16 tiles round first, then 32, 64 and its whole range (was: its whole range every time; a Snout on a settlement of radius 126: 1 s a search, now a few ms). Same tile found.'],
+  },
   // The right-click menu held to a width (style.css); a station's finished work counted by name (ui.ts).
   {
     n: 679,
