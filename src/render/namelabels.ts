@@ -297,8 +297,12 @@ export class NameLabels {
         this.drawPlate(ctx, lab, p.l, p.t, p.w, p.h, padY, nameH, noteH, icon, iconsW);
         continue;
       }
+      // Put down a device pixel to a device pixel, on whole ones: stretched or on a fraction of one, at a screen scale of
+      // 1.25 or 1.5 (or a Render scale under 100%), the writing came out blurred.
       const cv = this.plate(ctx, lab, m.a, p.w, p.h, padY, nameH, noteH, icon, iconsW);
-      ctx.drawImage(cv, p.l, p.t, cv.width / m.a, cv.height / m.a);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.drawImage(cv, Math.round(p.l * m.a + m.e), Math.round(p.t * m.a + m.f));
+      ctx.setTransform(m);
     }
     ctx.restore();
     for (let i = 0; i < list.length; i++) list[i].over?.(at[i].l + at[i].w / 2, at[i].t);

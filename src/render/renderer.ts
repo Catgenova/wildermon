@@ -5335,8 +5335,48 @@ export class Renderer {
     if (this.planGhost?.length) this.drawPlanGhost(ctx, this.planGhost);
     this.drawFight(ctx, zoom);
     if (this.game.settings.markThreats) this.drawThreats(ctx, zoom);
-    // Every name, over everything, laid out together so none covers another.
-    this.names.flush(ctx);
+    // Every name, over everything, laid out together so none covers another; at the screen's own pixels (`nameLayer`).
+    const layer = this.nameLayer();
+    if (layer) {
+      const m = ctx.getTransform(), k = this.canvas.fullDpr / this.canvas.dpr;
+      layer.g.setTransform(m.a * k, m.b * k, m.c * k, m.d * k, m.e * k, m.f * k);
+      this.names.flush(layer.g);
+    } else this.names.flush(ctx);
+  }
+
+  /**
+   * A canvas over the world's at the screen's own pixels, for the names, while Render scale draws the world at fewer
+   * (`FullscreenCanvas.scale`): written at the world's pixels and stretched, every name was blurred. Cleared each frame;
+   * null, and hidden, at 100%.
+   */
+  private names2: { el: HTMLCanvasElement; g: CanvasRenderingContext2D } | null = null;
+  private nameLayer(): { el: HTMLCanvasElement; g: CanvasRenderingContext2D } | null {
+    const c = this.canvas;
+    const want = c.scale < 1 && c.el.parentElement !== null;
+    let L = this.names2;
+    if (!want) {
+      if (L && !L.el.hidden) {
+        L.el.hidden = true;
+        L.el.width = L.el.height = 1;
+      }
+      return null;
+    }
+    if (!L) {
+      const el = document.createElement('canvas');
+      el.id = 'names';
+      c.el.after(el);
+      L = this.names2 = { el, g: el.getContext('2d') as CanvasRenderingContext2D };
+    }
+    const w = Math.round(c.width * c.fullDpr), h = Math.round(c.height * c.fullDpr);
+    if (L.el.width !== w || L.el.height !== h) {
+      L.el.width = w;
+      L.el.height = h;
+    } else {
+      L.g.setTransform(1, 0, 0, 1, 0, 0);
+      L.g.clearRect(0, 0, w, h);
+    }
+    L.el.hidden = false;
+    return L;
   }
 
   /**

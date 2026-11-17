@@ -868,7 +868,7 @@ export interface NoPlan extends Border {
 
 export const tileKey = (x: number, y: number): string => `${x},${y}`;
 /** Tiles `buildingAt` and `jettyAt` keep their answers for before starting again. */
-const MEMO_MOST = 262_144;
+const MEMO_MOST = 65_536;
 const wallKey = (level: number, b: Border): string => `${level}:${b.dir}:${b.x},${b.y}`;
 const floorKey = (level: number, x: number, y: number): string => `${level}:${x},${y}`;
 const columnKey = (level: number, x: number, y: number): string => `${level}:${x},${y}`;

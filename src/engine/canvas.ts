@@ -35,6 +35,11 @@ export class FullscreenCanvas {
     for (const fn of this.listeners) fn();
   }
 
+  /** Device pixels to a CSS pixel at a Render scale of 100%: what writing is drawn at (`Renderer.nameLayer`). */
+  get fullDpr(): number {
+    return this.scale > 0 ? this.dpr / this.scale : this.dpr;
+  }
+
   /** Reset the transform so one unit equals one CSS pixel. */
   begin(): void {
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);

@@ -664,6 +664,14 @@ body {
   touch-action: none;
 }
 
+/* The names over everyone's heads at the screen's own pixels while Render scale is under 100% (`Renderer.nameLayer`). */
+#names {
+  position: fixed;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
 /*
  * The interface is the screen, not the page.
  *

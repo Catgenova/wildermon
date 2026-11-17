@@ -434,6 +434,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Names at the screen's own pixels (`Renderer.nameLayer`; namelabels.ts on whole device pixels).
+  {
+    n: 678,
+    day: '2026-11-17',
+    lines: () => ['Fixed: names over players and wildermon blurred at a Render scale under 100% (Auto included) and at a screen scale of 125% or 150%: drawn at the screen\'s own pixels.'],
+  },
   // A body's kit at the other cut made while the page is idle (`kitAhead` in figure.ts).
   {
     n: 677,
