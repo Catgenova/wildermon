@@ -471,6 +471,52 @@ jobs:
               end loop;
               raise exception 'PARTS%', v_out;
             end \$\$"
+          ask "the ones named that sort: sort_stack's parts timed" "set statement_timeout = '15min'; do \$\$
+            declare c creature; dd deed; v_bins placed[]; b placed; t0 timestamptz; v_n bigint; v_m bigint; v_out text := ''; v_k int; v_defs text[]; v_d text;
+            begin
+              for c in select * from creature where id = any(string_to_array('$IDS', ',')::int[]) and mode = 'deed' and job = 'fetch' loop
+                v_out := v_out || E'\n#' || c.id;
+                t0 := clock_timestamp();
+                select * into dd from my_deed(c.world_id, c.keeper) md where md.world_id is not null;
+                v_out := v_out || format(' | my_deed %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                t0 := clock_timestamp();
+                select array_agg(bp order by bp.id) into v_bins from placed bp join furniture_def fd on fd.id = bp.sub
+                 where bp.world_id = c.world_id and bp.x between dd.x - dd.radius and dd.x + dd.radius and bp.y between dd.y - dd.radius and dd.y + dd.radius
+                   and bp.kind = 'furniture' and fd.takes in ('raw', 'worked') and private.hoard_items(bp.name) is null;
+                v_out := v_out || format(' | %s bins %s ms', coalesce(array_length(v_bins, 1), 0), round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                t0 := clock_timestamp();
+                select count(*) into v_n from deed_store_items(c.world_id, c.keeper) s;
+                v_out := v_out || format(' | deed_store_items %s rows %s ms', v_n, round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                t0 := clock_timestamp();
+                select count(*), count(distinct (s.it).def), array_agg(distinct (s.it).def) into v_n, v_m, v_defs
+                  from deed_store_items(c.world_id, c.keeper) s
+                 where abs(s.x - dd.x) <= dd.radius and abs(s.y - dd.y) <= dd.radius and (s.it).count > 0 and not coalesce((s.it).locked, false)
+                   and exists (select 1 from unnest(v_bins) bb join furniture_def fd on fd.id = bb.sub where furniture_takes(fd.takes, (s.it).def) is null)
+                   and case when s.kind = 'crate'
+                            then exists (select 1 from crate cr where cr.world_id = c.world_id and cr.id = s.sid
+                                            and cr.lock is null and cr.store_of is null and private.hoard_items(cr.name) is null)
+                            else exists (select 1 from placed pl join furniture_def fd on fd.id = pl.sub
+                                          where pl.id = s.sid and pl.lock is null and pl.store_of is null and fd.takes is null
+                                            and private.hoard_items(pl.name) is null and store_markable_refusal(pl) is null) end;
+                v_out := v_out || format(' | the query %s rows %s kinds %s ms', v_n, v_m, round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                t0 := clock_timestamp();
+                v_n := 0;
+                foreach v_d in array coalesce(v_defs, '{}') loop
+                  foreach b in array v_bins loop
+                    if (select furniture_takes(fd.takes, v_d) from furniture_def fd where fd.id = b.sub) is not null then continue; end if;
+                    v_k := furniture_room(b, v_d); v_n := v_n + 1;
+                  end loop;
+                end loop;
+                v_out := v_out || format(' | furniture_room x%s %s ms', v_n, round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                foreach b in array v_bins loop
+                  t0 := clock_timestamp();
+                  v_k := furniture_room(b, 'dirt');
+                  v_out := v_out || format(E'\n  bin %s %s heft %s kg %s room(dirt) %s: %s ms', b.id, b.sub, round(furniture_heft(b)::numeric), round(furniture_kg(b)::numeric),
+                    v_k, round(extract(epoch from clock_timestamp() - t0)::numeric * 1000, 1));
+                end loop;
+              end loop;
+              raise exception 'SORT%', v_out;
+            end \$\$"
           ask "the ones named that hoard: the stacks in unnamed boxes their named boxes want, and those boxes' room" "select b.kind, b.sid, b.ids is not null as named, b.shut,
                  case when b.kind = 'crate' then (select count(*) from item i where i.world_id = c.world_id and i.holder = 'crate' and i.crate = b.sid::int)
                       else (select count(*) from item i where i.placed = b.sid and i.holder = 'furniture') end as stacks,
