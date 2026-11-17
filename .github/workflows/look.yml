@@ -467,6 +467,29 @@ jobs:
                   t0 := clock_timestamp();
                   perform * from sort_stack(r.world_id, r, r.to_x, r.to_y);
                   v_out := v_out || format(' | sort_stack %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  -- Its search for the next tile of its trade (find_work_tile), and what of its site's square
+                  -- private.work_tile_may lets through to the tile-by-tile asking (worker_gatherable).
+                  declare v_site record; v_may boolean[]; v_kind text := coalesce(r.job, (select sd.gathers from species_def sd where sd.id = r.species));
+                  begin
+                    select * into v_site from work_site(r.world_id, r);
+                    if v_site.x is not null and v_kind is not null then
+                      t0 := clock_timestamp();
+                      v_may := private.work_tile_may(r.world_id, v_site.x, v_site.y, v_site.radius, v_kind, r.id);
+                      v_out := v_out || format(' | %s site %s,%s r%s: may %s of %s, %s ms', v_kind, v_site.x, v_site.y, v_site.radius,
+                        coalesce((select count(*) from unnest(v_may) m where m), -1), coalesce(array_length(v_may, 1), -1),
+                        round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                      t0 := clock_timestamp();
+                      perform * from find_work_tile(r.world_id, v_site.x, v_site.y, v_site.radius, v_kind, r);
+                      v_out := v_out || format(' | find_work_tile %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                      t0 := clock_timestamp();
+                      v_out := v_out || format(' | gatherable of the may: %s of %s in %s ms',
+                        (select count(*) from generate_series(-v_site.radius, v_site.radius) dy, generate_series(-v_site.radius, v_site.radius) dx
+                          where v_may[(dy + v_site.radius) * (2 * v_site.radius + 1) + dx + v_site.radius + 1]
+                            and worker_gatherable(r.world_id, v_site.x + dx, v_site.y + dy, v_kind, r)),
+                        coalesce((select count(*) from unnest(v_may) m where m), -1),
+                        round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                    end if;
+                  end;
                 end if;
                 t0 := clock_timestamp();
                 begin perform faith_owed_pay(r.world_id, r.id); raise exception 'undo';
