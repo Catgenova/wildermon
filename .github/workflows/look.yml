@@ -669,6 +669,12 @@ jobs:
               end loop;
               raise exception 'SIZES%', v_out;
             end \$\$"
+          ask "the slowest rounds, last hour, with all they kept of themselves" "select to_char(t.at, 'HH24:MI:SS') as at, round(t.ms::numeric) as ms,
+                 left(regexp_replace((to_jsonb(t) - 'at' - 'ms')::text, '\s+', ' ', 'g'), 400) as rest
+             from tick_time t where t.at > now() - interval '1 hour' order by t.ms desc limit 8"
+          ask "faults, last 2 hours" "select to_char(f.at, 'HH24:MI:SS') as first, to_char(f.last_at, 'HH24:MI:SS') as last, f.times, f.stage, coalesce(f.job, '') as job,
+                 left(f.error, 120) as error, left(regexp_replace(coalesce(f.context, ''), '\s+', ' ', 'g'), 200) as at_line
+             from private.tick_fault f where f.last_at > now() - interval '2 hours' order by f.last_at desc limit 10"
           ask "the clock's rounds, last 15 minutes, by stage" "select count(*) as rounds, round(avg(ms)::numeric) as ms_avg, round(max(ms)::numeric) as ms_worst,
                  (select string_agg(k || ' ' || round(v::numeric, 1), ', ' order by v desc) from (select e.key as k, avg((e.value::text)::numeric) as v
                     from tick_time t2, jsonb_each(t2.stages) e where t2.at > now() - interval '15 minutes' group by 1) q) as stages
