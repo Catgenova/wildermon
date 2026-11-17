@@ -433,6 +433,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A fence on a slope follows it (`WallPainter.slopeRise`).
+  {
+    n: 673,
+    day: '2026-11-17',
+    lines: () => ['Fixed: fence, fence gate and half wall on a slope, no building: drawn along the slope (was: level at the height of one end).'],
+  },
   // The ground read kept by the browser (`GroundHeld`): contents and walls and floors only as they change.
   {
     n: 672,

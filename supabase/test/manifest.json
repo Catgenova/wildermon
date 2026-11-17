@@ -3583,5 +3583,17 @@
     "title": "The ground read, kept by the browser: a piece's contents and the walls and floors only as they change",
     "shard": 4,
     "why": "A driven loaded wagon was sent whole every second (33 kB), and a builder's slow read carried 267 kB of walls and floors every minute and after every job."
+  },
+  {
+    "file": "supabase/test/slowthink.ts",
+    "title": "A wildermon's think that held the clock's round, kept with what it was doing",
+    "shard": 3,
+    "why": "A round of 36 s on the island and nothing kept to say whose think it was."
+  },
+  {
+    "file": "supabase/test/fenceslope.ts",
+    "title": "A fence on a slope stands on it",
+    "shard": 2,
+    "why": "Reported: fences on slopes aren't adhering to the slope properly."
   }
 ]

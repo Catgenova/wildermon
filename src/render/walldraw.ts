@@ -248,6 +248,50 @@ export class WallPainter {
    * that is the right amount of a wall.
    */
   drawWall(wall: Wall, border: Border, base: number, alpha: number): void {
+    /*
+     * A fence, a gate in one or a half wall standing on its own on the ground (no building under it) follows the
+     * slope it stands on: its foot from the ground at one end of its border to the ground at the other (`slopeRise`),
+     * drawn as the level wall sheared along its length. It used to stand level at the height of its first end, over
+     * the ground where the slope fell away and into it where it rose. Reported: "fences on slopes aren't adhering to
+     * the slope properly".
+     */
+    const rise = this.slopeRise(wall, border, base);
+    if (rise === 0) {
+      this.drawWallLevel(wall, border, base, alpha);
+      return;
+    }
+    const cam = this.r.camera;
+    const [ax, ay, bx, by] = borderPoints(border);
+    const sa = cam.worldToScreenX(ax, ay), sb = cam.worldToScreenX(bx, by);
+    const ctx = this.r.canvas.ctx;
+    // The screen's drop at the far end against the level wall's, taken along the screen's run of the wall.
+    const k = (cam.worldToScreenY(bx, by, base + rise) - cam.worldToScreenY(bx, by, base)) / (sb - sa);
+    ctx.save();
+    ctx.transform(1, k, 0, 1, 0, -k * sa);
+    try {
+      this.drawWallLevel(wall, border, base, alpha);
+    } finally {
+      ctx.restore();
+    }
+  }
+
+  /**
+   * The ground's rise from a wall's first end to its other, for a wall that stands on the ground on its own: a fence,
+   * a gate in one, a half wall (`standalone`), on the ground storey, with no building. Nothing for any other, or where
+   * the two ends' screen points are too close along the screen to shear between.
+   */
+  slopeRise(wall: Wall, border: Border, base: number): number {
+    if (wall.level !== 0 || wall.building || !WALL_TYPE_BY_ID.get(wall.type)?.standalone) return 0;
+    const [ax, ay, bx, by] = borderPoints(border);
+    const cam = this.r.camera;
+    if (Math.abs(cam.worldToScreenX(bx, by) - cam.worldToScreenX(ax, ay)) < 1e-3) return 0;
+    const world = this.r.game.world;
+    if (world.getHeight(ax, ay) !== base) return 0;
+    return world.getHeight(bx, by) - base;
+  }
+
+  /** A wall drawn standing level at `base`. */
+  private drawWallLevel(wall: Wall, border: Border, base: number, alpha: number): void {
     // A rune gate, finished, is a model of its own, its runes' light laid over it each frame (`runegate.ts`).
     if (isRuneGate(wall) && isDone(wall)) {
       this.drawRuneGateWall(wall, border, base, alpha);

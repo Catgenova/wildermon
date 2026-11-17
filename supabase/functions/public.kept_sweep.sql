@@ -15,7 +15,7 @@ begin
   loop
     exit when p_until is not null and clock_timestamp() > p_until;
     begin
-      if creature_settle(p_world, r.id) then n := n + 1; end if;
+      if private.settle_timed(p_world, r.id) then n := n + 1; end if;
     exception when lock_not_available then null; -- put all in: held; the next round's
     end;
   end loop;

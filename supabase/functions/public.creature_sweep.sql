@@ -18,7 +18,7 @@ begin
     order by mode = 'wild', until limit 120
   loop
     exit when p_until is not null and clock_timestamp() > p_until;
-    if creature_settle(p_world, r.id) then n := n + 1; end if;
+    if private.settle_timed(p_world, r.id) then n := n + 1; end if;
   end loop;
   return n;
 end $function$

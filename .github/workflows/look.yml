@@ -672,6 +672,10 @@ jobs:
           ask "the slowest rounds, last hour, with all they kept of themselves" "select to_char(t.at, 'HH24:MI:SS') as at, round(t.ms::numeric) as ms,
                  left(regexp_replace((to_jsonb(t) - 'at' - 'ms')::text, '\s+', ' ', 'g'), 400) as rest
              from tick_time t where t.at > now() - interval '1 hour' order by t.ms desc limit 8"
+          ask "thinks of a second or more, last 6 hours (private.slow_think)" "select to_char(t.at, 'MM-DD HH24:MI:SS') as at, round(t.ms) as ms, t.creature, t.species, t.mode, t.job, t.phase, t.idle_why,
+                 coalesce(p.name, left(t.keeper::text, 8)) as keeper
+             from private.slow_think t left join player p on p.world_id = t.world_id and p.uid = t.keeper
+            where t.at > now() - interval '6 hours' order by t.ms desc limit 25"
           ask "faults, last 2 hours" "select to_char(f.at, 'HH24:MI:SS') as first, to_char(f.last_at, 'HH24:MI:SS') as last, f.times, f.stage, coalesce(f.job, '') as job,
                  left(f.error, 120) as error, left(regexp_replace(coalesce(f.context, ''), '\s+', ' ', 'g'), 200) as at_line
              from private.tick_fault f where f.last_at > now() - interval '2 hours' order by f.last_at desc limit 10"
