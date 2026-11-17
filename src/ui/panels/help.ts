@@ -1521,6 +1521,8 @@ export function helpText(): string {
       <li>A second action asked for while one runs <b>queues</b> behind it, walking you there if needed. The bar above the action shows the queue.</li>
       <li>Size: <b>${BASE_QUEUE}</b>, one more per ${QUEUE_PER_MIND} <b>mind logic</b>.</li>
       <li>Walking off pauses the queue (resume: below). <kbd>Esc</kbd> clears it.</li>
+      <li><b>Action queue</b> window: a click on the bar's queue line, or the window list. The same list as the Crafting window foot, shown with nothing queued,
+      and <b>Again</b>: the last action asked, asked again (the Do it again key).</li>
       <li>Crafting window foot: every queued action, current first, with its count, time at your current pace (speed multiplier) and, for a craft, what it will use and from where
       (pack, bags or a named store) after the actions ahead.</li>
       <li>Reorder: drag by the grip, or <b>&uarr;</b> / <b>&darr;</b>. <b>&times;</b> removes. The current action never moves.</li>

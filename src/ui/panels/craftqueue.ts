@@ -55,6 +55,8 @@ export class QueueView {
   private readonly title: HTMLSpanElement;
   private readonly fold: HTMLButtonElement;
   private readonly go: HTMLButtonElement;
+  /** Again: the last job asked, asked again (`Game.repeatLast`). */
+  private readonly again: HTMLButtonElement;
   private readonly list: HTMLOListElement;
   private readonly repaint = new Repaint(250);
   private folded = false;
@@ -72,7 +74,11 @@ export class QueueView {
    */
   private refocus: { at: number; dir: 'up' | 'down' | 'drop' | 'stop'; until?: number } | null = null;
 
-  constructor(private readonly game: Game) {
+  /**
+   * `own`: the Action queue window's, shown whether or not anything is held and never folded; else the foot of the
+   * crafting window's. `againKey`: the key Again answers to, for its title.
+   */
+  constructor(private readonly game: Game, private readonly own = false, private readonly againKey: () => string | null = () => null) {
     this.el = document.createElement('section');
     this.el.className = 'craft-queue';
     this.el.hidden = true;
@@ -91,22 +97,31 @@ export class QueueView {
     this.go.textContent = 'Resume';
     this.go.title = 'Resume the actions paused by walking, from the top';
     this.go.addEventListener('click', () => this.game.resumeQueue());
-    this.head.append(this.fold, this.go);
+    this.again = document.createElement('button');
+    this.again.type = 'button';
+    this.again.className = 'tb-btn tb-small rc-btn cq-again';
+    this.again.addEventListener('click', () => this.game.repeatLast());
+    this.head.append(this.fold, this.go, this.again);
     this.list = document.createElement('ol');
     this.list.className = 'cq-list';
     this.el.append(this.head, this.list);
     // ↑, ↓ and × pressed from the keyboard, rather than Enter going to Talk.
     keepControlKeys(this.el);
     try {
-      this.folded = localStorage.getItem(FOLD_KEY) === '1';
+      this.folded = !own && localStorage.getItem(FOLD_KEY) === '1';
     } catch {
       // Open, for as long as the page is.
+    }
+    if (own) {
+      this.el.classList.add('cq-own');
+      this.fold.tabIndex = -1;
     }
     // What a craft would spend, and from where, changes with the pack and the stores.
     for (const ev of ['inventory', 'crate', 'skill', 'action'] as const) game.events.on(ev, () => this.repaint.ask());
   }
 
   private setFolded(on: boolean): void {
+    if (this.own) return;
     this.folded = on;
     try {
       localStorage.setItem(FOLD_KEY, on ? '1' : '0');
@@ -121,7 +136,7 @@ export class QueueView {
   update(now: number): void {
     const a = this.game.action;
     const q = this.game.queue;
-    const shape = `${a ? `${a.def.id}.${a.left ?? ''}.${a.goes ?? ''}.${a.state}` : '-'}|${q.map((j) => `${j.def.id}.${j.goes ?? 1}`).join()}|${this.game.held ? 1 : 0}|${this.game.queueCapacity()}`;
+    const shape = `${a ? `${a.def.id}.${a.left ?? ''}.${a.goes ?? ''}.${a.state}` : '-'}|${q.map((j) => `${j.def.id}.${j.goes ?? 1}`).join()}|${this.game.held ? 1 : 0}|${this.game.queueCapacity()}|${this.againSaid()}`;
     if (shape !== this.shape) {
       this.shape = shape;
       this.repaint.force();
@@ -135,6 +150,12 @@ export class QueueView {
       const t = this.timeLeft();
       if (t !== this.nowSaid) this.nowTime.textContent = this.nowSaid = t;
     }
+  }
+
+  /** What Again would ask: "Again: Mine × 10"; empty with nothing asked yet. */
+  private againSaid(): string {
+    const last = this.game.lastAsked;
+    return last ? `Again: ${last.def.label}${(last.goes ?? 1) > 1 ? ` × ${last.goes}` : ''}` : '';
   }
 
   private timeLeft(): string {
@@ -211,9 +232,20 @@ export class QueueView {
     this.nowTime = null;
     this.nowSaid = '';
     const any = !!a || q.length > 0;
-    this.el.hidden = !any;
+    const again = this.againSaid();
+    const key = this.againKey();
+    this.again.textContent = again || 'Again';
+    this.again.disabled = !again;
+    this.again.title = again ? `The last action asked, asked again: same target, same count${key ? ` (${key})` : ''}` : 'Nothing asked yet.';
+    this.el.hidden = !any && !this.own;
     if (!any) {
-      this.list.replaceChildren();
+      this.title.textContent = `Action queue · 0/${this.game.queueCapacity()}`;
+      this.go.hidden = true;
+      const none = document.createElement('li');
+      none.className = 'cq-row cq-none rc-row';
+      none.textContent = 'Nothing queued';
+      this.list.hidden = false;
+      this.list.replaceChildren(...(this.own ? [none] : []));
       return;
     }
     const held = (a ? 1 : 0) + q.length;
@@ -221,9 +253,11 @@ export class QueueView {
     let total = a && a.state !== 'walking' ? Math.max(0, a.duration - a.elapsed) + Math.max(0, (a.left ?? 1) - 1) * a.duration : 0;
     for (const j of q) total += this.secsOf(j.def, Math.max(1, j.goes ?? 1));
     const putDown = !a && this.game.held;
-    this.title.textContent = `${this.folded ? '▸' : '▾'} ${putDown ? 'Actions paused' : 'Action queue'} · ${held}/${cap} · ${clockSaid(total)} total`;
-    this.fold.title = this.folded ? 'Show actions' : 'Hide actions';
-    this.fold.setAttribute('aria-expanded', String(!this.folded));
+    this.title.textContent = `${this.own ? '' : this.folded ? '▸ ' : '▾ '}${putDown ? 'Actions paused' : 'Action queue'} · ${held}/${cap} · ${clockSaid(total)} total`;
+    if (!this.own) {
+      this.fold.title = this.folded ? 'Show actions' : 'Hide actions';
+      this.fold.setAttribute('aria-expanded', String(!this.folded));
+    }
     this.go.hidden = !putDown;
     this.list.hidden = this.folded;
     if (this.folded) {

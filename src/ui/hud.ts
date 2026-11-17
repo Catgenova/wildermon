@@ -67,6 +67,7 @@ interface Bar {
 export const WINDOWS: Array<{ label: string; bind: string; id: string }> = [
   { label: 'Inventory', bind: 'win_inventory', id: 'inventory' },
   { label: 'Craft', bind: 'win_craft', id: 'craft' },
+  { label: 'Action queue', bind: 'win_queue', id: 'queue' },
   { label: 'Tile', bind: 'win_tile', id: 'tile' },
   { label: 'Skills', bind: 'win_skills', id: 'skills' },
   { label: 'Health', bind: 'win_health', id: 'health' },
@@ -471,6 +472,17 @@ export class Hud {
     this.queueEl = document.createElement('div');
     this.queueEl.className = 'action-queue';
     this.queueEl.hidden = true;
+    // The line opens the Action queue window, where each job is moved, dropped or stopped.
+    this.queueEl.tabIndex = 0;
+    this.queueEl.setAttribute('role', 'button');
+    this.queueEl.title = 'Action queue: reorder, drop';
+    this.queueEl.addEventListener('click', () => cb.toggle('queue'));
+    this.queueEl.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      e.stopPropagation();
+      cb.toggle('queue');
+    });
     this.hintEl = document.createElement('div');
     this.hintEl.className = 'action-hint';
     this.stopBtn = document.createElement('button');

@@ -129,6 +129,7 @@ import { ContextMenu, type MenuItem } from './contextmenu';
 import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
 import { MendPanel } from './panels/mend';
+import { QueueView } from './panels/craftqueue';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
 import { changeWallRows, frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
 import { storeyHost, wallAcross } from '../game/storeyview';
@@ -392,6 +393,9 @@ export class UI {
   private readonly equipment: EquipmentPanel;
   private readonly shopping: ShoppingPanel;
   private readonly mend: MendPanel;
+  /** The Action queue window's list: every job held, moved, dropped or stopped from anywhere. */
+  private readonly queueView: QueueView;
+  private readonly queueWin: UIWindow;
   private readonly spellBar: SpellBar;
   private readonly deedPanel: DeedPanel;
   private readonly tilePanel: TilePanel;
@@ -542,6 +546,14 @@ export class UI {
     const mendWin = this.windows.create({ id: 'mend', title: 'Improve and repair', x: 364, y: 56, width: 560, height: 620, anchor: 'tr', open: false });
     this.mend = new MendPanel(mendWin, game);
     invPanel.openMend = (uid) => this.mend.show(uid);
+    // Every action held (`QueueView`, its own): off the action bar's queue line, or the window list.
+    this.queueWin = this.windows.create({ id: 'queue', title: 'Action queue', x: 364, y: 56, width: 360, height: 320, anchor: 'tr', open: false });
+    kitBody(this.queueWin.body, 'queue-body');
+    this.queueView = new QueueView(game, true, () => {
+      const codes = this.keys.codes('repeat');
+      return codes.length ? keyName(codes[0]) : null;
+    });
+    this.queueWin.body.append(this.queueView.el);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
     this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick, (ground) => this.selectTile(ground)), this.tooltip);
     const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 358, anchor: 'tr', open: false, seeThrough: true });
@@ -1159,6 +1171,7 @@ export class UI {
     this.equipment.update(performance.now());
     this.shopping.update(performance.now());
     this.mend.update(performance.now());
+    if (this.queueWin.isOpen) this.queueView.update(performance.now());
     this.spellBar.update();
   }
 

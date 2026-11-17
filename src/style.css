@@ -1611,7 +1611,12 @@ button.goal-row:focus-visible {
   color: var(--ui-accent);
   font-size: 11px;
   opacity: 0.85;
+  cursor: pointer;
 }
+
+/* The line opens the Action queue window. */
+.action-queue:hover { opacity: 1; text-decoration: underline; }
+.action-queue:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
 
 .action-hint {
   margin-top: 4px;
@@ -6392,6 +6397,12 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   max-height: 40%;
   border-top: 1px solid var(--ui-border);
 }
+
+/* The Action queue window's own: the whole window, never folded. */
+.craft-queue.cq-own { max-height: none; border-top: 0; }
+.cq-own .cq-fold { cursor: default; }
+.cq-again { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.cq-none { color: var(--ui-dim); }
 
 .craft-body:has(> .craft-queue:not([hidden])) > .inv-list {
   min-height: 96px;

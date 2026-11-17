@@ -434,6 +434,15 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The action queue in a window of its own (craftqueue.ts `own`), opened off the bar's queue line; Again in its head.
+  {
+    n: 684,
+    day: '2026-11-17',
+    lines: () => [
+      'Added: Action queue window: every action held, current first; reorder (drag, ↑ ↓), drop (×), stop the current one. Opened by a click on the action bar\'s queue line, or the window list.',
+      'Added: Again button, Action queue window and Crafting window queue: the last action asked, same target, same count (the Do it again key).',
+    ],
+  },
   // The Improve window: Repair all, Hone all and Improve all at the top; one piece at a time (mend.ts, migration 140).
   {
     n: 683,
