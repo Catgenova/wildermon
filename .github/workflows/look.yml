@@ -24,6 +24,9 @@ on:
       think_costs:
         description: 'Anything: time one think of every kept wildermon, each rolled back (blank skips it)'
         default: ''
+      perf:
+        description: 'Anything: the wild by birth and block, and each awake player''s reads timed, each rolled back (blank skips it)'
+        default: ''
 
 # Reads the repository and nothing else; the project is reached with the AI environment's secrets.
 permissions:
@@ -553,6 +556,101 @@ jobs:
               raise exception 'THINK total % ms over % kept%', (select round(sum((e->>'ms')::numeric)) from jsonb_array_elements(res) e),
                 jsonb_array_length(res), v_out;
             end \$\$"
+
+      - name: The wild by birth and block, and what each awake player's reads cost
+        # Asked: "look into the wild population jump. Identify as many high value reductions to ms and increases to fps
+        # as possible." The wild by the day each was born and by its stock block (`creature_stock_block` keeps
+        # `wild_per_region()` a 32-tile region), and how many stand near each awake player; and, as each awake player,
+        # `rpc_ground` whole and at once again on its own answer (`since`), `rpc_creatures`, `rpc_settle`, and the parts
+        # of `rpc_ground` that are calls of their own, each timed and undone. Writes nothing.
+        if: inputs.perf != ''
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          ask "wild alive, by the day each was born" "select to_char(date_trunc('day', c.born), 'MM-DD') as born, count(*) as alive,
+                 count(*) filter (where c.pedigree is not null) as bred, count(*) filter (where c.lair is not null) as of_lair,
+                 count(*) filter (where c.boss) as bosses
+             from creature c where c.world_id::text like 'f3a88670%' and c.mode = 'wild' group by 1 order by 1 desc limit 20"
+          ask "wild by stock block: how many blocks hold how many (64 wanted a whole block)" "with b as (select floor(c.to_x / 256)::int as bx, floor(c.to_y / 256)::int as by, count(*) as n
+                 from creature c where c.world_id::text like 'f3a88670%' and c.mode = 'wild' group by 1, 2)
+             select width_bucket(n, 0, 160, 8) as bucket, min(n) as least, max(n) as most, count(*) as blocks, sum(n) as wild from b group by 1 order by 1"
+          ask "the fullest stock blocks: wild, born in the last 2 days, of lairs, and when stocked" "with b as (select floor(c.to_x / 256)::int as bx, floor(c.to_y / 256)::int as by, count(*) as n,
+                   count(*) filter (where c.born > now() - interval '2 days') as young, count(*) filter (where c.lair is not null) as lair
+                 from creature c where c.world_id::text like 'f3a88670%' and c.mode = 'wild' group by 1, 2)
+             select b.*, to_char(s.at, 'MM-DD HH24:MI') as stocked from b left join world_stocked s on s.world_id::text like 'f3a88670%' and s.bx = b.bx and s.by = b.by
+             order by n desc limit 12"
+          ask "wild alive by kind, and born in the last 2 days" "select c.species, count(*) as alive, count(*) filter (where c.born > now() - interval '2 days') as young,
+                 count(*) filter (where c.lair is not null) as of_lair from creature c where c.world_id::text like 'f3a88670%' and c.mode = 'wild'
+             group by 1 order by 3 desc limit 25"
+          ask "each awake player: wild, kept and players within 40 tiles, and things placed and lying within 40" "select p.name, round(p.x) as x, round(p.y) as y,
+                 (select count(*) from creature c where c.world_id = p.world_id and c.mode = 'wild' and abs(c.to_x - p.x) <= 40 and abs(c.to_y - p.y) <= 40) as wild,
+                 (select count(*) from creature c where c.world_id = p.world_id and c.mode <> 'wild' and abs(c.to_x - p.x) <= 40 and abs(c.to_y - p.y) <= 40) as kept,
+                 (select count(*) from player q where q.world_id = p.world_id and q.uid <> p.uid and not q.away and abs(q.x - p.x) <= 40 and abs(q.y - p.y) <= 40) as players,
+                 (select count(*) from placed q where q.world_id = p.world_id and abs(q.cx - p.x) <= 40 and abs(q.cy - p.y) <= 40) as placed,
+                 (select count(*) from item i where i.world_id = p.world_id and i.holder = 'ground' and abs(i.gx - p.x) <= 40 and abs(i.gy - p.y) <= 40) as lying
+             from player p where p.world_id::text like 'f3a88670%' and not p.away and p.seen_at > now() - interval '10 minutes' order by p.name"
+          ask "each awake player's reads, timed and undone" "set statement_timeout = '15min'; do \$\$
+            declare p player; t0 timestamptz; r jsonb; v_out text := ''; v_at text; v_n int;
+            begin
+              for p in select * from player where world_id::text like 'f3a88670%' and not away and seen_at > now() - interval '10 minutes' order by name loop
+                v_out := v_out || E'\n' || p.name;
+                begin
+                  perform set_config('request.jwt.claims', json_build_object('sub', p.uid, 'role', 'authenticated')::text, true);
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; t0 := clock_timestamp(); r := rpc_ground(p.world_id, 40, true, null);
+                  v_at := r->>'at';
+                  v_out := v_out || format(' | ground whole %s ms %s kB (placed %s, lying %s, crates %s)', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000),
+                    length(r::text) / 1024, jsonb_array_length(r->'placed'), jsonb_array_length(r->'lying'), jsonb_array_length(coalesce(r->'crates', '[]')));
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; t0 := clock_timestamp(); r := rpc_ground(p.world_id, 40, false, v_at);
+                  v_out := v_out || format(' | ground since, not slow %s ms %s kB', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000), length(r::text) / 1024);
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; t0 := clock_timestamp(); r := rpc_ground(p.world_id, 40, true, v_at);
+                  v_out := v_out || format(' | ground since, slow %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; t0 := clock_timestamp(); r := rpc_creatures(p.world_id, 40, null, null, false);
+                  v_at := r->>'at';
+                  v_out := v_out || format(' | creatures whole %s ms %s kB %s rows', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000), length(r::text) / 1024, jsonb_array_length(coalesce(r->'rows', '[]')));
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; t0 := clock_timestamp(); r := rpc_creatures(p.world_id, 40, v_at, null, false);
+                  v_out := v_out || format(' | creatures since %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  t0 := clock_timestamp(); perform crops_settle(p.world_id, p.x, p.y, 40);
+                  v_out := v_out || format(' | crops_settle %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  t0 := clock_timestamp(); perform planters_settle(p.world_id, p.x, p.y, 40);
+                  v_out := v_out || format(' | planters_settle %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  t0 := clock_timestamp(); perform crates_near(p.world_id, p.uid, 40);
+                  v_out := v_out || format(' | crates_near %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  t0 := clock_timestamp(); perform folk_ashore(p.world_id, p.uid);
+                  v_out := v_out || format(' | folk_ashore %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  update public.caller set paced = null, calls = 0 where uid = p.uid; t0 := clock_timestamp(); perform rpc_settle(null, p.world_id, null, false, null);
+                  v_out := v_out || format(' | settle %s ms', round(extract(epoch from clock_timestamp() - t0)::numeric * 1000));
+                  raise exception 'undo';
+                exception when others then
+                  if sqlerrm <> 'undo' then v_out := v_out || ' | ERR ' || left(sqlerrm, 100); end if;
+                end;
+              end loop;
+              raise exception 'READS%', v_out;
+            end \$\$"
+          ask "the clock's rounds, last 15 minutes, by stage" "select count(*) as rounds, round(avg(ms)::numeric) as ms_avg, round(max(ms)::numeric) as ms_worst,
+                 (select string_agg(k || ' ' || round(v::numeric, 1), ', ' order by v desc) from (select e.key as k, avg((e.value::text)::numeric) as v
+                    from tick_time t2, jsonb_each(t2.stages) e where t2.at > now() - interval '15 minutes' group by 1) q) as stages
+             from tick_time where at > now() - interval '15 minutes'"
+          echo "== what each call costs now: 110 seconds of pg_stat_statements, by call and arguments"
+          PGPASSWORD="$SUPABASE_DB_PASSWORD" psql "$(sed 's/:\[YOUR-PASSWORD\]//' supabase/.temp/pooler-url)" -X -q -v ON_ERROR_STOP=1 <<'EOSQL' \
+            || echo "::warning::could not take the two-minute count"
+          create temp table s0 as select userid, dbid, toplevel, queryid, calls, total_exec_time from pg_stat_statements;
+          select pg_sleep(55);
+          select pg_sleep(55);
+          select r.rolname as who,
+                 coalesce(substring(s.query from '"?public"?\."?([a-z_0-9]+)"?\('), left(regexp_replace(s.query, '\s+', ' ', 'g'), 40)) as call,
+                 coalesce(nullif(array_to_string(array(select distinct m[1] from regexp_matches(s.query, '"(p_[a-z_]+)"', 'g') as m order by 1), ','), ''), '-') as args,
+                 sum(s.calls - coalesce(a.calls, 0)) as calls,
+                 round((sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) / greatest(sum(s.calls - coalesce(a.calls, 0)), 1))::numeric, 2) as ms_each,
+                 round(sum(s.total_exec_time - coalesce(a.total_exec_time, 0))::numeric) as ms_total
+            from pg_stat_statements s left join s0 a using (userid, dbid, toplevel, queryid) left join pg_roles r on r.oid = s.userid
+           where s.calls > coalesce(a.calls, 0)
+           group by 1, 2, 3 order by sum(s.total_exec_time - coalesce(a.total_exec_time, 0)) desc limit 25;
+          EOSQL
 
       - name: Look
         env:
