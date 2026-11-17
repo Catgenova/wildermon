@@ -38,9 +38,10 @@ create table if not exists private.slow_think (
 );
 create index if not exists slow_think_at on private.slow_think (at);
 
--- One think, timed; kept when it is slow. What `creature_settle` says, and what it raises, as it was.
+-- One think, timed; kept when it is slow. What `creature_settle` says, and what it raises, as it was. On the caller's
+-- search path, as the sweeps' own call to `creature_settle` was (a test's counting `creature_settle` ahead of it, `stirload.ts`).
 create or replace function private.settle_timed(p_world uuid, p_id integer) returns boolean
-language plpgsql set search_path = public as $fn$
+language plpgsql as $fn$
 declare t0 timestamptz := clock_timestamp(); v_ok boolean; v_ms double precision;
 begin
   v_ok := creature_settle(p_world, p_id);

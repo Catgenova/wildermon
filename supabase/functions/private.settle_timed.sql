@@ -3,7 +3,6 @@
 CREATE OR REPLACE FUNCTION private.settle_timed(p_world uuid, p_id integer)
  RETURNS boolean
  LANGUAGE plpgsql
- SET search_path TO 'public'
 AS $function$
 declare t0 timestamptz := clock_timestamp(); v_ok boolean; v_ms double precision;
 begin
