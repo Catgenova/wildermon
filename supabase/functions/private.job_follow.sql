@@ -5,34 +5,45 @@ CREATE OR REPLACE FUNCTION private.job_follow(p_world uuid, p_uid uuid, p_action
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare v_it item; v_next item; v_all int;
+declare v_it item; v_next item; v_all int; v_each int; v_t jsonb; v_from bigint;
 begin
   if p_action not in ('improve_item', 'repair_item', 'hone_whetstone') or jsonb_typeof(p_target) is distinct from 'object' then
     return null;
   end if;
-  if p_action = 'repair_item' and jsonb_typeof(p_target->'cycles') = 'number' then
-    v_it := carried(p_world, p_uid, target_item(p_target));
-    if v_it.id is null then return null; end if;
-    return jsonb_build_array(jsonb_build_object('action', 'improve_item',
-             'target', jsonb_build_object('kind', 'item', 'uid', v_it.id, 'mend', true)
-                       || jsonb_strip_nulls(jsonb_build_object('stock', p_target->'stock', 'stockOf', p_target->'stockOf',
-                                                               'upto', p_target->'upto')),
-             'goes', least(100, greatest(1, (p_target->>'cycles')::int))));
-  end if;
-  if p_action = 'improve_item' then
-    if not coalesce((p_target->>'mend')::boolean, false) then return null; end if;
-    v_it := carried(p_world, p_uid, target_item(p_target));
-    if v_it.id is null or v_it.dmg <= 10 or item_refusal(p_world, p_uid, 'repair_item', p_target) is not null then
-      return null;
-    end if;
-    return jsonb_build_array(jsonb_build_object('action', 'repair_item',
-             'target', jsonb_build_object('kind', 'item', 'uid', v_it.id),
-             'goes', private.repair_goes(p_world, p_uid, v_it.dmg)))
-        || case when p_left > 0
-                then jsonb_build_array(jsonb_build_object('action', 'improve_item', 'target', p_target, 'goes', p_left))
-                else '[]'::jsonb end;
-  end if;
   v_all := case when jsonb_typeof(p_target->'all') = 'number' then (p_target->>'all')::int else 0 end;
+  v_each := case when jsonb_typeof(p_target->'cycles') = 'number' then least(100, greatest(1, (p_target->>'cycles')::int)) end;
+  if (p_action = 'repair_item' and v_each is not null) or p_action = 'improve_item' then
+    if p_action = 'repair_item' then
+      -- A Repair to 0 that carries a run: the run, on the same piece.
+      v_it := carried(p_world, p_uid, target_item(p_target));
+      if v_it.id is not null then
+        v_t := jsonb_build_object('kind', 'item', 'uid', v_it.id, 'mend', true)
+               || jsonb_strip_nulls(jsonb_build_object('stock', p_target->'stock', 'stockOf', p_target->'stockOf',
+                                                       'upto', p_target->'upto', 'all', p_target->'all',
+                                                       'cycles', case when v_all > 1 then to_jsonb(v_each) end));
+        if v_all <= 1 or item_refusal(p_world, p_uid, 'improve_item', v_t) is null then
+          return jsonb_build_array(jsonb_build_object('action', 'improve_item', 'target', v_t, 'goes', v_each));
+        end if;
+      end if;
+    else
+      if not coalesce((p_target->>'mend')::boolean, false) then return null; end if;
+      -- A run over 10 damage: Repair to 0, then the rest of the run.
+      v_it := carried(p_world, p_uid, target_item(p_target));
+      if v_it.id is not null and v_it.dmg > 10 and item_refusal(p_world, p_uid, 'repair_item', p_target) is null then
+        return jsonb_build_array(jsonb_build_object('action', 'repair_item',
+                 'target', jsonb_build_object('kind', 'item', 'uid', v_it.id),
+                 'goes', private.repair_goes(p_world, p_uid, v_it.dmg)))
+            || case when p_left > 0
+                    then jsonb_build_array(jsonb_build_object('action', 'improve_item', 'target', p_target, 'goes', p_left))
+                    -- The run over, in an Improve all: the next piece's after the Repair.
+                    else private.improve_all_next(p_world, p_uid, v_it.id, v_all, v_each, p_target->'upto') end;
+      end if;
+    end if;
+    -- Improve all: the next piece's run, once this one's is over.
+    v_from := coalesce(v_it.id, case when jsonb_typeof(p_target->'uid') = 'number' then (p_target->>'uid')::bigint end);
+    return nullif(private.improve_all_next(p_world, p_uid, v_from, v_all, v_each, p_target->'upto'), '[]'::jsonb);
+  end if;
+  -- Repair all and Hone all: the most damaged held piece next.
   if v_all <= 1 then return null; end if;
   select g.* into v_next from private.held_gear(p_world, p_uid) g
    where g.dmg > 0

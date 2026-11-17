@@ -434,6 +434,16 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The Improve window: Repair all, Hone all and Improve all at the top; one piece at a time (mend.ts, migration 140).
+  {
+    n: 683,
+    day: '2026-11-17',
+    lines: () => [
+      'Added: Improve window: Improve all: each item Improve takes, by item id, one after another: Cycles an item and Target QL as set; over 10 damage: a full Repair first.',
+      'Changed: Improve window: Repair all, Hone all and Improve all at the top.',
+      'Removed: Improve window: choosing several items (Ctrl/⌘-click, Shift-click, ✓) and the several-item Improve and Cycles sections.',
+    ],
+  },
   // Trophies `unmendable`, and the stock an Improve pass took said in its line (migration 139).
   {
     n: 682,

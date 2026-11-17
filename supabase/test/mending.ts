@@ -277,6 +277,24 @@ begin
   insert into said select 'E_DMG', round(dmg::numeric, 1)::text from item where id = s2;
   insert into said values ('E_IDLE', coalesce((select act from player where world_id = w and uid = u), 'idle'));
 
+  -- Improve all, as the window asks it: the first piece's run carrying all (pieces at most) and cycles (passes a piece).
+  -- The hatchet's 2 passes, then the next held piece by id, the long sword over 10: its Repair to 0, then its 2 passes;
+  -- nothing after it, and nothing before the hatchet (the pickaxe, the shovel).
+  delete from item where world_id = w and holder = 'player' and holder_uid = u and def in ('iron_lump', 'tin_lump', 'copper_lump');
+  perform give(w, u, 'iron_lump', 30, 20);
+  update item set dmg = 0 where id = h2;
+  update item set dmg = 14 where id = s2;
+  m0 := coalesce((select max(n) from event where world_id = w), 0);
+  insert into said values ('F_ASK', coalesce((rpc_act(w, 'improve_item', jsonb_build_object('kind', 'item', 'uid', h2, 'mend', true,
+    'all', 3, 'cycles', 2), 2))->>'started', 'null'));
+  insert into said values ('F_RUN', pg_temp.run(w, u, 400)::text);
+  insert into said select 'F_PASSES', coalesce(string_agg(nm || ':' || k, ',' order by nm), '') from (
+    select substring(text from '^(?:Improved|Improve failed): ([a-z ]+),') nm, count(*) k from event
+     where world_id = w and uid = u and n > m0 and text ~ '^(Improved|Improve failed): ' group by 1) x;
+  insert into said select 'F_ORDER', coalesce(string_agg(substring(text from '^(?:Improved|Improve failed|Fully repaired): ([a-z ]+),'), ',' order by n), '')
+    from event where world_id = w and uid = u and n > m0 and text ~ '^(Improved|Improve failed|Fully repaired): ';
+  insert into said values ('F_IDLE', coalesce((select act from player where world_id = w and uid = u), 'idle'));
+
   -- Both sides' words and numbers.
   insert into said values ('FOLLOW', private.job_follow(w, u, 'repair_item', jsonb_build_object('kind', 'item', 'uid', s2, 'mend', true,
     'stock', 'tin_lump', 'stockOf', 'Tin', 'upto', 60, 'cycles', 5), 0)::text);
@@ -333,6 +351,12 @@ check('island: the pieces in turn: the hatchet\'s run, the sword\'s Repair and i
 check('island: the sword repaired first, then its 3 passes held to tin; each piece to its own kind, all of it used',
   at('E_SWORD1').startsWith('Fully repaired: long sword') && at('E_IRON') === '0' && at('E_TIN') === '0' && at('E_COPPER') === '0'
   && Number(at('E_DMG')) <= IMPROVE_DAMAGE && at('E_IDLE') === 'idle', `first "${at('E_SWORD1')}", iron ${at('E_IRON')}, tin ${at('E_TIN')}, copper ${at('E_COPPER')}, sword damage ${at('E_DMG')}, ${at('E_IDLE')}`);
+
+const fOrder = at('F_ORDER').split(',').filter(Boolean);
+check('island: Improve all: 2 passes on the hatchet, then the long sword\'s Repair to 0 and its 2 passes; not the pickaxe or shovel; idle',
+  at('F_ASK') === 'true' && at('F_PASSES') === 'hatchet:2,long sword:2' && fOrder.indexOf('long sword') > 0
+  && fOrder.slice(0, fOrder.indexOf('long sword')).every((n) => n === 'hatchet') && at('F_IDLE') === 'idle',
+  `asked ${at('F_ASK')}, passes ${at('F_PASSES')}, order ${at('F_ORDER')}, ${at('F_IDLE')}`);
 
 // The run a Repair carries, as the island puts it in front and as the browser asks it of a piece at nought.
 const follow = (JSON.parse(at('FOLLOW')) as Array<{ action: string; target: Record<string, unknown>; goes: number }>)[0];

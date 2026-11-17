@@ -1,14 +1,13 @@
 import { ACTION_BY_ID, type Target } from '../../game/actions';
-import { QUEUE_PER_MIND, type Game } from '../../game/game';
+import type { Game } from '../../game/game';
 import { canImprove, IMPROVE_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD, improvable, lockSaid, madeOf, stockKinds, type StockLock } from '../../game/improve';
 import { itemDef, itemName, type Item } from '../../game/items';
 import {
-  byDamage, cyclePlan, goSecs, heldEquipment, honeable, honeQueue, improveTools, improveTop, JOB_GOES_MOST, lockAtHand, lockKey, passesAhead, pieceJob, piecePlans,
-  piecesThatFit, queueRoom, repairCost, repairHealed, repairQlPerPoint, repairQueue, repairRefusal, whetstonesHeld, type CyclePlan, type CycleStop,
+  byDamage, cyclePlan, goSecs, heldEquipment, honeable, honeQueue, improveTools, improveTop, JOB_GOES_MOST, lockKey, passesAhead, pieceJob, piecePlans,
+  queueRoom, repairCost, repairHealed, repairQlPerPoint, repairQueue, repairRefusal, whetstonesHeld, type CyclePlan, type CycleStop,
 } from '../../game/mending';
 import { WHETSTONE } from '../../game/relicuse';
 import { SKILL_BY_ID } from '../../game/skills';
-import { Picking } from '../picking';
 import { Repaint } from '../repaint';
 import type { UIWindow } from '../windows';
 import { kitBody } from '../kit';
@@ -19,7 +18,6 @@ const pct = (p: number): string => `${Math.round(p * 100)}%`;
 const lower = (id: string): string => itemDef(id).name.toLowerCase();
 const skillName = (id: string): string => SKILL_BY_ID.get(id)?.name ?? id.replace(/_/g, ' ');
 const actionsSaid = (n: number): string => `${n} ${n === 1 ? 'action' : 'actions'}`;
-const piecesSaid = (n: number): string => `${n} ${n === 1 ? 'piece' : 'pieces'}`;
 
 /** A stop of a run of cycles, as its line says it: what it comes to on its own. */
 function stopSaid(g: Game, it: Item, stop: CycleStop, plan: CyclePlan, lock: StockLock, atHand: number, upto: number | null): string {
@@ -36,9 +34,6 @@ function stockSaid(it: Item): string {
   const stock = improvable(it.id, it.extra)?.material.stock ?? [];
   return `${stock.filter((s) => !s.endsWith('_ingot')).slice(0, 4).map(lower).join(', ')}${stock.length > 4 ? ', …' : ''}`;
 }
-
-/** Keys and modifiers a pick reads: a click's, a key's, or a box ticked. */
-type PickKeys = Pick<MouseEvent, 'ctrlKey' | 'metaKey' | 'shiftKey'>;
 
 /** The jobs this window starts, which it says are in hand. */
 const OURS = new Set(['improve_item', 'repair_item', 'hone_whetstone']);
@@ -57,10 +52,8 @@ const OURS = new Set(['improve_item', 'repair_item', 'hone_whetstone']);
 export class MendPanel {
   private readonly body: HTMLDivElement;
   private readonly repaint = new Repaint(400);
-  /** The piece last picked on its own: the one a Shift-click runs from, and the one chosen when the pick is empty. */
+  /** The piece Improve shows: the one last picked while held, else the first. */
   private uid: number | null = null;
-  /** The pieces chosen for Improve and the cycles. */
-  private readonly picking = new Picking();
   /** The stock kind a run is held to for each material (`lockKey`), chosen here; the first a pass would draw otherwise. */
   private readonly locks = new Map<string, string>();
   private cycles = 10;
@@ -83,7 +76,6 @@ export class MendPanel {
   show(uid?: number): void {
     if (uid !== undefined) {
       this.uid = uid;
-      this.picking.only(uid);
       this.locks.clear();
     }
     if (!this.win.isOpen) this.win.open();
@@ -97,36 +89,16 @@ export class MendPanel {
     this.render(now);
   }
 
-  /**
-   * A row's name or box: a plain click chooses that piece alone; Ctrl/⌘ adds it or takes it off; Shift chooses
-   * the run from the last piece picked to it, in the rows' order. Never none.
-   */
-  private pick(uid: number, order: number[], e: PickKeys): void {
-    if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
-      this.show(uid);
-      return;
-    }
-    this.picking.click(uid, order, e as MouseEvent);
-    if (!this.picking.size) this.picking.only(uid);
-    if (!e.shiftKey && this.picking.uids.has(uid)) this.uid = uid;
-    this.repaint.force();
-    this.render();
-  }
-
   private render(now = performance.now()): void {
     const g = this.game;
     const gear = heldEquipment(g);
     const rows = [...gear].sort(byDamage);
     const pieces = rows.filter((it) => canImprove(it.id));
-    // The pick keeps to what is still held; empty, it is the piece last picked, else the first.
-    this.picking.keep(pieces.map((it) => it.uid));
-    if (!this.picking.size && pieces.length) this.picking.only(pieces.find((it) => it.uid === this.uid)?.uid ?? pieces[0].uid);
-    const chosen = pieces.filter((it) => this.picking.uids.has(it.uid));
     const a = g.action;
     const sign = JSON.stringify([
       gear.map((it) => [it.uid, it.id, it.ql.toFixed(2), it.dmg.toFixed(2), g.isEquipped(it.uid)]),
       g.inventory.items.map((it) => [it.id, it.extra, it.count]), [...g.skills.values.entries()].map(([k, v]) => [k, v.toFixed(2)]),
-      this.uid, chosen.map((it) => it.uid), [...this.locks], this.cycles, this.upto, a ? [a.def.id, a.left, a.goes, a.target] : null,
+      this.uid, [...this.locks], this.cycles, this.upto, a ? [a.def.id, a.left, a.goes, a.target] : null,
       g.queue.map((q) => [q.def.id, q.goes]), g.queueCapacity(),
     ]);
     if (!this.repaint.changed(now, sign)) return;
@@ -142,14 +114,111 @@ export class MendPanel {
       (!!improve && !improve.check?.({ kind: 'item', uid: it.uid }, g)) || (it.dmg > 0 && !repairRefusal(g, it)) || (honeable(it) && whet > 0)]));
     const live = (it: Item): number => Number(!can.get(it.uid));
     rows.sort((a, b) => live(a) - live(b) || byDamage(a, b));
-    const shown = pieces.sort((a, b) => live(a) - live(b) || byDamage(a, b));
+    pieces.sort((a, b) => live(a) - live(b) || byDamage(a, b));
+    const one = pieces.find((it) => it.uid === this.uid) ?? pieces[0];
     this.body.replaceChildren();
+    this.allSection(pieces);
     this.inHand();
-    this.repairSection(rows, shown.map((it) => it.uid));
-    this.improveSection(shown, chosen.sort((a, b) => live(a) - live(b) || byDamage(a, b)));
+    this.repairSection(rows, one?.uid ?? null);
+    this.improveSection(pieces, one);
     this.win.body.scrollTop = scroll;
     this.body.scrollTop = scrolled;
     if (focus) this.body.querySelector<HTMLElement>(`[data-mend-focus="${focus}"]`)?.focus();
+  }
+
+  /* ---- all ---------------------------------------------------------------------------------------- */
+
+  /** Repair all, Hone all and Improve all: each piece in turn, one job after another. */
+  private allSection(pieces: Item[]): void {
+    const g = this.game;
+    const box = this.section('All', 'mend-all');
+    const repair = ACTION_BY_ID.get('repair_item');
+    const hone = ACTION_BY_ID.get('hone_whetstone');
+    const improve = ACTION_BY_ID.get('improve_item');
+    // Repair all.
+    const all = repairQueue(g);
+    const goes = all.reduce((n, it) => n + repairCost(g, it).goes, 0);
+    const secs = all.reduce((n, it) => n + repairCost(g, it).secs, 0);
+    const qlLost = all.reduce((n, it) => n + repairCost(g, it).ql, 0);
+    const dmg = all.reduce((n, it) => n + it.dmg, 0);
+    const line = this.row([
+      `Repair all: ${all.length} ${all.length === 1 ? 'item' : 'items'}`, `${dmg > 0 ? '−' : ''}${ql1(dmg)} damage`, actionsSaid(goes), clockSaid(secs), `QL −${qlLost.toFixed(2)}`,
+      'most damaged first',
+    ], 'mend-sum');
+    line.append(this.button('Repair all', all.length ? `${all.length} items, one job each, one after another` : 'Nothing damaged that Repair takes.', !all.length || !repair, () => {
+      const first = all[0];
+      if (repair && first) g.requestAction(repair, { kind: 'item', uid: first.uid, all: all.length }, repairCost(g, first).goes);
+    }, 'mend-go'));
+    box.append(line);
+
+    // The ancient whetstones.
+    const held = whetstonesHeld(g);
+    const honed = honeQueue(g);
+    const hDmg = honed.reduce((n, it) => n + it.dmg, 0);
+    const hKept = honed.reduce((n, it) => n + repairCost(g, it).ql, 0);
+    const damaged = heldEquipment(g).filter(honeable).length;
+    const hl = this.row([
+      `Hone all: ${honed.length} of ${damaged} damaged ${damaged === 1 ? 'item' : 'items'}`, `${itemDef(WHETSTONE).name}s: ${honed.length} of ${held} held`,
+      `${hDmg > 0 ? '−' : ''}${ql1(hDmg)} damage`, `QL kept (Repair: −${hKept.toFixed(2)})`, 'most damaged first',
+    ], 'mend-sum');
+    hl.append(this.button('Hone all', honed.length ? `${honed.length} ancient whetstones, one an item` : held < 1 ? 'Need an ancient whetstone.' : 'Nothing damaged.', !honed.length || !hone, () => {
+      const first = honed[0];
+      if (hone && first) g.requestAction(hone, { kind: 'item', uid: first.uid, all: honed.length });
+    }, 'mend-go'));
+    box.append(hl);
+    box.append(this.row(['Hone: 1 item a whetstone', 'all damage off', 'QL kept', 'used up', `${clockSaid(goSecs(g, 'hone_whetstone'))} an action`], 'mend-dim'));
+
+    // Improve all: a run of cycles on each piece Improve takes, by item id; the island picks each next (`private.improve_all_next`).
+    const count = Math.max(1, Math.min(JOB_GOES_MOST, Math.floor(this.cycles)));
+    const upto = this.upto ?? undefined;
+    const byId = [...pieces].sort((a, b) => a.uid - b.uid);
+    const plans = piecePlans(g, byId, (it) => stockKinds(g, it)[0]?.lock ?? null, count, upto).filter((p) => p.jobs > 0);
+    const sum = (f: (p: CyclePlan) => number): number => plans.reduce((n, p) => n + (p.plan ? f(p.plan) : 0), 0);
+    const il = this.row([
+      `Improve all: ${plans.length} of ${pieces.length} ${pieces.length === 1 ? 'item' : 'items'}`, `Improve ${actionsSaid(sum((p) => p.passes))}`,
+      `Repair ≈ ${actionsSaid(sum((p) => p.repairGoes))}`, `≈ ${clockSaid(sum((p) => p.secs))}`,
+    ], 'mend-sum');
+    const head = plans[0];
+    il.append(this.button('Improve all', head ? `${plans.length} items in turn: Improve × ${count} each, Repair when damage is over ${IMPROVE_DAMAGE}` : 'No item Improve takes now.',
+      !head || !improve || !repair, () => {
+        if (!head || !improve || !repair) return;
+        const t = { kind: 'item', uid: head.it.uid, mend: true, all: plans.length, cycles: count, ...(upto !== undefined ? { upto } : {}) } as Target;
+        if (head.first) g.requestAction(repair, t, head.first.goes);
+        else g.requestAction(improve, t, count);
+      }, 'mend-go'));
+    box.append(il);
+    box.append(this.cycleInputs(true));
+  }
+
+  /** Cycles and Target QL: one value each, for Improve all and the piece's own run. */
+  private cycleInputs(all: boolean): HTMLDivElement {
+    const inputs = this.row([], 'mend-dim');
+    const num = (label: string, value: string, min: number, max: number, step: number, set: (v: string) => void, title: string, key: string): void => {
+      const l = document.createElement('label');
+      l.className = 'mend-field';
+      l.append(label);
+      const i = document.createElement('input');
+      i.type = 'number';
+      i.min = String(min);
+      i.max = String(max);
+      i.step = String(step);
+      i.value = value;
+      i.title = title;
+      i.className = 'mend-input rc-field';
+      i.dataset.mendFocus = `${key}:${all ? 'all' : 'one'}`;
+      i.addEventListener('keydown', (e) => e.stopPropagation());
+      i.addEventListener('change', () => {
+        set(i.value);
+        this.repaint.force();
+        this.render();
+      });
+      l.append(i);
+      inputs.append(l);
+    };
+    const count = Math.max(1, Math.min(JOB_GOES_MOST, Math.floor(this.cycles)));
+    num(all ? 'Cycles an item' : 'Cycles', String(count), 1, JOB_GOES_MOST, 1, (v) => { this.cycles = Number(v) || 1; }, `Improve passes${all ? ' an item' : ''}, 1 to ${JOB_GOES_MOST}`, 'cycles');
+    num('Target QL', this.upto === null ? '' : String(this.upto), 1, 100, 1, (v) => { this.upto = v.trim() === '' ? null : Math.max(1, Math.min(100, Number(v))); }, 'Blank: none', 'upto');
+    return inputs;
   }
 
   /* ---- what is in hand ---------------------------------------------------------------------------- */
@@ -176,7 +245,7 @@ export class MendPanel {
 
   /* ---- repair --------------------------------------------------------------------------------------- */
 
-  private repairSection(rows: Item[], order: number[]): void {
+  private repairSection(rows: Item[], on: number | null): void {
     const g = this.game;
     const box = this.section('Repair', 'mend-repair');
     const repair = ACTION_BY_ID.get('repair_item');
@@ -189,49 +258,26 @@ export class MendPanel {
     if (!rows.length) {
       box.append(this.row(['No held equipment: worn, or tools, weapons, armour, shields and packs in the pack.'], 'mend-dim'));
     } else {
-      // How many are chosen for Improve, and the ways to choose several.
-      const n = this.picking.size;
-      const count = this.row([`Chosen for Improve: ${n} of ${order.length}`], 'mend-count');
-      count.append(this.row(['Several: Ctrl/⌘-click, Shift-click or ✓'], 'mend-dim'));
-      if (n > 1 && this.uid !== null) {
-        const one = this.uid;
-        count.append(this.button('Only one', 'Choose only the piece last picked', false, () => this.show(one), 'mend-go'));
-      }
-      box.append(count);
-      const table = this.table(box, ['✓', 'Item', 'QL', 'Damage', 'Repair to 0', '']);
+      const table = this.table(box, ['Item', 'QL', 'Damage', 'Repair to 0', '']);
       const whet = whetstonesHeld(g);
       for (const it of rows) {
         const tr = document.createElement('tr');
-        const picked = this.picking.uids.has(it.uid);
-        if (picked) tr.className = 'mend-chosen rc-on';
+        if (it.uid === on) tr.className = 'mend-chosen rc-on';
         const said = `${itemName(it)}${g.isEquipped(it.uid) ? ' (worn)' : ''}`;
-        // The box: the same as a Ctrl-click (a Shift-click on it, the same as a Shift-click), for a thumb and the Tab key.
-        const tick = this.cell(tr, '', 'mend-tick');
-        if (canImprove(it.id)) {
-          const box2 = document.createElement('input');
-          box2.type = 'checkbox';
-          box2.className = 'rc-check';
-          box2.checked = picked;
-          box2.title = 'Choose for Improve';
-          box2.setAttribute('aria-label', `Choose for Improve: ${said}`);
-          box2.dataset.mendFocus = `tick:${it.uid}`;
-          box2.addEventListener('click', (e) => this.pick(it.uid, order, { ctrlKey: !e.shiftKey, metaKey: false, shiftKey: e.shiftKey }));
-          tick.append(box2);
-        }
         const name = this.cell(tr, said, 'mend-name');
         if (canImprove(it.id)) {
           name.classList.add('mend-pick');
-          name.title = 'Improve this · Ctrl/⌘-click: add or take off · Shift-click: a run';
+          name.title = 'Show in Improve';
           name.tabIndex = 0;
           name.setAttribute('role', 'button');
-          name.setAttribute('aria-pressed', String(picked));
+          name.setAttribute('aria-pressed', String(it.uid === on));
           name.dataset.mendFocus = `name:${it.uid}`;
-          name.addEventListener('click', (e) => this.pick(it.uid, order, e));
+          name.addEventListener('click', () => this.show(it.uid));
           name.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
             e.preventDefault();
             e.stopPropagation();
-            this.pick(it.uid, order, e);
+            this.show(it.uid);
           });
         }
         this.cell(tr, ql1(it.ql), 'mend-num');
@@ -272,42 +318,6 @@ export class MendPanel {
         table.append(tr);
       }
     }
-    // Repair all.
-    const all = repairQueue(g);
-    const goes = all.reduce((n, it) => n + repairCost(g, it).goes, 0);
-    const secs = all.reduce((n, it) => n + repairCost(g, it).secs, 0);
-    const qlLost = all.reduce((n, it) => n + repairCost(g, it).ql, 0);
-    const dmg = all.reduce((n, it) => n + it.dmg, 0);
-    const line = this.row([
-      `Repair all: ${all.length} ${all.length === 1 ? 'item' : 'items'}`, `${dmg > 0 ? '−' : ''}${ql1(dmg)} damage`, actionsSaid(goes), clockSaid(secs), `QL −${qlLost.toFixed(2)}`,
-      'most damaged first',
-    ], 'mend-sum');
-    line.append(this.button('Repair all', all.length ? `${all.length} items, one job each, one after another` : 'Nothing damaged that Repair takes.', !all.length || !repair, () => {
-      const first = all[0];
-      if (repair && first) g.requestAction(repair, { kind: 'item', uid: first.uid, all: all.length }, repairCost(g, first).goes);
-    }, 'mend-go'));
-    box.append(line);
-
-    // The ancient whetstones.
-    const held = whetstonesHeld(g);
-    const sub = document.createElement('div');
-    sub.className = 'mend-sub';
-    sub.textContent = `${itemDef(WHETSTONE).name}s held: ${held}`;
-    box.append(sub);
-    box.append(this.row(['Each: 1 item', 'all damage off', 'QL kept', 'used up', `${clockSaid(goSecs(g, 'hone_whetstone'))} an action`], 'mend-dim'));
-    const honed = honeQueue(g);
-    const hDmg = honed.reduce((n, it) => n + it.dmg, 0);
-    const hKept = honed.reduce((n, it) => n + repairCost(g, it).ql, 0);
-    const damaged = heldEquipment(g).filter(honeable).length;
-    const hl = this.row([
-      `Hone all: ${honed.length} of ${damaged} damaged ${damaged === 1 ? 'item' : 'items'}`, `${honed.length} ${honed.length === 1 ? 'whetstone' : 'whetstones'}`,
-      `${hDmg > 0 ? '−' : ''}${ql1(hDmg)} damage`, `QL kept (Repair: −${hKept.toFixed(2)})`, 'most damaged first',
-    ], 'mend-sum');
-    hl.append(this.button('Hone all', honed.length ? `${honed.length} ancient whetstones, one an item` : held < 1 ? 'Need an ancient whetstone.' : 'Nothing damaged.', !honed.length || !hone, () => {
-      const first = honed[0];
-      if (hone && first) g.requestAction(hone, { kind: 'item', uid: first.uid, all: honed.length });
-    }, 'mend-go'));
-    box.append(hl);
   }
 
   /* ---- improve -------------------------------------------------------------------------------------- */
@@ -319,19 +329,13 @@ export class MendPanel {
     return (kinds.find((k) => lockKey(k.lock) === want) ?? kinds[0])?.lock ?? null;
   }
 
-  private improveSection(pieces: Item[], chosen: Item[]): void {
+  private improveSection(pieces: Item[], it: Item | undefined): void {
     const g = this.game;
     const box = this.section('Improve', 'mend-improve');
-    if (!pieces.length || !chosen.length) {
+    if (!it) {
       box.append(this.row(['No held item Improve takes.'], 'mend-dim'));
       return;
     }
-    if (chosen.length > 1) {
-      this.severalSection(box, chosen);
-      this.cyclesSection(chosen);
-      return;
-    }
-    const it = chosen[0];
     const what = improvable(it.id, it.extra);
     if (!what) return;
 
@@ -401,55 +405,7 @@ export class MendPanel {
         table.append(tr);
       }
     }
-    this.cyclesSection(chosen);
-  }
-
-  /** Several pieces chosen: each one's QL, top, tools and stock, what is missing, and the kinds of stock by material. */
-  private severalSection(box: HTMLElement, chosen: Item[]): void {
-    const g = this.game;
-    const improve = ACTION_BY_ID.get('improve_item');
-    box.append(this.sub(`Chosen: ${piecesSaid(chosen.length)}`));
-    const table = this.table(box, ['Item', 'QL', 'Top', 'Tools', 'Stock (at hand)', 'Improve now'], 'mend-each');
-    const groups = new Map<string, { name: string; items: Item[] }>();
-    for (const it of chosen) {
-      const what = improvable(it.id, it.extra);
-      if (!what) continue;
-      const tools = improveTools(g, it);
-      const missing = tools.filter((t) => !t.held);
-      const lock = this.lockFor(it);
-      const why = improve?.check?.({ kind: 'item', uid: it.uid }, g) ?? null;
-      const tr = document.createElement('tr');
-      this.cell(tr, itemName(it), 'mend-name');
-      this.cell(tr, ql1(it.ql), 'mend-num');
-      this.cell(tr, ql1(improveTop(g, it)), 'mend-num');
-      this.cell(tr, missing.length ? `Missing: ${missing.map((t) => lower(t.id)).join(', ')}` : tools.map((t) => lower(t.id)).join(', '), missing.length ? 'mend-bad' : '');
-      this.cell(tr, lock ? `${lockSaid(lock)} (${lockAtHand(g, lock)})` : `Missing: ${stockSaid(it)}`, lock ? '' : 'mend-bad');
-      this.cell(tr, why ?? '—', why ? 'mend-bad' : '');
-      table.append(tr);
-      const grp = groups.get(what.material.id) ?? { name: what.material.name, items: [] };
-      grp.items.push(it);
-      groups.set(what.material.id, grp);
-    }
-    // The kinds of stock, by material: the one chosen holds every piece that takes it.
-    for (const [mat, grp] of groups) {
-      box.append(this.sub(`Stock, ${grp.name}: 1 a pass`));
-      const kinds = new Map<string, { lock: StockLock; carried: number; stored: number; n: number }>();
-      for (const it of grp.items) {
-        for (const k of stockKinds(g, it)) {
-          const was = kinds.get(lockKey(k.lock));
-          if (was) was.n++;
-          else kinds.set(lockKey(k.lock), { ...k, n: 1 });
-        }
-      }
-      if (!kinds.size) {
-        box.append(this.row([`Missing: ${stockSaid(grp.items[0])}`], 'mend-bad'));
-        continue;
-      }
-      const want = this.locks.get(mat);
-      const first = grp.items.map((it) => this.lockFor(it)).find((l) => l !== null);
-      const on = want && kinds.has(want) ? want : first ? lockKey(first) : '';
-      this.kindsTable(box, mat, [...kinds.values()].map((k) => ({ ...k, takes: `${k.n} of ${grp.items.length}` })), on, true);
-    }
+    this.cyclesSection(it);
   }
 
   /** Kinds of stock, a radio each for the one a run is held to (for this material). */
@@ -481,133 +437,54 @@ export class MendPanel {
 
   /* ---- a run of cycles ---------------------------------------------------------------------------------- */
 
-  private cyclesSection(chosen: Item[]): void {
+  private cyclesSection(piece: Item): void {
     const g = this.game;
     const box = this.section('Improve and repair cycles', 'mend-cycles');
     const improve = ACTION_BY_ID.get('improve_item');
     const repair = ACTION_BY_ID.get('repair_item');
-    const several = chosen.length > 1;
     const count = Math.max(1, Math.min(JOB_GOES_MOST, Math.floor(this.cycles)));
     const upto = this.upto ?? undefined;
-    const inputs = this.row([]);
-    const num = (label: string, value: string, min: number, max: number, step: number, set: (v: string) => void, title: string): void => {
-      const l = document.createElement('label');
-      l.className = 'mend-field';
-      l.append(label);
-      const i = document.createElement('input');
-      i.type = 'number';
-      i.min = String(min);
-      i.max = String(max);
-      i.step = String(step);
-      i.value = value;
-      i.title = title;
-      i.className = 'mend-input rc-field';
-      i.addEventListener('keydown', (e) => e.stopPropagation());
-      i.addEventListener('change', () => {
-        set(i.value);
-        this.repaint.force();
-        this.render();
-      });
-      l.append(i);
-      inputs.append(l);
-    };
-    num(several ? 'Cycles a piece' : 'Cycles', String(count), 1, JOB_GOES_MOST, 1, (v) => { this.cycles = Number(v) || 1; }, `Improve passes${several ? ' a piece' : ''}, 1 to ${JOB_GOES_MOST}`);
-    num('Target QL', this.upto === null ? '' : String(this.upto), 1, 100, 1, (v) => { this.upto = v.trim() === '' ? null : Math.max(1, Math.min(100, Number(v))); }, 'Blank: none');
-    box.append(inputs);
+    box.append(this.cycleInputs(false));
 
-    const plans = piecePlans(g, chosen, (it) => this.lockFor(it), count, upto);
+    const [one] = piecePlans(g, [piece], (it) => this.lockFor(it), count, upto);
+    if (!one?.lock) return;
+    box.append(this.row(['Cycle: 1 Improve pass', `damage over ${IMPROVE_DAMAGE}: Repair to 0 first`, `stock held to ${lockSaid(one.lock)}`], 'mend-dim'));
+    const plan = one.plan ?? cyclePlan(g, one.it, one.lock, count, upto, one.atHand);
+    const list = document.createElement('ul');
+    list.className = 'mend-stops';
+    for (const k of ['count', 'stock', 'target', 'top'] as const) {
+      const li = document.createElement('li');
+      const label = stopSaid(g, one.it, k, plan, one.lock, one.atHand, this.upto);
+      li.textContent = label;
+      if (k === plan.stop) {
+        li.className = 'mend-first';
+        li.textContent = `${label} ◀ stops here`;
+      }
+      list.append(li);
+    }
+    box.append(this.sub('Stops at the first of'), list);
+    box.append(this.row([
+      `Uses: ${plan.passes} × ${lockSaid(one.lock)} (at hand ${one.atHand})`,
+      `Repair ≈ ${actionsSaid(plan.repairGoes)}, QL −${plan.repairQl.toFixed(2)}`,
+      `Ends ≈ QL ${ql1(plan.endQl)}`,
+      `≈ ${clockSaid(plan.secs)}`,
+    ], 'mend-sum'));
+
+    // The queue: the run is one job (`pieceJob`).
     const room = queueRoom(g);
-    const { fit, left } = piecesThatFit(plans, room);
-    const one = plans[0];
-    if (!several) {
-      if (!one?.lock) return;
-      box.append(this.row(['Cycle: 1 Improve pass', `damage over ${IMPROVE_DAMAGE}: Repair to 0 first`, `stock held to ${lockSaid(one.lock)}`], 'mend-dim'));
-      const plan = one.plan ?? cyclePlan(g, one.it, one.lock, count, upto, one.atHand);
-      const list = document.createElement('ul');
-      list.className = 'mend-stops';
-      for (const k of ['count', 'stock', 'target', 'top'] as const) {
-        const li = document.createElement('li');
-        const label = stopSaid(g, one.it, k, plan, one.lock, one.atHand, this.upto);
-        li.textContent = label;
-        if (k === plan.stop) {
-          li.className = 'mend-first';
-          li.textContent = `${label} ◀ stops here`;
-        }
-        list.append(li);
-      }
-      box.append(this.sub('Stops at the first of'), list);
-      box.append(this.row([
-        `Uses: ${plan.passes} × ${lockSaid(one.lock)} (at hand ${one.atHand})`,
-        `Repair ≈ ${actionsSaid(plan.repairGoes)}, QL −${plan.repairQl.toFixed(2)}`,
-        `Ends ≈ QL ${ql1(plan.endQl)}`,
-        `≈ ${clockSaid(plan.secs)}`,
-      ], 'mend-sum'));
-    } else {
-      box.append(this.row(['Cycle: 1 Improve pass', `damage over ${IMPROVE_DAMAGE}: Repair to 0 first`, 'each piece held to its stock kind', 'pieces in the rows\' order'], 'mend-dim'));
-      const table = this.table(box, ['Item', 'Stock (at hand)', 'Passes', 'Stops first', 'Repairs', 'Ends QL', 'Time'], 'mend-each');
-      for (const p of plans) {
-        const tr = document.createElement('tr');
-        if (left.includes(p)) tr.className = 'mend-left';
-        this.cell(tr, itemName(p.it), 'mend-name');
-        if (!p.plan || !p.lock) {
-          const why = this.cell(tr, p.why ?? '—', 'mend-bad');
-          why.colSpan = 6;
-        } else {
-          this.cell(tr, `${lockSaid(p.lock)} (${p.atHand})`);
-          this.cell(tr, String(p.plan.passes), 'mend-num');
-          this.cell(tr, stopSaid(g, p.it, p.plan.stop, p.plan, p.lock, p.atHand, this.upto), p.plan.passes ? '' : 'mend-bad');
-          this.cell(tr, `≈ ${p.plan.repairGoes}`, 'mend-num');
-          this.cell(tr, `≈ ${ql1(p.plan.endQl)}`, 'mend-num');
-          this.cell(tr, `≈ ${clockSaid(p.plan.secs)}`, 'mend-num');
-        }
-        table.append(tr);
-      }
-      // The totals, of the pieces that go in the queue.
-      const sum = (f: (p: CyclePlan) => number): number => fit.reduce((n, p) => n + (p.plan ? f(p.plan) : 0), 0);
-      const uses = new Map<string, { lock: StockLock; n: number }>();
-      for (const p of fit) {
-        if (!p.lock || !p.plan) continue;
-        const u = uses.get(lockKey(p.lock)) ?? { lock: p.lock, n: 0 };
-        u.n += p.plan.passes;
-        uses.set(lockKey(p.lock), u);
-      }
-      box.append(this.row([
-        `Total: ${piecesSaid(fit.length)}`,
-        `Improve ${actionsSaid(sum((p) => p.passes))}`,
-        `Repair ≈ ${actionsSaid(sum((p) => p.repairGoes))}, QL −${sum((p) => p.repairQl).toFixed(2)}`,
-        `Uses: ${[...uses.values()].map((u) => `${u.n} × ${lockSaid(u.lock)}`).join(', ') || 'none'}`,
-        `≈ ${clockSaid(sum((p) => p.secs))}`,
-      ], 'mend-sum'));
-    }
-
-    // The queue: one job for each piece's run (`pieceJob`); what the room left takes.
-    const asked = plans.filter((p) => p.jobs > 0);
-    if (left.length) {
-      box.append(this.row([
-        `Action queue ${g.queueCapacity()}: room for ${room}, ${asked.reduce((n, p) => n + p.jobs, 0)} asked`,
-        `Not queued: ${left.map((p) => itemName(p.it)).join(', ')}`,
-        `${skillName('mind_logic')}: +1 per ${QUEUE_PER_MIND} levels`,
-      ], 'mend-bad'));
-    }
-    const jobs = fit.flatMap((p) => {
-      const job = pieceJob(p, count, upto);
-      const def = job.action === 'repair_item' ? repair : improve;
-      return def ? [{ def, target: job.target, goes: job.goes }] : [];
-    });
-    const why = (!several ? one?.why : null) ?? (fit.length ? null : asked.length ? `Action queue full: ${g.queueCapacity()}.` : 'No piece to improve.');
-    const first = !several ? one?.first ?? null : null;
-    const label = `Queue ${count} ${count === 1 ? 'cycle' : 'cycles'}${several ? ` × ${piecesSaid(fit.length)}` : ''}`;
-    const title = why ?? (several
-      ? `${fit.map((p) => itemName(p.it)).join(', ')}: in turn, Improve × ${count} each, Repair when damage is over ${IMPROVE_DAMAGE}`
-      : `${first ? `Repair × ${first.goes}, then ` : ''}Improve × ${count}, Repair when damage is over ${IMPROVE_DAMAGE}`);
+    const job = one.jobs > 0 ? pieceJob(one, count, upto) : null;
+    const def = job ? (job.action === 'repair_item' ? repair : improve) : undefined;
+    const why = one.why ?? (!job ? 'No piece to improve.' : room < 1 ? `Action queue full: ${g.queueCapacity()}.` : null);
+    const first = one.first;
+    const label = `Queue ${count} ${count === 1 ? 'cycle' : 'cycles'}`;
+    const title = why ?? `${first ? `Repair × ${first.goes}, then ` : ''}Improve × ${count}, Repair when damage is over ${IMPROVE_DAMAGE}`;
     const go = this.row([]);
-    const b = this.button(label, title, !!why || !improve || !jobs.length, () => void g.requestInTurn(jobs), 'mend-go rc-go');
+    const b = this.button(label, title, !!why || !def, () => {
+      if (job && def) void g.requestInTurn([{ def, target: job.target, goes: job.goes }]);
+    }, 'mend-go rc-go');
     b.dataset.mendFocus = 'queue';
     go.append(b);
     if (first && !why) go.append(this.row([`First: Repair to 0, ${actionsSaid(first.goes)}, QL −${first.ql.toFixed(2)}`], 'mend-dim'));
-    if (several && fit.some((p) => p.first) && !why) {
-      go.append(this.row([`First, over ${IMPROVE_DAMAGE} damage: Repair to 0 (${fit.filter((p) => p.first).map((p) => itemName(p.it)).join(', ')})`], 'mend-dim'));
-    }
     if (why) {
       const w = document.createElement('span');
       w.className = 'mend-bad';
