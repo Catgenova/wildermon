@@ -2523,7 +2523,8 @@ button.goal-row:focus-visible {
 .ctx-menu {
   position: absolute;
   min-width: 170px;
-  max-width: calc(100% - 8px);
+  /* As wide as its jobs, and no wider than this: a line of what a smelter has finished wraps rather than widening it. */
+  max-width: min(380px, calc(100% - 8px));
   max-height: calc(100% - 8px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -2572,6 +2573,7 @@ button.goal-row:focus-visible {
 .ctx-item.disabled {
   color: var(--ui-dim);
   cursor: default;
+  white-space: normal;
 }
 
 .ctx-item.disabled:hover {

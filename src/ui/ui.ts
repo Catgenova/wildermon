@@ -2715,7 +2715,15 @@ export class UI {
       const job = s.jobs[0];
       entries.push({ label: `In the furnace: ${jobName(job)}`, note: `${Math.ceil(job.left)} s left, ${s.jobs.length} total`, disabled: true });
     }
-    if (s.output.length) entries.push({ label: `Finished: ${s.output.map((o) => `${o.count > 1 ? `${o.count} × ` : ''}${seenName(o, this.game).toLowerCase()}`).join(', ')}`, disabled: true });
+    // One count a name: five batches of bells are "5 × bell casting (iron)", not the name five times over.
+    if (s.output.length) {
+      const said = new Map<string, number>();
+      for (const o of s.output) {
+        const name = seenName(o, this.game).toLowerCase();
+        said.set(name, (said.get(name) ?? 0) + o.count);
+      }
+      entries.push({ label: `Finished: ${[...said].map(([name, n]) => `${n > 1 ? `${n} × ` : ''}${name}`).join(', ')}`, disabled: true });
+    }
     return entries;
   }
 

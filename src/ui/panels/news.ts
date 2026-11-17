@@ -434,6 +434,15 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The right-click menu held to a width (style.css); a station's finished work counted by name (ui.ts).
+  {
+    n: 679,
+    day: '2026-11-17',
+    lines: () => [
+      'Fixed: the right-click menu: at most 380 px wide; a long line (a smelter\'s Finished) wraps (was: the menu as wide as the line).',
+      'Changed: Finished on a smelter, forge or kiln: one count a name ("5 × bell casting (iron)", was: the name once a batch).',
+    ],
+  },
   // Names at the screen's own pixels (`Renderer.nameLayer`; namelabels.ts on whole device pixels).
   {
     n: 678,
