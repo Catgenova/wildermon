@@ -26,7 +26,7 @@ begin
    where q.world_id = p_world and q.keeper = p_uid and q.around is not null order by q.id limit 1;
   if v_other is not null then return 'Already working around you: ' || v_other || '.'; end if;
   v_kind := coalesce(c.job, d.gathers);
-  if v_kind is null then return d.name || ': no task.'; end if;
+  if v_kind is null then return kind_name_at(c) || ': no task.'; end if;
   if not worker_job_ported(v_kind) then
     return 'Not on islands yet: ' || (select verb from gather_def where id = v_kind) || '.';
   end if;

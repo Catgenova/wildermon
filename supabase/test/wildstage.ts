@@ -157,6 +157,9 @@ ${DICE.map(([d], k) => `
     update skill set value = ${def.tameLevel} where world_id = w and uid = u and id = 'taming';
     insert into said values ('REFUSE:' || i, coalesce(creature_refusal(w, u, 'tame', jsonb_build_object('kind', 'creature', 'id', a)), '-'));
     update skill set value = ${TAMING} where world_id = w and uid = u and id = 'taming';
+    -- Out of reach: named at its stage, not as the first. Reported: "Tame: Snarepup: too far." of a Vinehunter.
+    update creature set from_x = px + 30.5, to_x = px + 30.5 where world_id = w and id = a;
+    insert into said values ('FAR:' || i, coalesce(creature_refusal(w, u, 'tame', jsonb_build_object('kind', 'creature', 'id', a)), '-'));
     delete from creature where world_id = w and id = a;
   end loop;
 
@@ -222,6 +225,10 @@ for (const k of ['block', 'all']) {
     stocked === wild && wild > 0 && (k === 'block' ? wild <= target : wild === target) && wrong === 0, at(`STOCK:${k}`));
 }
 check('and both stockings put them out through the roll', at('PATCHED') === '2', at('PATCHED'));
+for (let i = 0; i < 3; i++) {
+  const named = i === 0 ? def.name : def.stages?.[i - 1]?.name;
+  check(`out of reach at stage ${i + 1}: "${named}: too far."`, at(`FAR:${i}`) === `${named}: too far.`, at(`FAR:${i}`));
+}
 check(`a browser is told a wild one's skills, so it names and draws it at its stage`,
   at('SENT').split('|')[0] === def.stages![0].name && stageOf({ species: KIND, skills: { [SKILL]: Number(at('SENT').split('|')[1]) } }) === 1, at('SENT'));
 

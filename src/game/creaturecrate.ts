@@ -1,6 +1,6 @@
 import type { ActionDef, Target } from './actions';
 import { STORE_REACH, SUBTILES } from './crates';
-import { ageDef, GATHER_DO, SPECIES, TEND_JOBS, workRangeOf, type Creature } from './creatures';
+import { ageDef, GATHER_DO, kindName, SPECIES, TEND_JOBS, workRangeOf, type Creature } from './creatures';
 import { CREATURE_CRATE, emptyCrate, shutIn } from './crating';
 import { facingOf, furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import type { Side } from './building';
@@ -307,7 +307,7 @@ export const CREATURE_CRATE_ACTIONS: ActionDef[] = [
       if (shut) return shut;
       if (!g.deed) return 'No settlement.';
       const def = at.c ? SPECIES[at.c.species] : undefined;
-      if (def && !def.gathers && def.style !== 'spar') return `${def.name}: no task.`;
+      if (def && at.c && !def.gathers && def.style !== 'spar') return `${kindName(at.c)}: no task.`;
       if (g.creatures.workers().length >= g.workerCap) {
         return `${g.deed.name} full: ${g.workerCap} workers at level ${g.deedLevel}.`;
       }

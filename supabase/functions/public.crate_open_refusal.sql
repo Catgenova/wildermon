@@ -30,7 +30,7 @@ begin
   v_dd := my_deed(p_world, p_uid);
   if v_dd.world_id is null then return 'No settlement.'; end if;
   select * into v_d from species_def where id = v_c.species;
-  if v_d.gathers is null and v_d.style is distinct from 'spar' then return v_d.name || ': no task.'; end if;
+  if v_d.gathers is null and v_d.style is distinct from 'spar' then return kind_name_at(v_c) || ': no task.'; end if;
   if v_d.gathers is not null and not worker_job_ported(v_d.gathers) then
     return 'Not on islands yet: '
       || (select verb from gather_def where id = v_d.gathers) || '.';

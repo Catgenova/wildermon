@@ -434,6 +434,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A creature's refusals name it at its stage (`kind_name_at`, `kindName`), migration 144.
+  {
+    n: 687,
+    day: '2026-11-18',
+    lines: () => ['Fixed: refusals name an evolved wildermon at its stage: "Vinehunter: too far.", not "Snarepup: too far." Also cannot be tamed, no task, not one of its tasks, cannot be brushed.'],
+  },
   // Guiding Light on for every new body, no switch on the runestone card; its tab open on first coming ashore (play.ts `first`).
   {
     n: 686,

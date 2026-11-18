@@ -671,7 +671,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (!g.deed) return 'No settlement.';
       const c = creatureOf(g, t);
       // A kind with no task has nothing to do there; a Sparra's is sparring with your guards (`sparTaskSays`).
-      if (c && !SPECIES[c.species].gathers && SPECIES[c.species].style !== 'spar') return `${SPECIES[c.species].name}: no task.`;
+      // Named at its stage (`kindName`), as the island's `kind_name_at`: a Vinehunter, not the Snarepup it grew from.
+      if (c && !SPECIES[c.species].gathers && SPECIES[c.species].style !== 'spar') return `${kindName(c)}: no task.`;
       // One off a post takes a place as much as one off the road, since a post costs none.
       const working = g.creatures.workers().length;
       if (c && (c.mode !== 'deed' || c.post !== null || !!c.around) && working >= g.workerCap) {
@@ -682,7 +683,7 @@ export const CREATURE_ACTIONS: ActionDef[] = [
       if (c && want) {
         const def = SPECIES[c.species];
         const trades: string[] = def.trades ?? (def.gathers ? [def.gathers] : []);
-        if (!trades.includes(want)) return `${def.name}: not one of its tasks.`;
+        if (!trades.includes(want)) return `${kindName(c)}: not one of its tasks.`;
       }
       return null;
     },

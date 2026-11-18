@@ -37,7 +37,7 @@ begin
   -- An order is heard from wherever you stand, as a stance is.
   if p_action not in ('examine_creature', 'assign_deed', 'set_stance', 'order_attack', 'order_heel')
      and not creature_in_reach(p_world, p_uid, c) then
-    return case when c.mode = 'wild' then d.name || ': too far.'
+    return case when c.mode = 'wild' then kind_name_at(c) || ': too far.'
                 else 'Stand next to ' || c.name || '.' end;
   end if;
 
@@ -48,7 +48,7 @@ begin
 
   if p_action = 'tame' then
     if d.monster then
-      return d.name || ': cannot be tamed.';
+      return kind_name_at(c) || ': cannot be tamed.';
     end if;
     if c.mode <> 'wild' then return c.name || ' is already yours.'; end if;
     if tame_gate_refusal(c, skill_of(p_world, p_uid, 'taming')) is not null then
@@ -66,11 +66,11 @@ begin
     if (my_deed(p_world, p_uid)).world_id is null then
       return 'No settlement.';
     end if;
-    if d.gathers is null and d.style is distinct from 'spar' then return d.name || ': no task.'; end if;
+    if d.gathers is null and d.style is distinct from 'spar' then return kind_name_at(c) || ': no task.'; end if;
     -- A trade asked for by name has to be one of its own.
     if nullif(p_target->>'job', '') is not null
        and not (p_target->>'job' = d.gathers or p_target->>'job' = any(coalesce(d.trades, '{}'::text[]))) then
-      return d.name || ': not one of its tasks.';
+      return kind_name_at(c) || ': not one of its tasks.';
     end if;
     if d.gathers is not null and not worker_job_ported(coalesce(nullif(p_target->>'job', ''), d.gathers)) then
       return 'Not on islands yet: '
@@ -97,7 +97,7 @@ begin
     return null;
 
   elsif p_action = 'groom' then
-    if d.monster then return d.name || ': cannot be brushed.'; end if;
+    if d.monster then return kind_name_at(c) || ': cannot be brushed.'; end if;
     if c.mode = 'wild' then return 'Not yours.'; end if;
     if pack_count(p_world, p_uid, 'brush') <= 0 then return 'Need a brush.'; end if;
     if c.care >= 0.995 then return c.name || ': care full.'; end if;

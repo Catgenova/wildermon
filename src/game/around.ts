@@ -1,5 +1,5 @@
 import type { ActionDef, Target } from './actions';
-import { ERRAND_JOBS, GATHER_VERB, SPECIES, STORE_RECIPES, workRangeOf, type Creature, type GatherKind } from './creatures';
+import { ERRAND_JOBS, GATHER_VERB, kindName, SPECIES, STORE_RECIPES, workRangeOf, type Creature, type GatherKind } from './creatures';
 import type { Game } from './game';
 import { POST_FOLLOW_REACH } from './posts';
 
@@ -54,7 +54,7 @@ export function aroundRefusal(g: Game, c: Creature | undefined): string | null {
   const working = g.creatures.aroundYou();
   if (working.length >= AROUND_MOST) return `Already working around you: ${working[0].name}.`;
   const kind = c.trade ?? def.gathers;
-  if (!kind) return `${def.name}: no task.`;
+  if (!kind) return `${kindName(c)}: no task.`;
   if (!aroundTrade(kind)) return `Settlement only: ${GATHER_VERB[kind]}.`;
   return null;
 }
