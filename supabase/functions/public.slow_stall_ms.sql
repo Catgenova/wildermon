@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.slow_stall_ms()
  RETURNS double precision
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select 5000::double precision $function$
+AS $function$ select 1000::double precision $function$

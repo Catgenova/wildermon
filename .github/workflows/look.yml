@@ -705,14 +705,14 @@ jobs:
                  coalesce(p.name, left(t.keeper::text, 8)) as keeper
              from private.slow_think t left join player p on p.world_id = t.world_id and p.uid = t.keeper
             where t.at > now() - interval '6 hours' order by t.ms desc limit 25"
-          # A think of slow_stall_ms() or more keeps what else was running at its end (migration 142): a stall of the
+          # A think of slow_stall_ms() or more keeps what else was running at its end (migrations 142, 143): a stall of the
           # whole database shows as other work there, or as several keepers' thinks slow in the same minute.
-          ask "thinks of 5 s or more, last 3 days, with what else was running" "select to_char(t.at, 'MM-DD HH24:MI:SS') as at, round(t.ms) as ms,
+          ask "slow thinks with what else was running (5 s or more, or kept with it), last 3 days" "select to_char(t.at, 'MM-DD HH24:MI:SS') as at, round(t.ms) as ms,
                  t.creature, t.species, t.job, t.phase, coalesce(p.name, '') as keeper,
                  coalesce((select string_agg(format('%s %s %s %ss %s', o->>'type', o->>'state', o->>'wait', o->>'secs', o->>'query'), ' || ')
                              from jsonb_array_elements(t.others) o), case when t.others is null then '(not looked)' else '(nothing else)' end) as others
              from private.slow_think t left join player p on p.world_id = t.world_id and p.uid = t.keeper
-            where t.ms >= 5000 order by t.at desc limit 20"
+            where t.ms >= 5000 or t.others is not null order by t.at desc limit 20"
           ask "the clock's rounds of 5 s or more, last 6 hours, by minute" "select to_char(m.minute, 'MM-DD HH24:MI') as minute, m.rounds, m.ms_worst,
                  (select string_agg(k || ' ' || round(v::numeric), ', ' order by v desc) from (select e.key as k, max((e.value::text)::numeric) as v
                     from tick_time t2, jsonb_each(t2.stages) e where date_trunc('minute', t2.at) = m.minute and t2.ms >= 5000 group by 1) q) as stages_worst
