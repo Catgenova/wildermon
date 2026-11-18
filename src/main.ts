@@ -320,6 +320,8 @@ game.measureDrawing = () => {
   renderer.timings.measure();
 };
 const renderer = new Renderer(canvas, game);
+// The island's answers laid, for the drawing times' line (`Timings.add`).
+island.laid = (ms) => renderer.timings.add('island', ms);
 const camera = renderer.camera;
 const input = new Input(canvasEl);
 /** Screen pixels a second the view slides while a push key is held. */
@@ -640,6 +642,7 @@ const loop = new GameLoop(
     }
 
     // The whole of the frame's wall time, a tenth of a second at a time (`clockSteps`).
+    const u0 = performance.now();
     for (const step of clockSteps(dt)) game.update(step);
 
     // Where we have walked to, told rarely and never twice for standing still, with the turns of the path
@@ -685,11 +688,15 @@ const loop = new GameLoop(
     music.step();
 
     ui.hoverFrame(input.pointer, input.dragging, dropOver);
+    // The update's time, for the drawing times' line (`Timings.add`).
+    renderer.timings.add('update', performance.now() - u0);
   },
   (dt) => {
     const t0 = performance.now();
     renderer.render(dt);
+    const w0 = performance.now();
     ui.update(loop.fps);
+    renderer.timings.add('windows', performance.now() - w0);
     loop.maxFps = frameCapOf(game.settings, onPhone());
     if (game.settings.renderScale === 'auto') {
       const t1 = performance.now();

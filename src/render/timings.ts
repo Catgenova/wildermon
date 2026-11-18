@@ -60,6 +60,9 @@ interface Trial {
   fps: Array<[Layer | null, number]>;
 }
 
+/** What a frame's time goes on outside the drawing (`Timings.add`). */
+type Outside = 'update' | 'windows' | 'island';
+
 export class Timings {
   /** Milliseconds per layer so far this window, and the frames they were spread over. */
   private sums = new Map<Layer | 'frame', number>();
@@ -69,6 +72,8 @@ export class Timings {
   private starts: number[] = [];
   private inner: number[] = [];
   private frameAt = 0;
+  /** Time spent outside the drawing this window (`add`): the frame's update, and the windows. */
+  private outside = new Map<Outside, number>();
   /** The last window's averages, written out. */
   line = '';
   /** The frame rate with each layer left out, written out, once `measure` has run. */
@@ -136,6 +141,11 @@ export class Timings {
     };
   }
 
+  /** Milliseconds spent outside the drawing: the update (the rules, the word to the island), the windows, or the island's answers laid. */
+  add(what: Outside, ms: number): void {
+    if (this.on) this.outside.set(what, (this.outside.get(what) ?? 0) + ms);
+  }
+
   begin(): void {
     const now = performance.now();
     if (this.trial) this.step(now);
@@ -185,7 +195,9 @@ export class Timings {
       claimed += ms;
       bits.push(`${layer} ${ms.toFixed(1)}`);
     }
-    this.line = `drawing ${frame.toFixed(1)} ms: ground ${Math.max(0, frame - claimed).toFixed(1)} · ${bits.join(' · ')}`;
+    const out = (k: Outside): string => ((this.outside.get(k) ?? 0) / Math.max(1, this.frames)).toFixed(1);
+    this.line = `update ${out('update')} ms · windows ${out('windows')} ms · island ${out('island')} ms · drawing ${frame.toFixed(1)} ms: ground ${Math.max(0, frame - claimed).toFixed(1)} · ${bits.join(' · ')}`;
+    this.outside.clear();
     this.sums.clear();
     this.frames = 0;
   }

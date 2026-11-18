@@ -434,6 +434,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The drawing times' line with the frame's time outside the drawing (timings.ts `add`), to find a long walk's slowdown.
+  {
+    n: 685,
+    day: '2026-11-18',
+    lines: () => ['Added: Show drawing times (Settings): ms a frame on the update, the windows and laying the island\'s answers, before the drawing.'],
+  },
   // The action queue in a window of its own (craftqueue.ts `own`), opened off the bar's queue line; Again in its head.
   {
     n: 684,

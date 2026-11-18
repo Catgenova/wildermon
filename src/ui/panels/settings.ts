@@ -527,8 +527,8 @@ export class SettingsPanel {
     );
     add(
       'Show drawing times',
-      `Under the frame rate: frame time and ms per layer (ground, ${listed(Object.keys(LAYERS))}), `
-        + `averaged over ${TIMING_WINDOW * 1000} ms. Frame time far above draw time: GPU-bound. `
+      `Under the frame rate: frame time; ms a frame on the update (rules, the word to the island), the windows and laying the island's answers (creatures, ground); ms per layer (ground, ${listed(Object.keys(LAYERS))}), `
+        + `averaged over ${TIMING_WINDOW * 1000} ms. Frame time far above update, windows and drawing together: the graphics chip, the island's answers being laid, or garbage collection. `
         + `Bodies: ms a frame on bodies (budget ${BODY_BUDGET_MS} ms), bodies drawn a frame, bodies waiting a frame, quality step (${QUALITY_STEPS}/${QUALITY_STEPS} best).`,
       () => game.settings.timings,
       (v) => (game.settings.timings = v),

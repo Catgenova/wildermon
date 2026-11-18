@@ -3154,6 +3154,9 @@ export class Island {
    * trip when both are due (`rpc_near`): the same two answers, each laid as it would be on its own. An island a
    * migration behind this page, or one either read is asked the old way of, is asked them apart.
    */
+  /** Told how long each answer of `refreshNear` took to lay, in ms: the drawing times' line (`Timings.add`). */
+  laid: ((ms: number) => void) | null = null;
+
   async refreshNear(now: number): Promise<void> {
     // Either due brings the other along when it is due within `NEAR_EARLY`, so the two keep step and go together.
     let mobs = this.mobsAsk(now);
@@ -3167,15 +3170,22 @@ export class Island {
       });
       if (!lacks(error, /rpc_near|p_ground_since|p_ground_keep|p_ground_build_since/)) {
         const both = (data ?? null) as { creatures?: unknown; ground?: unknown } | null;
+        const t0 = performance.now();
         this.layMobs(mobs, both?.creatures ?? null, error);
         this.layGround(ground, both?.ground ?? null, error);
+        this.laid?.(performance.now() - t0);
         return;
       }
       this.nearOld.trip(at);
     }
+    const timed = (lay: () => void): void => {
+      const t0 = performance.now();
+      lay();
+      this.laid?.(performance.now() - t0);
+    };
     await Promise.all([
-      mobs ? this.mobsCall(mobs).then((r) => this.layMobs(mobs, r.data, r.error)) : null,
-      ground ? this.groundCall(ground).then((r) => this.layGround(ground, r.data, r.error)) : null,
+      mobs ? this.mobsCall(mobs).then((r) => timed(() => this.layMobs(mobs, r.data, r.error))) : null,
+      ground ? this.groundCall(ground).then((r) => timed(() => this.layGround(ground, r.data, r.error))) : null,
     ]);
   }
 
