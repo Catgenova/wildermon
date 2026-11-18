@@ -274,10 +274,7 @@ function playingElsewhere(stop?: () => void): void {
 watchErrors();
 // This tab's seat on the account, before the first call (`holdSeat`).
 holdSeat();
-const started = await startIsland(params, boot.say, (stones) => {
-  const path = { on: true };
-  return pickStone(document.querySelector('#boot .boot-card'), stones, path).then((stone) => ({ stone, path: path.on }));
-}).catch((e: unknown) => {
+const started = await startIsland(params, boot.say, (stones) => pickStone(document.querySelector('#boot .boot-card'), stones)).catch((e: unknown) => {
   boot.stop();
   if (e instanceof Error && e.message.includes(SEAT_ELSEWHERE)) {
     playingElsewhere();
@@ -358,6 +355,8 @@ const music = new Music({
 });
 
 const ui = new UI(game, renderer, uiRoot, canvasEl, { turn: turnView, keys, island });
+// A new body's first coming ashore: the Journal open at its Guiding Light tab.
+if (started.first) ui.openJournal('path');
 // A window or bar moved or resized against another clicks as they join.
 ui.windows.onJoin = () => sound.join();
 // The island can refuse to save: the banner says when it has.

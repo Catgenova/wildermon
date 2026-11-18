@@ -64,6 +64,8 @@ export interface Started {
   game: Game;
   island: Island;
   id: string;
+  /** A new body's first coming ashore: Guiding Light switched on, and its tab opened (`main.ts`). */
+  first: boolean;
 }
 
 /**
@@ -106,7 +108,7 @@ async function homeIsland(): Promise<string | null> {
  * How a first join is shown the Runestones and answers with the one it starts beside (`pickStone`), and whether the
  * Path is on for the new body (the card's Path switch, on unless turned off).
  */
-export type StonePick = (stones: readonly Runestone[]) => Promise<{ stone: RunestoneId | null; path: boolean }>;
+export type StonePick = (stones: readonly Runestone[]) => Promise<RunestoneId | null>;
 
 export async function startIsland(params: URLSearchParams, tell: Telling, pick?: StonePick): Promise<Started> {
   const founding = params.get('found');
@@ -240,7 +242,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    * starts beside (`startChoices`); somebody coming back never sees it.
    */
   let stone: RunestoneId | null = null;
-  // The Path, for a new body: on unless the card turned it off (`src/game/path.ts`).
+  // The Path, for a new body: always on, with no way off on the card (`src/game/path.ts`); Settings switches it later.
   let pathOn = false;
   if (pick) {
     const { first, size } = await island.firstJoin(id);
@@ -248,9 +250,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
     pathOn = first;
     if (stones.length) {
       tell('join', 'Runestone');
-      const choice = await pick(stones);
-      stone = choice.stone;
-      pathOn = choice.path;
+      stone = await pick(stones);
     }
   }
   try {
@@ -924,7 +924,7 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
   // Joined: what goes wrong in this browser from now on, and anything that
   // already has, goes to the island to be written down.
   reportErrorsTo((r) => island.reportError(r));
-  return { game, island, id };
+  return { game, island, id, first: pathOn };
 }
 
 /**

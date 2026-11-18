@@ -818,6 +818,11 @@ export class UI {
     this.journalPanel.toggle(tab);
   }
 
+  /** Open the journal at a tab, whether or not it is open. */
+  openJournal(tab: JournalTab): void {
+    this.journalPanel.open(tab);
+  }
+
   /** The help's pages, building them into the journal's Help tab the first time (it is a file of its own, fetched then). */
   private helpPages(): Promise<HelpPages> {
     if (!this.helpBuilt) {

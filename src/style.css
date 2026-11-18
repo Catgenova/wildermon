@@ -372,12 +372,6 @@ body {
   margin-bottom: 0.15rem;
 }
 
-/* The Path switch over the stones (src/ui/stonestart.ts): its own row, at the left. */
-.boot-path {
-  grid-column: 1 / -1;
-  justify-self: start;
-}
-
 .boot-stone {
   display: flex;
   align-items: center;

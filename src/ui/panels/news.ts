@@ -434,6 +434,15 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Guiding Light on for every new body, no switch on the runestone card; its tab open on first coming ashore (play.ts `first`).
+  {
+    n: 686,
+    day: '2026-11-18',
+    lines: () => [
+      'Changed: first coming ashore: Guiding Light always On; the runestone card has no Guiding Light switch. Settings, Interface, Guiding Light still turns it off.',
+      'Added: first coming ashore: the Journal opens at the Guiding Light tab.',
+    ],
+  },
   // The drawing times' line with the frame's time outside the drawing (timings.ts `add`), to find a long walk's slowdown.
   {
     n: 685,
