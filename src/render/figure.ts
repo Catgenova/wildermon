@@ -11602,6 +11602,8 @@ const gearLod = (zoom: number): number => (zoom < 1.5 ? 0.5 : zoom < STILL_BELOW
 const SCULPT: {
   on: boolean; flips: number; loading: boolean; draw: ((ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, pose: FigurePose, water?: 'over' | 'under') => boolean) | null;
   gen: () => number; asked: Set<string>; soft: boolean; fx: SculptFx | null; noGl: boolean;
+  /** Whether there is a GL context to draw with now (`glDraws`): none once one was lost and none could be made again. */
+  glNow: (() => boolean) | null;
   /** Drawing many bodies on one GL canvas and putting them down after (`drawBodies`, `../sculpt/gl.ts` glBatchBegin). */
   batch: { begin: (count: number, cw: number, ch: number, now: number) => number; end: () => void; last: () => GlTile | null; blit: (ctx: CanvasRenderingContext2D, t: GlTile) => void } | null;
   /** The clip a body plays alone and where in it, for the loops of work and a fight (`clipLoop`, `../sculpt/sculpted.ts` clipNow). */
@@ -11609,7 +11611,7 @@ const SCULPT: {
   /** The things a body holds that have a model of their own, and that model drawn alone (`../sculpt/sculpted.ts` drawPropAlone). */
   props: ReadonlySet<string> | null;
   prop: ((ctx: CanvasRenderingContext2D | null, sx: number, sy: number, zoom: number, piece: GearPiece, facing: number, dpr: number) => [number, number, number, number] | null) | null;
-} = { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false, batch: null, clipNow: null, props: null, prop: null };
+} = { on: false, flips: 0, loading: false, draw: null, gen: () => 0, asked: new Set(), soft: false, fx: null, noGl: false, glNow: null, batch: null, clipNow: null, props: null, prop: null };
 let FLAT: boolean | undefined;
 /**
  * Whether people are drawn flat here: only a browser the sculpted bodies cannot be drawn in -- no WebGL2, no float colour
@@ -11618,7 +11620,8 @@ let FLAT: boolean | undefined;
  * (the bodies still loading) is not drawn at all.
  */
 export function flatFigures(): boolean {
-  if (SCULPT.noGl) return true;
+  // And no context now: one lost and none made again (`../sculpt/gl.ts` contextGone), the flat figure rather than nothing.
+  if (SCULPT.noGl || (SCULPT.glNow && !SCULPT.glNow())) return true;
   if (FLAT === undefined) {
     try {
       const gl = document.createElement('canvas').getContext('webgl2');
@@ -11644,6 +11647,7 @@ export function sculptedFigures(want: boolean, by: 'island' | 'creator' = 'islan
     SCULPT.loading = true;
     import('../sculpt/sculpted').then((m) => {
       SCULPT.draw = m.drawSculptLive; SCULPT.gen = m.sculptGen; SCULPT.soft = m.glSoftware(); SCULPT.fx = m.SCULPT_FX; SCULPT.noGl = !m.glDraws();
+      SCULPT.glNow = m.glDraws;
       SCULPT.batch = { begin: m.glBatchBegin, end: m.glBatchEnd, last: m.glBatchLast, blit: m.glBlit };
       SCULPT.clipNow = m.clipNow;
       SCULPT.props = new Set(m.propIds());

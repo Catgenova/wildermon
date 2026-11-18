@@ -415,12 +415,31 @@ export function glSoftware(): boolean {
   return /swiftshader|llvmpipe|softpipe|software/i.test(name);
 }
 
-/** The one GL context, made on first use; null where there is no WebGL2 (the caller falls back to the 2D figure). */
+/**
+ * The context given up: lost by the browser (GPU memory short, a driver reset, a tab long in the background). Everything
+ * made on it -- the frame's textures, every bake's buffers -- went with it, and the next draw makes a context afresh.
+ * Reported: "my character model is missing", the wildermon drawn round an empty tile; a lost context drew every body as
+ * nothing for the rest of the session.
+ */
+function contextGone(): void {
+  CTX = undefined;
+  BUFFERS = new WeakMap();
+  BATCH = null;
+  fromHeld = false;
+}
+
+/** The one GL context, made on first use and again once lost; null where there is no WebGL2 (the caller falls back to the 2D figure). */
 export function glContext(): Ctx | null {
+  // Lost before its event came: given up here, as the event would have.
+  if (CTX && CTX.gl.isContextLost()) contextGone();
   if (CTX !== undefined) return CTX;
   const cv = document.createElement('canvas');
   const gl = cv.getContext('webgl2', { premultipliedAlpha: true, antialias: false, alpha: true, preserveDrawingBuffer: false });
   if (!gl) return (CTX = null);
+  cv.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    if (CTX && CTX.cv === cv) contextGone();
+  });
   if (!gl.getExtension('EXT_color_buffer_float')) return (CTX = null);
   // A GPU the shaders do not fit draws no bodies rather than stopping whatever asked for one (the sign-in among them).
   let prog: WebGLProgram, edge: WebGLProgram, wire: WebGLProgram;
@@ -477,7 +496,7 @@ function size(C: Ctx, w: number, h: number): void {
 }
 
 interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number; face: WebGLBuffer | null; shapes: WebGLTexture | null }
-const BUFFERS = new WeakMap<Baked, Buffers>();
+let BUFFERS = new WeakMap<Baked, Buffers>();
 function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   let bf = BUFFERS.get(b);
   if (bf) return bf;

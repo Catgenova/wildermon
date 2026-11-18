@@ -434,6 +434,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // A lost GL context made again for the sculpted bodies, the flat figure meanwhile (gl.ts `contextGone`).
+  {
+    n: 688,
+    day: '2026-11-18',
+    lines: () => ['Fixed: bodies vanishing for the rest of the session after the browser drops the graphics context (GPU memory short, a driver reset): made again on the next frame, the flat figure while none can be.'],
+  },
   // A creature's refusals name it at its stage (`kind_name_at`, `kindName`), migration 144.
   {
     n: 687,
