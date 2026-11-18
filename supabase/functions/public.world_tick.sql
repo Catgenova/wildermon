@@ -183,8 +183,8 @@ begin
     v_mark := clock_timestamp();
     begin
       v_sunk := reap_islands();
-      -- An hour of rounds is all anybody needs to see where the time went.
-      delete from tick_time where at < now() - interval '1 hour';
+      -- Six hours of rounds: a stall is looked into after it, and an hour had gone by the time anybody asked.
+      delete from tick_time where at < now() - interval '6 hours';
       -- And a week of faults, which is long enough for somebody to ask.
       delete from private.tick_fault where last_at < now() - interval '7 days';
       delete from private.player_ip where last_at < now() - private.ip_keep();

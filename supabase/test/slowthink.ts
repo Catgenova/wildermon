@@ -6,7 +6,9 @@
  *   * every think the clock asks for goes through `private.settle_timed`: `kept_sweep`, `worker_sweep` and
  *     `creature_sweep`, and none of them calls `creature_settle` any other way;
  *   * one of `slow_think_ms()` or more is kept with the creature, its kind, mode, job, phase and keeper, and its time;
- *   * one under it is not; and what `settle_timed` says is what `creature_settle` says.
+ *   * one under it is not; and what `settle_timed` says is what `creature_settle` says;
+ *   * kept at the time the think began, not its round's;
+ *   * one of `slow_stall_ms()` or more is kept with what else was running (`others`), one under it without.
  *
  * Every step is undone.
  */
@@ -40,6 +42,15 @@ begin
   insert into said select 'KEPT', count(*) || '|' || max(t.creature) || '|' || max(t.species) || '|' || max(t.mode) || '|' || bool_and(t.keeper = u)::text
       || '|' || (min(t.ms) >= 0)::text from private.slow_think t where t.world_id = w;
   insert into said values ('ID', m::text);
+  -- Kept at the think's own start: after this transaction began.
+  insert into said select 'AT', bool_and(t.at > now())::text from private.slow_think t where t.world_id = w;
+  insert into said select 'NO_OTHERS', bool_and(t.others is null)::text from private.slow_think t where t.world_id = w;
+  -- Over the stall bar: what else was running, kept with it (a list, if an empty one).
+  create or replace function public.slow_stall_ms() returns double precision language sql immutable as $fn$ select 0::double precision $fn$;
+  update creature set until = now() - interval '1 second', settled_at = now() - interval '5 seconds' where world_id = w and id = m;
+  v_ok := private.settle_timed(w, m);
+  insert into said select 'OTHERS', count(*) || '|' || coalesce(jsonb_typeof((array_agg(t.others order by t.at desc))[1]), 'none')
+    from private.slow_think t where t.world_id = w;
 end $t$;
 select k || '=' || v from said;
 rollback;
@@ -51,5 +62,8 @@ for (const f of ['public.kept_sweep', 'public.worker_sweep', 'public.creature_sw
 check('a think under slow_think_ms(): nothing kept', said.get('UNDER') === '0', said.get('UNDER'));
 check('a think at or over it: kept with the creature, its kind, mode and keeper, and its time',
   said.get('KEPT') === `1|${said.get('ID')}|rabba|active|true|true`, said.get('KEPT'));
+check('kept at the time the think began, not its round\'s', said.get('AT') === 'true', said.get('AT'));
+check('under slow_stall_ms(): no others kept', said.get('NO_OTHERS') === 'true', said.get('NO_OTHERS'));
+check('at or over it: what else was running kept with it', said.get('OTHERS') === '2|array', said.get('OTHERS'));
 check('and settle_timed says what creature_settle says', said.get('SAYS') === 'true' || said.get('SAYS') === 'false', said.get('SAYS'));
 finish('A slow think, kept');

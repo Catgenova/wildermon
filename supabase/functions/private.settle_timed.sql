@@ -4,13 +4,27 @@ CREATE OR REPLACE FUNCTION private.settle_timed(p_world uuid, p_id integer)
  RETURNS boolean
  LANGUAGE plpgsql
 AS $function$
-declare t0 timestamptz := clock_timestamp(); v_ok boolean; v_ms double precision;
+declare t0 timestamptz := clock_timestamp(); v_ok boolean; v_ms double precision; v_others jsonb;
 begin
   v_ok := creature_settle(p_world, p_id);
   v_ms := extract(epoch from clock_timestamp() - t0) * 1000;
   if v_ms >= slow_think_ms() then
-    insert into private.slow_think (world_id, creature, species, mode, job, phase, idle_why, keeper, ms)
-      select p_world, p_id, c.species, c.mode, c.job, c.phase, c.idle_why, c.keeper, v_ms
+    -- Held this long, what else was running: a stall of the whole database shows here, a slow think of its own does not.
+    if v_ms >= slow_stall_ms() then
+      -- An empty list when nothing else was: looked at, and nothing found.
+      select coalesce(jsonb_agg(jsonb_build_object(
+               'pid', a.pid, 'type', a.backend_type, 'user', a.usename, 'state', a.state,
+               'wait', coalesce(a.wait_event_type || ':' || a.wait_event, ''),
+               'secs', round(extract(epoch from clock_timestamp() - coalesce(a.query_start, a.backend_start))::numeric, 1),
+               'query', left(regexp_replace(coalesce(a.query, ''), '\s+', ' ', 'g'), 160))
+             order by a.query_start), '[]'::jsonb)
+        into v_others
+        from pg_stat_activity a
+       where a.pid <> pg_backend_pid() and coalesce(a.state, '') <> 'idle'
+         and a.backend_type in ('client backend', 'autovacuum worker', 'background worker', 'pg_cron', 'walsender');
+    end if;
+    insert into private.slow_think (at, world_id, creature, species, mode, job, phase, idle_why, keeper, ms, others)
+      select t0, p_world, p_id, c.species, c.mode, c.job, c.phase, c.idle_why, c.keeper, v_ms, v_others
         from creature c where c.world_id = p_world and c.id = p_id;
     delete from private.slow_think where at < now() - slow_think_keep();
   end if;

@@ -500,7 +500,8 @@ jobs:
           ask "the ones named that sort: sort_stack's parts timed" "set statement_timeout = '15min'; do \$\$
             declare c creature; dd deed; v_bins placed[]; b placed; t0 timestamptz; v_n bigint; v_m bigint; v_out text := ''; v_k int; v_defs text[]; v_d text;
             begin
-              for c in select * from creature where id = any(string_to_array('$IDS', ',')::int[]) and mode = 'deed' and job = 'fetch' loop
+              -- Any worker named: what sort_stack costs is its keeper's settlement's, whatever its trade.
+              for c in select * from creature where id = any(string_to_array('$IDS', ',')::int[]) and mode = 'deed' loop
                 v_out := v_out || E'\n#' || c.id;
                 t0 := clock_timestamp();
                 select * into dd from my_deed(c.world_id, c.keeper) md where md.world_id is not null;
@@ -550,6 +551,11 @@ jobs:
              from creature c cross join lateral private.hoard_boxes(c.world_id, c) b
             where c.id = any(string_to_array('$IDS', ',')::int[]) and c.mode = 'deed' order by b.ids is null, b.kind, b.sid limit 80"
           fi
+          # Who pays sort_stack: a fetch worker that finds nothing lying asks it every think (worker_settle).
+          ask "fetch workers: keeper, phase, why idle, next think" "select c.id, coalesce(p.name, left(c.keeper::text, 8)) as keeper, c.species, c.phase,
+                 coalesce(c.idle_why, '') as idle_why, round(extract(epoch from c.until - now())::numeric, 1) as next_think_s
+             from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
+            where c.mode = 'deed' and c.job = 'fetch' order by 2, 1 limit 40"
           ask "kept wildermon by keeper and mode" "select coalesce(p.name, left(c.keeper::text, 8)) as keeper, c.mode, count(*) as n,
                  count(*) filter (where c.until <= now()) as due
              from creature c left join player p on p.world_id = c.world_id and p.uid = c.keeper
@@ -699,6 +705,20 @@ jobs:
                  coalesce(p.name, left(t.keeper::text, 8)) as keeper
              from private.slow_think t left join player p on p.world_id = t.world_id and p.uid = t.keeper
             where t.at > now() - interval '6 hours' order by t.ms desc limit 25"
+          # A think of slow_stall_ms() or more keeps what else was running at its end (migration 142): a stall of the
+          # whole database shows as other work there, or as several keepers' thinks slow in the same minute.
+          ask "thinks of 5 s or more, last 3 days, with what else was running" "select to_char(t.at, 'MM-DD HH24:MI:SS') as at, round(t.ms) as ms,
+                 t.creature, t.species, t.job, t.phase, coalesce(p.name, '') as keeper,
+                 coalesce((select string_agg(format('%s %s %s %ss %s', o->>'type', o->>'state', o->>'wait', o->>'secs', o->>'query'), ' || ')
+                             from jsonb_array_elements(t.others) o), case when t.others is null then '(not looked)' else '(nothing else)' end) as others
+             from private.slow_think t left join player p on p.world_id = t.world_id and p.uid = t.keeper
+            where t.ms >= 5000 order by t.at desc limit 20"
+          ask "the clock's rounds of 5 s or more, last 6 hours, by minute" "select to_char(m.minute, 'MM-DD HH24:MI') as minute, m.rounds, m.ms_worst,
+                 (select string_agg(k || ' ' || round(v::numeric), ', ' order by v desc) from (select e.key as k, max((e.value::text)::numeric) as v
+                    from tick_time t2, jsonb_each(t2.stages) e where date_trunc('minute', t2.at) = m.minute and t2.ms >= 5000 group by 1) q) as stages_worst
+             from (select date_trunc('minute', at) as minute, count(*) as rounds, round(max(ms)::numeric) as ms_worst
+                     from tick_time where at > now() - interval '6 hours' and ms >= 5000 group by 1) m
+            order by m.minute desc limit 30"
           ask "faults, last 2 hours" "select to_char(f.at, 'HH24:MI:SS') as first, to_char(f.last_at, 'HH24:MI:SS') as last, f.times, f.stage, coalesce(f.job, '') as job,
                  left(f.error, 120) as error, left(regexp_replace(coalesce(f.context, ''), '\s+', ' ', 'g'), 200) as at_line
              from private.tick_fault f where f.last_at > now() - interval '2 hours' order by f.last_at desc limit 10"
