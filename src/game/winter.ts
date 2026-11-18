@@ -96,11 +96,7 @@ export const CACHE_LOOT: readonly CacheLoot[] = [
   { item: 'ice_mote', count: 3, weight: 30, at: 0 },
   { item: 'life_mote', count: 2, weight: 20, at: 0 },
   { item: 'ancient_seed_jar', count: 1, weight: 15, at: 0 },
-  { item: 'mithril_lump', count: 2, weight: 10, at: 20 },
   { item: 'tarnished_bauble', count: 1, weight: 8, at: 30 },
-  { item: 'glimmersteel_lump', count: 2, weight: 7, at: 40 },
-  { item: 'adamantine_lump', count: 2, weight: 6, at: 60 },
-  { item: 'seryll_lump', count: 2, weight: 4, at: 80 },
 ];
 
 /** The lines of `CACHE_LOOT` open at a Tracking level. */
@@ -133,7 +129,7 @@ export const lootSays = (l: Pick<CacheLoot, 'item' | 'count'>): string =>
 export const cacheOddsSays = (level: number): string =>
   cacheOdds(level).map(([l, p]) => `${lootSays(l)} ${Math.round(p * 100)}%`).join(', ');
 
-/** "mithril lump from 20, ...": the lines a level does not yet open. */
+/** "tarnished bauble from 30": the lines a level does not yet open. */
 export const cacheLaterSays = (level: number): string =>
   CACHE_LOOT.filter((l) => l.at > level).map((l) => `${itemDef(l.item).name.toLowerCase()} from ${l.at}`).join(', ');
 

@@ -7542,7 +7542,7 @@ create or replace function cache_deed_gap() returns int language sql immutable a
 create or replace function cache_ground(p_tile int) returns boolean language sql immutable as $fn$ select p_tile in (0, 5, 6, 11, 12, 7) $fn$;
 create or replace function cache_spot_at(p_level int) returns int language sql immutable as $fn$ select 3 + floor(p_level::double precision / 20)::int $fn$;
 create or replace function cache_draws(p_level int) returns int language sql immutable as $fn$ select 2 + floor(p_level::double precision / 30)::int $fn$;
-create or replace function cache_loot() returns table (ord int, item text, n int, weight int, at int) language sql immutable as $fn$ values (0, 'ice_mote', 3, 30, 0), (1, 'life_mote', 2, 20, 0), (2, 'ancient_seed_jar', 1, 15, 0), (3, 'mithril_lump', 2, 10, 20), (4, 'tarnished_bauble', 1, 8, 30), (5, 'glimmersteel_lump', 2, 7, 40), (6, 'adamantine_lump', 2, 6, 60), (7, 'seryll_lump', 2, 4, 80) $fn$;
+create or replace function cache_loot() returns table (ord int, item text, n int, weight int, at int) language sql immutable as $fn$ values (0, 'ice_mote', 3, 30, 0), (1, 'life_mote', 2, 20, 0), (2, 'ancient_seed_jar', 1, 15, 0), (3, 'tarnished_bauble', 1, 8, 30) $fn$;
 create or replace function cache_pick(p_level int, p_roll double precision) returns int language plpgsql immutable as $fn$
 declare l record; v_r double precision; v_last int;
 begin

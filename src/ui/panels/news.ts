@@ -256,7 +256,7 @@ const METALS_BEFORE_VOLCANO = METALS.filter((m) => m.id !== FIRE_STEEL);
 /** The share of strikes QL 0 gold took the die (n 103), as it was before coins stopped being struck (n 646). */
 const COIN_PURITY_FLOOR_WAS = 0.5;
 import {
-  CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_LOOT, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, lootSays, WINTER_FUR, WINTER_FUR_PART,
+  CACHE_DEED_GAP, CACHE_DRAW_EVERY, CACHE_DRAWS, CACHE_EVERY, CACHE_SPOT_BASE, CACHE_SPOT_EVERY, cacheOddsSays, WINTER_FUR, WINTER_FUR_PART,
 } from '../../game/winter';
 import { betterThanCommon, BLOOD_CHANNELS, husbandryOdds, LAMP_TIER_ODDS, pct as cardPct, TIERS, TRAIT_SLOTS, depthMul, MUTATION_ODDS, PEDIGREE_MOST, PEDIGREE_STEP } from '../../game/traits';
 import { SLOTS_PER_STAGE, stageSlots } from '../../game/traits';
@@ -434,6 +434,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The metal lumps out of a winter cache's loot (winter.ts `CACHE_LOOT`, the island's `cache_loot`).
+  {
+    n: 690,
+    day: '2026-11-18',
+    lines: () => [`Removed: metal lumps (mithril, glimmersteel, adamantine, seryll) from winter cache draws. Odds at ${SKILL_TOP} now: ${cacheOddsSays(SKILL_TOP)}.`],
+  },
   // Walked to a job, then asked from where the island has the body (island.ts `sayHere`, game.ts `CREATURE_REACH`, `WALK_TRIES`).
   {
     n: 689,
@@ -6352,7 +6358,8 @@ export const NEWS: News[] = [
       `Added: critter caches, winter only: a cache per ${CACHE_EVERY}×${CACHE_EVERY} tiles, hidden, not within ${CACHE_DEED_GAP} tiles of a settlement, gone when winter ends.`
         + ` Search for caches (tile menu): nearest within Track's reach, read as Track reads; its tile within ${CACHE_SPOT_BASE} tiles, a tile further every ${CACHE_SPOT_EVERY} Tracking levels.`
         + ` Dig up cache (on that tile, first to finish takes it): ${CACHE_DRAWS} draws, a draw more every ${CACHE_DRAW_EVERY} Tracking levels, QL by Tracking.`,
-      `Cache draws, opening by Tracking: ${CACHE_LOOT.map((l) => `${lootSays(l)} from ${l.at}`).join(', ')}. Odds at ${SKILL_TOP}: ${cacheOddsSays(SKILL_TOP)}.`,
+      // As the table stood then: its metal lumps were taken out on 11-18 (690).
+      'Cache draws, opening by Tracking: 3 × ice mote from 0, 2 × life mote from 0, ancient seed jar from 0, 2 × mithril lump from 20, tarnished bauble from 30, 2 × glimmersteel lump from 40, 2 × adamantine lump from 60, 2 × seryll lump from 80. Odds at 100: 3 × ice mote 30%, 2 × life mote 20%, ancient seed jar 15%, 2 × mithril lump 10%, tarnished bauble 8%, 2 × glimmersteel lump 7%, 2 × adamantine lump 6%, 2 × seryll lump 4%.',
     ],
   },
   {

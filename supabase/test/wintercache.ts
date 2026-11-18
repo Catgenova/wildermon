@@ -64,8 +64,10 @@ select 'pick ' || string_agg(p, ',' order by o) from (
    group by o) x;`);
 check('the winter fur multiplier, the loot table, the draws, the spot, the caches an island is laid, the ground and every pick: the island\'s are the browser\'s',
   theirNumbers === mineNumbers, theirNumbers === mineNumbers ? '' : `\nisland  ${theirNumbers}\nbrowser ${mineNumbers}`);
-check('the loot is worth having: no nuts or roots, motes, a relic, a bauble and four rare metals',
-  CACHE_LOOT.every((l) => ITEM_DEFS[l.item] && !['nuts', 'acorn', 'lily_root'].includes(l.item)) && CACHE_LOOT.some((l) => l.item === 'seryll_lump'),
+// Asked for: "remove metal lumps from winter caches".
+check('the loot is worth having: no nuts or roots, motes, a relic and a bauble; no metal lumps',
+  CACHE_LOOT.every((l) => ITEM_DEFS[l.item] && !['nuts', 'acorn', 'lily_root'].includes(l.item) && !l.item.endsWith('_lump'))
+    && CACHE_LOOT.some((l) => l.item === 'tarnished_bauble'),
   CACHE_LOOT.map((l) => l.item).join(', '));
 
 /* ---- the island ------------------------------------------------------------------------------------------------- */
