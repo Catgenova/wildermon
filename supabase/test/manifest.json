@@ -497,6 +497,12 @@
     "why": "Reported: \"my character model is missing\", the wildermon drawn round an empty tile. A browser short of GPU memory takes a WebGL context away, and nothing listened: every body after it was drawn on the lost context, as nothing. Drawn in Chromium: the body there, the context taken away (WEBGL_lose_context), and after more frames at least 80% of the body's dark pixels still there (0.99 with the context made again, 0.55 without)."
   },
   {
+    "file": "supabase/test/walkreach.ts",
+    "title": "Walked to a creature, then asked from where the island takes it to be in reach",
+    "shard": 5,
+    "why": "Reported: moving to the area and then still being told it is too far, and nothing happens. The island measures a creature body to body (creature_in_reach, 1.9 tiles); the browser took any tile beside its tile as near, whose far corner is 2.7 off. A corner 2.7 off not in reach; the walk ends on a tile whose middle is within CREATURE_REACH; asked from within reach; one that moved off on the way walked to again and asked, never \"too far\"."
+  },
+  {
     "file": "supabase/test/access.ts",
     "title": "Low-end graphics draw the wood flat, less motion stops its sway, and every key is a row",
     "shard": 1,

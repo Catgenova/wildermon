@@ -448,6 +448,13 @@ export const ASH_RATE = 1 / 120;
 export const DAMAGE_WARN = 75;
 /** The longest leg of a long walk, in tiles (`travelTo`): well inside what one path is looked for over. */
 export const TRAVEL_LEG = 60;
+/**
+ * How near a creature is near enough to be reached, between the two bodies, in tiles: the island's `creature_in_reach`
+ * takes 1.9, and this is short of it by what the creature and the word of where you are may move before it is asked.
+ */
+export const CREATURE_REACH = 1.6;
+/** Walks to a job made again after one ended out of its reach, before saying it is too far. */
+export const WALK_TRIES = 3;
 /** Legs in a row that bring you no nearer before a long walk gives up. */
 export const TRAVEL_STUCK = 3;
 export const DAMAGE_WARN_STEP = 5;
@@ -5161,6 +5168,13 @@ export class Game {
       const { def, target, goes } = a;
       this.action = null;
       if (foe ? !inFightReach(this, def.id, foe) : !this.inRange(def, target)) {
+        // Arrived out of its reach -- a creature that moved off, a way that ended short: walked again, `WALK_TRIES` times.
+        const tries = a.tries ?? 0;
+        if (!foe && tries < WALK_TRIES && !cellarGate(this, def.id, target) && this.walkToward(def, target) && this.player.path) {
+          this.action = { ...a, tries: tries + 1 };
+          this.events.emit('action');
+          return;
+        }
         this.logMsg(cellarGate(this, def.id, target) ?? 'You are too far away from that.', 'error');
         this.events.emit('action');
         return;
@@ -6329,6 +6343,12 @@ export class Game {
       // would count as near here and not there.
       return Math.hypot(into.centre[0] - this.player.x, into.centre[1] - this.player.y) <= STORE_REACH;
     }
+    // A creature as the island measures it (`creature_in_reach`): body to body, not tile to tile, which put a corner of a
+    // tile beside it as near and was refused on the island as too far.
+    if (target.kind === 'creature' && (def.rangeFor?.(this) ?? def.range ?? 1) <= 1) {
+      const c = this.creatures.get(target.id);
+      return !!c && Math.hypot(c.x - this.player.x, c.y - this.player.y) <= CREATURE_REACH;
+    }
     const tile = this.targetTile(target);
     if (!tile) return false;
     const px = this.player.tileX;
@@ -6366,6 +6386,12 @@ export class Game {
       candidates = [{ x: tile.x, y: tile.y }, ...this.neighbours(tile.x, tile.y)];
     }
     candidates = candidates.filter((c) => this.world.isPassable(c.x, c.y));
+    // To a creature: a tile whose middle is within its reach of it (`CREATURE_REACH`), where there is one.
+    const near = target.kind === 'creature' && (def.rangeFor?.(this) ?? def.range ?? 1) <= 1 ? this.creatures.get(target.id) : undefined;
+    if (near) {
+      const within = candidates.filter((c) => Math.hypot(c.x + 0.5 - near.x, c.y + 0.5 - near.y) <= CREATURE_REACH);
+      if (within.length) candidates = within;
+    }
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
     const { rule, levels, below, lift } = this.movement();
     // To the storey the thing is on: down to a crate in the cellar, up to a tree out of one.

@@ -195,6 +195,14 @@ export function turnsOf(from: { x: number; y: number } | null, steps: Array<{ x:
  * nearest, and `to` itself. The next word walks on from there along the same
  * path rather than straight across from `at`.
  */
+/**
+ * Whether a job's target is somewhere the body has to be near: a tile, a creature, a piece, a crate, somebody, or a
+ * thing going into a store (`into`). A thing in the pack (eaten, worn, dropped) is not, and its job does not wait for a
+ * word of where the body is (`Island.sayHere`).
+ */
+export const placed = (target: Record<string, unknown>): boolean =>
+  typeof target.kind === 'string' && (target.kind !== 'item' || target.into !== undefined);
+
 export function turnsAhead(from: { x: number; y: number } | null, turns: Array<{ x: number; y: number }>, to: { x: number; y: number }, at: { x: number; y: number }): Array<{ x: number; y: number }> {
   const pts = [...(from ? [from] : []), ...turns, to];
   let best = Infinity;
@@ -1317,6 +1325,8 @@ export class Island {
   /** When the spots picked over near us were last read (`refreshForaged`), and where we were. */
   private lastForaged = 0;
   private near: { x: number; y: number } | null = null;
+  /** The storey `near` was on. */
+  private nearLevel: number | null = null;
   /** When the swirls were last asked for, and whether something has said to ask again now. */
   private lastSwirls = 0;
   /** When the rolls rune gates are lit by were last asked for (`refreshGateFolk`), in seconds; never, to begin with. */
@@ -3597,6 +3607,7 @@ export class Island {
     void this.refreshNear(now);
     void this.refreshSprings(now);
     this.near = { x, y };
+    this.nearLevel = level;
     void this.refreshForaged(now);
     void this.refreshSwirls(now);
     void this.refreshGateFolk(now);
@@ -4819,10 +4830,37 @@ export class Island {
     return (data as { why?: string } | null)?.why ?? null;
   }
 
+  /**
+   * Where the body stands now, told the island before a job is asked of it, where its last word is not that.
+   *
+   * A word of where we are goes at most every `MOVE_EVERY`; a job asked the moment the feet arrived was judged from where
+   * the island last had them, up to a second's walk back, and refused as too far with the body beside the thing. Reported:
+   * "moving to the area and then still getting an error message of being too far away and nothing happens". A change
+   * of storey is not said here: that goes as `move` says it, and the job waits for it (`turning`).
+   */
+  private async sayHere(): Promise<void> {
+    const at = this.near, level = this.nearLevel;
+    if (!this.info || !at || level === null || level !== this.lastLevel) return;
+    const said = `${at.x.toFixed(2)},${at.y.toFixed(2)},${level}`;
+    if (said !== this.lastSaid) {
+      this.lastMove = performance.now() / 1000;
+      this.lastSaid = said;
+      this.lastTile = `${Math.floor(at.x)},${Math.floor(at.y)},${level}`;
+      const asked = this.tellWhere(at.x, at.y, level, false);
+      await waitAtMost(asked, MOVE_LOST);
+      if (this.telling === asked) this.telling = null;
+    } else if (this.telling) {
+      // That word on its way: landed first.
+      await waitAtMost(this.telling, MOVE_LOST);
+    }
+  }
+
   async act(action: string, target: Record<string, unknown>, times = 1, hidden = false): Promise<ActResult> {
     if (!this.info) return { started: false, why: 'You are not on an island.' };
     // A word at a cellar's stairs still on its way lands first, so the job is judged on the storey the body is on.
     if (this.turning) await waitAtMost(this.turning, MOVE_LOST);
+    // And where the body stands now, so a job at something somewhere is judged from there (`sayHere`).
+    if (placed(target)) await this.sayHere();
     const sent = ++this.asksSent;
     /*
      * gates: a solid wall asked for as a hidden door (`gates.ts`) goes by
@@ -4937,6 +4975,9 @@ export class Island {
    */
   async actMany(action: string, targets: Array<Record<string, unknown>>): Promise<{ rest: Array<Record<string, unknown>>; busy: boolean }> {
     if (!this.info) return { rest: targets, busy: false };
+    // Judged from where the body stands now (`sayHere`).
+    if (this.turning) await waitAtMost(this.turning, MOVE_LOST);
+    if (targets.some(placed)) await this.sayHere();
     for (let i = 0; i < targets.length; i += ACT_MANY_MOST) {
       const chunk = targets.slice(i, i + ACT_MANY_MOST);
       const sent = ++this.asksSent;

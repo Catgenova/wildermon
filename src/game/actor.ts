@@ -30,6 +30,8 @@ export interface ActiveAction {
   left?: number;
   /** How many were asked for, for saying so when it is done. */
   goes?: number;
+  /** Walks to it made again after one ended out of its reach (`WALK_TRIES`): a creature moved off, a way that ended short. */
+  tries?: number;
 }
 
 /** Where somebody's news goes: on screen. */

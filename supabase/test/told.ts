@@ -306,6 +306,26 @@ for (const [label, legs] of [
 }
 
 /*
+ * A job at a tile asked the moment the feet arrive, the last step of the walk not yet told (a word goes at most every
+ * MOVE_EVERY). Reported: "moving to the area and then still getting an error message of being too far away and nothing
+ * happens": the job was judged from where the island last had the body, a second's walk back.
+ */
+{
+  link = () => [60, 60];
+  const isle = ashore(10.5, 20.5, 0);
+  await play([
+    [0, () => go(isle, 10.5, 19.5, 0, 100, false)],
+    // Inside MOVE_EVERY of the last word: no word of its own.
+    [0.3, () => go(isle, 10.5, 18.6, 0, 100.3, false)],
+    [0.35, () => { void isle.act('dig', { kind: 'tile', x: 10, y: 17 }); }],
+  ], 1);
+  const here = calls.find((c) => c.y === 18.6);
+  check('a job at a tile asked before the last step was told: that step told first, and the job asked once it is in',
+    !!here && acts.length === 1 && acts[0] >= here.doneAt && held.y === 18.6,
+    `words ${calls.map((c) => c.y).join(' ')}; job at ${acts[0]?.toFixed(0)} ms, the word answered at ${here?.doneAt.toFixed(0)} ms; island has y ${held.y}`);
+}
+
+/*
  * Thirty seconds of walking east at a walking pace, the game's clock
  * running `fast` times the link's, so the walk takes thirty seconds over that.
  * Then ten seconds of standing at the end of it, as the game goes on calling

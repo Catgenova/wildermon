@@ -36,7 +36,7 @@ import { POST_FOLLOW_REACH } from '../../game/posts';
 import { AROUND_MOST, aroundStoreTrades } from '../../game/around';
 import { AUTO_EAT_AT } from '../../game/autoeat';
 import { CRATE_DEFS, CRATE_KINDS_SAID, rackPutLine, STORE_REACH } from '../../game/crates';
-import { BASE_QUEUE, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
+import { BASE_QUEUE, CREATURE_REACH, WALK_TRIES, DEED_GAP, DEED_SPACING, DEED_STONE_GAP, DAMAGE_WARN, QUEUE_PER_MIND, FORAGE_COOLDOWN, KIT_LEFT_OUT, KIT_QL, SPROUT_COOLDOWN, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, TRAVEL_LEG, deedLevel } from '../../game/game';
 import { ROT_SOON } from '../../game/rot';
 import { FAIL_EXAMPLE_AT, FAIL_FACTORS, FAIL_LEAST, FAIL_WHY_JOBS, failFactor, failFactorSaid } from '../../game/failwhy';
 import {
@@ -434,6 +434,16 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Walked to a job, then asked from where the island has the body (island.ts `sayHere`, game.ts `CREATURE_REACH`, `WALK_TRIES`).
+  {
+    n: 689,
+    day: '2026-11-18',
+    lines: () => [
+      'Fixed: a job walked to and then refused as too far: where you stand is told the island before the job, not up to a second after.',
+      `Fixed: a wildermon walked to and refused as too far: reach measured body to body, ${CREATURE_REACH} tiles (the island's 1.9), not any tile beside it.`,
+      `Changed: a target that moved off while you walked to it: walked to again, up to ${WALK_TRIES} times, before "too far".`,
+    ],
+  },
   // A lost GL context made again for the sculpted bodies, the flat figure meanwhile (gl.ts `contextGone`).
   {
     n: 688,
