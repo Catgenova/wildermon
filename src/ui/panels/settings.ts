@@ -236,8 +236,16 @@ export class SettingsPanel {
       (v) => void game.pathDoor?.turn(v),
     );
     add(
+      'Guiding Light panel',
+      'Card kept up in the corner while the Guiding Light is on: one step, its Steps numbered, Why it matters; a moving picture of the action. Skip, Next step (once the step is done), fold.',
+      () => game.settings.pathPanel,
+      (v) => {
+        game.settings.pathPanel = v;
+      },
+    );
+    add(
       'Guiding Light pop-ups',
-      'Card in the corner as each Guiding Light step ticks: done, next, how, why; a moving picture of the action. Close, Skip next, Guiding Light tab.',
+      'Card in the corner as each Guiding Light step ticks, with the panel off: done, next, how, why; a moving picture of the action. Close, Skip next, Guiding Light tab.',
       () => game.settings.pathPopups,
       (v) => {
         game.settings.pathPopups = v;

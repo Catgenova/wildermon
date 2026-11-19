@@ -6916,6 +6916,38 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   font-weight: 600;
 }
 
+.path-card-top {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.path-card-top .path-card-done {
+  flex: 1;
+  min-width: 0;
+}
+
+.path-card-fold[hidden],
+.path-card-foot button[hidden],
+.path-card-mid[hidden] {
+  display: none;
+}
+
+/* The panel (settings.pathPanel): kept up; Next step lit once the step is done. */
+.path-card.path-panel {
+  width: 460px;
+}
+
+.path-card-lines > b {
+  display: block;
+}
+
+.path-card-go.path-card-ready {
+  border-color: var(--ui-accent);
+  color: var(--ui-accent);
+  font-weight: 600;
+}
+
 .path-card-mid {
   display: flex;
   gap: 8px;

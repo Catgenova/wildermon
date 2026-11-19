@@ -146,6 +146,13 @@ export const SETTING_DEFAULTS = {
   /** A card in the corner each time a Path step ticks: what was done, and the next step's how and why (`src/ui/pathcard.ts`). */
   pathPopups: true,
   /**
+   * The Guiding Light panel (`src/ui/pathcard.ts`): the card kept up while the Guiding Light is on, one step at a time,
+   * with Skip and Next step. On for a new body's first coming ashore.
+   */
+  pathPanel: false,
+  /** The panel folded to its top line. */
+  pathPanelFolded: false,
+  /**
    * Phone only (`lowPowerOn`): at most `LOW_POWER_FPS` frames a second, the
    * fast graphics, and no wakes or dust.
    */

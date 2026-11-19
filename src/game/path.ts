@@ -829,16 +829,29 @@ export function doneSays(g: Game, id: string): string {
   return step ? head : `Detour: ${head}`;
 }
 
-/** What a card says: the steps just done, and the next step with its line, how, why and picture; null next at the end. */
+/** A phase named: "At the runestone", "Level 2". */
+export const phaseName = (p: PathPhase): string => PATH_PHASES.find(([id]) => id === p)?.[1] ?? p;
+
+/**
+ * What a card says: the steps just done, and a step (the current one, or `id`) with its line, how, why, picture, phase
+ * and whether it is behind you; null next at the end.
+ */
 export interface PathCardSays {
   done: string[];
-  next: { id: string; line: string; how: string[]; why: string[]; show: PathShow } | null;
+  next: {
+    id: string; line: string; how: string[]; why: string[]; show: PathShow;
+    number: number; phase: string; passed: 'done' | 'skipped' | null;
+  } | null;
 }
-export function pathCardSays(g: Game, done: readonly string[]): PathCardSays {
-  const s = currentStep(g);
+export function pathCardSays(g: Game, done: readonly string[], id?: string | null): PathCardSays {
+  const s = (id ? PATH_STEP_BY_ID.get(id) : undefined) ?? currentStep(g);
   return {
-    done: done.map((id) => doneSays(g, id)),
-    next: s ? { id: s.id, line: `${stepNumber(s)}/${PATH_STEPS.length} · ${s.label(g)}`, how: s.how(g), why: s.why(g), show: s.show } : null,
+    done: done.map((d) => doneSays(g, d)),
+    next: s ? {
+      id: s.id, line: `${stepNumber(s)}/${PATH_STEPS.length} · ${s.label(g)}`, how: s.how(g), why: s.why(g), show: s.show,
+      number: stepNumber(s), phase: phaseName(s.phase),
+      passed: g.pathDone.has(s.id) ? 'done' : g.thePath?.skip.includes(s.id) ? 'skipped' : null,
+    } : null,
   };
 }
 

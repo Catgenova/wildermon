@@ -345,7 +345,7 @@ import {
   STONE_LANTERN_REACH, SUNDIAL, WOVEN_RUG,
 } from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
-import { ASHORE_KINDS, GUIDE_START, PATH_CRATE, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE, WILD_NEAR } from '../../game/path';
+import { ASHORE_KINDS, GUIDE_START, MET_MARK, PATH_CRATE, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE, WILD_NEAR } from '../../game/path';
 import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
@@ -434,6 +434,16 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The Guiding Light panel (pathcard.ts `pin`, settings.pathPanel), up for a first coming ashore.
+  {
+    n: 691,
+    day: '2026-11-19',
+    lines: () => [
+      `New: Guiding Light panel, top right, kept up while the Guiding Light is on: step number of ${PATH_STEPS.length}, phase, the step's Steps numbered, Why it matters.`,
+      `New: panel buttons Skip (the step after) and Next step (once the step is done; it stays up marked ${MET_MARK} Done until then); − folds it to its top line.`,
+      'Changed: first coming ashore: the Guiding Light panel up, in place of the Journal at the Guiding Light tab. Settings, Interface, Guiding Light panel: on or off.',
+    ],
+  },
   // The metal lumps out of a winter cache's loot (winter.ts `CACHE_LOOT`, the island's `cache_loot`).
   {
     n: 690,

@@ -39,7 +39,7 @@ import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { layingBill } from '../../src/game/buildActions';
 import { DEED_UPGRADES } from '../../src/game/deed';
-import { deedRadiusAt, deedWorkersAt } from '../../src/game/deedsize';
+import { deedRadiusAt, deedWorkersAt, MAX_DEED_LEVEL } from '../../src/game/deedsize';
 import { EMOTE_BY_ID } from '../../src/game/emotes';
 import { SPECIES } from '../../src/game/creatures';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
@@ -48,7 +48,7 @@ import { itemDef } from '../../src/game/items';
 import { TRACK_SHOW } from '../../src/game/tracking';
 import {
   ANVIL_LUMPS, currentStep, pathCardSays, pathCheck, PATH_BUILD, PATH_CARD_HOLD, PATH_DETOURS, PATH_STEP_BY_ID, PATH_STEPS,
-  SMELTER_BRICKS, SMELTER_MORTAR, stepNumber, UNMET_MARK, watchPathCards,
+  MET_MARK, SMELTER_BRICKS, SMELTER_MORTAR, stepNumber, UNMET_MARK, watchPathCards,
 } from '../../src/game/path';
 import { PLACEHOLDER, workClipOf } from '../../src/sculpt/anim';
 import type { CardView } from './pathcard-page';
@@ -359,6 +359,55 @@ if (!browser) {
     await call('meet', [PATH_STEPS[24].id]);
     const none = await call<CardView>('look');
     check('drawn: Path pop-ups Off puts none up', !none.open && none.shown === later.shown, JSON.stringify(none));
+
+    // The panel: a first coming ashore's, at the current step, kept up through jobs, Skip and Next step.
+    const at = (id: string): string => `Step ${stepNumber(PATH_STEP_BY_ID.get(id)!)}/${PATH_STEPS.length}`;
+    await call('turn', false);
+    await call('look');
+    await call('turn', true);
+    await call('look');
+    await call('panel', true);
+    const curNow = (await call<{ id: string; how: string[]; why: string[] } | null>('current'))!;
+    const cur = PATH_STEP_BY_ID.get(curNow.id)!;
+    const p0 = await call<CardView>('tick');
+    check('panel: up at the current step, its place, phase and goal',
+      p0.open && p0.done.startsWith(`Guiding Light · ${at(cur.id)} · `) && p0.done.includes(`goal: settlement level ${MAX_DEED_LEVEL}`), JSON.stringify(p0));
+    check('panel: Steps numbered, Why it matters',
+      p0.how.length === curNow.how.length && p0.how.every((l, i) => l === `${i + 1}. ${curNow.how[i]}`)
+      && p0.why.join('|') === curNow.why.join('|') && p0.why.length > 0, JSON.stringify([p0.how, p0.why, curNow]));
+    check('panel: fold, Skip, Next step (not yet), the Guiding Light tab; no Close',
+      p0.buttons.join('|') === '−|Skip|Next step|Guiding Light tab (End)' && p0.nextOff && !p0.skipOff, JSON.stringify(p0));
+    const j1 = await call<CardView>('startJob', 'forage', PATH_CARD_HOLD + 5);
+    const j2 = await call<CardView>('startJob', 'cut_down', PATH_CARD_HOLD + 5);
+    check('panel: kept up through jobs started', j1.open && j2.open);
+    await call('meet', [cur.id]);
+    const ticked = await call<CardView>('look');
+    await call('tick');
+    const pKept = await call<CardView>('view');
+    check(`panel: a step done stays up, marked ${MET_MARK} Done, Next step on, Skip off`,
+      pKept.open && pKept.next.startsWith(`${MET_MARK} Done · `) && !pKept.nextOff && pKept.skipOff && pKept.shown === ticked.shown, JSON.stringify(pKept));
+    await shot('panel-done.png');
+    const went = await call<CardView>('click', 'Next step');
+    const pAfter = PATH_STEP_BY_ID.get((await call<{ id: string }>('current')).id)!;
+    check('panel: Next step, the step after', went.done.startsWith(`Guiding Light · ${at(pAfter.id)} · `) && !went.next.startsWith(MET_MARK) && went.nextOff, JSON.stringify(went));
+    await call('wait', 1200);
+    await shot('panel.png');
+    await call('click', 'Skip');
+    await call('wait', 50);
+    const skippedTo = await call<CardView>('tick');
+    const after2 = PATH_STEP_BY_ID.get((await call<{ id: string }>('current')).id)!;
+    check('panel: Skip, the step after it shown', skippedTo.done.startsWith(`Guiding Light · ${at(after2.id)} · `), JSON.stringify(skippedTo));
+    const folded = await call<CardView>('click', '−');
+    check('panel: − folds it to its top line', folded.open && !(await call<boolean>('pictureShown')) && folded.buttons.includes('+'), JSON.stringify(folded));
+    await call('click', '+');
+    await call('turn', false);
+    const off = await call<CardView>('tick');
+    check('panel: down with the Guiding Light off', !off.open);
+    await call('turn', true);
+    await call('look');
+    const back = await call<CardView>('tick');
+    check('panel: up again with it on', back.open);
+    await call('panel', false);
     check('drawn: nothing thrown', thrown.length === 0, thrown.join('; '));
     if (shots) writeFileSync(join(shots, 'README.txt'), 'tame-step.png, craft-step.png, upgrade-step.png, turned-on.png; tame-*.png, craft-*.png: the card with its picture playing.\n');
   } finally {

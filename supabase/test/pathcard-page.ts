@@ -6,7 +6,7 @@
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { EMOTE_BY_ID } from '../../src/game/emotes';
-import { pathCheck, PATH_DETOURS, PATH_STEPS } from '../../src/game/path';
+import { currentStep, pathCheck, PATH_DETOURS, PATH_STEPS } from '../../src/game/path';
 import { setAnimations } from '../../src/engine/motion';
 import { figureStats, flatFigures, sculptedFigures, sculptedReady, sculptSoft } from '../../src/render/figure';
 import { loadWildermon } from '../../src/render/wildermon';
@@ -59,6 +59,8 @@ export interface CardView {
   how: string[];
   why: string[];
   buttons: string[];
+  nextOff: boolean;
+  skipOff: boolean;
   tabOpened: number;
 }
 
@@ -71,7 +73,9 @@ function view(): CardView {
     next: card.el.querySelector('.path-card-next')?.textContent ?? '',
     how: rows('.path-card-lines:not(.path-card-why)'),
     why: rows('.path-card-why'),
-    buttons: [...card.el.querySelectorAll('button')].map((b) => b.textContent ?? ''),
+    buttons: [...card.el.querySelectorAll('button')].filter((b) => !b.hidden).map((b) => b.textContent ?? ''),
+    nextOff: [...card.el.querySelectorAll('button')].find((b) => b.textContent === 'Next step')?.disabled ?? true,
+    skipOff: [...card.el.querySelectorAll('button')].find((b) => b.textContent === 'Skip')?.disabled ?? true,
     tabOpened: opened,
   };
 }
@@ -128,6 +132,24 @@ const api = {
   popups(on: boolean): void {
     game.settings.pathPopups = on;
   },
+  /** The panel up, as a first coming ashore puts it (`PathCard.pin`), or off. */
+  panel(on: boolean): void {
+    if (on) card.pin();
+    else game.settings.pathPanel = false;
+  },
+  /** The card's look, as every frame makes it. */
+  tick(): CardView {
+    clock += 1000;
+    card.update(clock);
+    return view();
+  },
+  /** The current step, and its how and why as the page's game says them. */
+  current: (): { id: string; how: string[]; why: string[] } | null => {
+    const s = currentStep(game);
+    return s ? { id: s.id, how: s.how(game), why: s.why(game) } : null;
+  },
+  /** Whether the card's picture is shown. */
+  pictureShown: (): boolean => !card.preview.el.hidden,
   click(text: string): CardView {
     [...card.el.querySelectorAll('button')].find((b) => b.textContent === text)?.click();
     return view();

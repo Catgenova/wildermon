@@ -355,8 +355,8 @@ const music = new Music({
 });
 
 const ui = new UI(game, renderer, uiRoot, canvasEl, { turn: turnView, keys, island });
-// A new body's first coming ashore: the Journal open at its Guiding Light tab.
-if (started.first) ui.openJournal('path');
+// A new body's first coming ashore: the Guiding Light panel up, kept up (`PathCard.pin`).
+if (started.first) ui.pathCard.pin();
 // A window or bar moved or resized against another clicks as they join.
 ui.windows.onJoin = () => sound.join();
 // The island can refuse to save: the banner says when it has.

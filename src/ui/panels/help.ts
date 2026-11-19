@@ -316,7 +316,7 @@ import { ALL_TRACKS, playlistSays } from '../../audio/music/playlist';
 import { CUT_POLL_MS, CUT_QUIET_MS, RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS, RECONNECTING } from '../phone';
 import { WATCH_AWAKE_HOURS, WATCH_BREAK_MINS, WATCH_KEEP_DAYS, WATCH_SKILL_MINS, WATCH_SKILL_TIMES, WATCH_STOCK_PER_MILLE } from '../../game/watch';
 import { fixed, setMarkup } from '../html';
-import { ASHORE_KINDS, GUIDE_START, PATH_CARD_HOLD, PATH_CRATE, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_STOCKS, PATH_SURE, WILD_NEAR } from '../../game/path';
+import { ASHORE_KINDS, GUIDE_START, MET_MARK, PATH_CARD_HOLD, PATH_CRATE, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_PHASES, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_STOCKS, PATH_SURE, WILD_NEAR } from '../../game/path';
 import { KIT, kitBody, made as kitMade } from '../kit';
 
 /** The QL the help reads a station's decay an hour at. */
@@ -1253,10 +1253,11 @@ function pathHelp(): string {
     <h3>Guiding Light</h3>
     <ul>
       <li><b>Guiding Light</b>: ${PATH_STEPS.length} steps in ${PATH_PHASES.length} phases, runestone to settlement level ${MAX_DEED_LEVEL}; ${PATH_DETOURS.length} detours, never in the way. Optional; kept on the island.</li>
-      <li><b>On, off</b>: first coming ashore: <b>On</b>, the Journal open at the Guiding Light tab. After: Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light</b>; or the Guiding Light tab. Turned on later: starts at the first step not done.</li>
+      <li><b>On, off</b>: first coming ashore: <b>On</b>, the Guiding Light panel up. After: Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light</b>; or the Guiding Light tab. Turned on later: starts at the first step not done.</li>
       <li><b>Line at the top</b>: step number of ${PATH_STEPS.length}, the step, its bait and taming. Arrow: away from the stone to ${DEED_STONE_GAP} tiles, to a suggested site, or the last track on a tame step. <b>−</b>: folded to the step number. Click: the Guiding Light tab.</li>
       <li><b>Guiding Light tab</b>: Journal (<kbd>${keyOf('win_path')}</kbd>): every step by phase, the current one marked, <b>Skip</b> per step (<b>Unskip</b> back), detours under their step.</li>
-      <li><b>Guiding Light card</b>: top right, as a step ticks: <b>Done</b>, <b>Next</b>, <b>How</b>, <b>Why</b>, a picture of you at the job; <b>Close</b>, <b>Skip next</b>, <b>Guiding Light tab</b>. Down on Close or the first job started after ${PATH_CARD_HOLD} s. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light pop-ups</b>: On.</li>
+      <li><b>Guiding Light panel</b>: top right, kept up while the Guiding Light is on: step number of ${PATH_STEPS.length}, phase, goal settlement level ${MAX_DEED_LEVEL}; the step; <b>Steps</b>, numbered; <b>Why it matters</b>; a picture of you at the job. A step done: <b>${MET_MARK} Done</b>, kept until <b>Next step</b>. <b>Skip</b>: the step after. <b>−</b>: folded to the top line. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light panel</b>: on for a first coming ashore.</li>
+      <li><b>Guiding Light card</b>: panel off: top right, as a step ticks: <b>Done</b>, <b>Next</b>, <b>How</b>, <b>Why</b>, a picture of you at the job; <b>Close</b>, <b>Skip next</b>, <b>Guiding Light tab</b>. Down on Close or the first job started after ${PATH_CARD_HOLD} s. Settings (<kbd>${keyOf('win_settings')}</kbd>), Interface, <b>Guiding Light pop-ups</b>: On.</li>
       <li><b>Ticks</b>: a step done ticks itself, early or late, once the island's own record shows it done.</li>
       <li><b>Field guide</b>: Guiding Light on notes ${PATH_KINDS.length} kinds (${listed(kinds)}): <b>Noted (Guiding Light)</b>; Track as if seen. Noted: no seen count, goal or title.</li>
       <li><b>Suggested sites</b>: ${PATH_SITE.count} nearest, every ${PATH_SITE.every} tiles within ${PATH_SITE.reach} of you, ${PATH_SITE.apart} apart: every founding check; trees your woodcutting fells ${PATH_SITE.trees}+ within ${PATH_SITE.treeReach}; water within ${PATH_SITE.water}; bare rock within ${PATH_SITE.rock}.</li>
