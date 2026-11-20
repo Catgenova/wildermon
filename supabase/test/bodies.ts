@@ -95,6 +95,11 @@ try {
    * in the frame its zoom first went under one and a half -- On's first round alone, never Off's after it.
    */
   for (const a of ['on', 'off'] as const) await run(tab, FRAMES, a, 'zoom');
+  /*
+   * And a whole sweep each way, for the same reason: whatever the sweep costs the first time it is drawn fell in On's
+   * first round alone, never Off's after it (one frame of 136-172 ms there, whatever the bodies spent; 77-109 warmed).
+   */
+  for (const a of ['on', 'off'] as const) await run(tab, FRAMES, a, 'pan');
   const shots = process.env.BODIES_SHOTS;
   if (shots) {
     // The same frames before and after a change: the quality held at its best, every body given time to be drawn.
