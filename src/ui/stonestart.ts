@@ -24,14 +24,14 @@
  * Built a node at a time, with no markup: the page takes no HTML from a
  * string (src/page-guard.ts).
  */
-import { START_GAP, type Runestone, type RunestoneId } from '../game/runestones';
+import type { Runestone, RunestoneId } from '../game/runestones';
 import { deedTotemBounds, drawDeedTotem, type DeedTotemLook } from '../render/deedtotem';
 import { drawRunestone, runestoneBounds } from '../render/runestone';
 import { sunOfDay } from '../render/sun';
 import { TILE_DEFS, TileType } from '../world/tiles';
 
 /** What the chooser is headed. */
-export const STONE_PICK_HEAD = `Starting Runestone: ${START_GAP} tiles from it`;
+export const STONE_PICK_HEAD = 'Select a starting Runestone';
 
 /** The camera's turn the pictures are seen from: the one a new body first looks through. */
 const PIC_TURN = 0;

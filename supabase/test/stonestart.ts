@@ -246,7 +246,7 @@ if (!browser) {
     const want = RUNESTONES.map((s) => `${s.id}|${s.name}|${s.place}`);
     check(`drawn: a first join, the ${RUNESTONES.length} stones on the boot card, by name and where each stands`,
       JSON.stringify(first.stones) === JSON.stringify(want) && !first.at_once, first.stones.join('; '));
-    check(`drawn: headed with the gap, ${START_GAP} tiles`, first.head === `Starting Runestone: ${START_GAP} tiles from it`, first.head ?? '');
+    check('drawn: headed "Select a starting Runestone"', first.head === 'Select a starting Runestone', first.head ?? '');
     const pics = await tab.evaluate(() => (window as unknown as { stonestart: Page }).stonestart.pictures());
     const shares = pics.painted.map((p) => Number(p.split('|')[1]));
     check(`drawn: each of the ${RUNESTONES.length} with its picture, a stone on its grass, no two alike`,
