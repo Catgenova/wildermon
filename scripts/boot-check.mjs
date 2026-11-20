@@ -226,6 +226,8 @@ if (panels) {
   const p = panels;
   if (p.opened.length < 10) bad.push(`in the game: only ${p.opened.length} windows opened (${p.opened.join(', ')})`);
   if (!p.help) bad.push('in the game: the help was not built');
+  console.log(`buttons with no word on them: ${p.iconButtons} looked at, ${p.untitled?.length ?? 0} without a title`);
+  if (p.untitled?.length) bad.push(`in the game: buttons with no word on them and no title: ${p.untitled.join('; ')}`);
   if (p.shown.some((s) => !s)) bad.push(`in the game: chat lines not shown as their own text: ${p.shown.map((s, i) => (s ? '' : i)).filter((i) => i !== '').join(', ')}`);
   if (p.made.length) bad.push(`in the game: chat or names made into elements: ${p.made.join('; ')}`);
   if (p.logLinks) bad.push(`in the game: ${p.logLinks} link(s) in the event log; chat is never linkified`);

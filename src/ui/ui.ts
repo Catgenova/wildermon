@@ -131,6 +131,7 @@ import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
 import { MendPanel } from './panels/mend';
 import { QueueView } from './panels/craftqueue';
+import { SeasonsView } from './panels/seasons';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
 import { changeWallRows, frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
 import { storeyHost, wallAcross } from '../game/storeyview';
@@ -397,6 +398,8 @@ export class UI {
   /** The Action queue window's list: every job held, moved, dropped or stopped from anywhere. */
   private readonly queueView: QueueView;
   private readonly queueWin: UIWindow;
+  private readonly seasonsWin: UIWindow;
+  private readonly seasonsView: SeasonsView;
   private readonly spellBar: SpellBar;
   private readonly deedPanel: DeedPanel;
   private readonly tilePanel: TilePanel;
@@ -450,10 +453,11 @@ export class UI {
   constructor(
     private readonly game: Game,
     private readonly renderer: Renderer,
-    root: HTMLElement,
+    private readonly uiEl: HTMLElement,
     canvas: HTMLCanvasElement,
     cb: UICallbacks,
   ) {
+    const root = this.uiEl;
     this.keys = cb.keys;
     this.island = cb.island ?? null;
     this.windows = new WindowManager(root);
@@ -555,6 +559,11 @@ export class UI {
       return codes.length ? keyName(codes[0]) : null;
     });
     this.queueWin.body.append(this.queueView.el);
+    // The season calendar (`seasons.ts`): the window list, or its key.
+    this.seasonsWin = this.windows.create({ id: 'seasons', title: 'Season calendar', x: 364, y: 56, width: 340, height: 420, anchor: 'tr', open: false });
+    kitBody(this.seasonsWin.body, 'seasons-body');
+    this.seasonsView = new SeasonsView(game);
+    this.seasonsWin.body.append(this.seasonsView.el);
     const tileWin = this.windows.create({ id: 'tile', title: 'Tile', x: 12, y: 200, width: 300, height: 320, open: false });
     this.tilePanel = new TilePanel(tileWin, game, (pick) => this.menuFor(pick, (ground) => this.selectTile(ground)), this.tooltip);
     const map = this.windows.create({ id: 'map', title: 'Map', x: 12, y: 370, width: 236, height: 358, anchor: 'tr', open: false, seeThrough: true });
@@ -1145,6 +1154,8 @@ export class UI {
   }
 
   update(fps: number): void {
+    // Compact HUD on a phone (`settings.compactHud`, src/style.css `#ui.phone.hud-compact`).
+    if (this.uiEl.classList.contains('hud-compact') !== this.game.settings.compactHud) this.uiEl.classList.toggle('hud-compact', this.game.settings.compactHud);
     // The redraws asked for since the last frame, once each (`nextFrame`).
     nextFrame.flush();
     // Runecut's light on the island clock turns at dusk and dawn; set to Day or Night this writes nothing.
@@ -1178,6 +1189,7 @@ export class UI {
     this.shopping.update(performance.now());
     this.mend.update(performance.now());
     if (this.queueWin.isOpen) this.queueView.update(performance.now());
+    if (this.seasonsWin.isOpen) this.seasonsView.update(performance.now());
     this.spellBar.update();
   }
 

@@ -157,6 +157,8 @@ export const SETTING_DEFAULTS = {
    * fast graphics, and no wakes or dust.
    */
   lowPower: false,
+  /** Phone only: the HUD's strip lower, its bars without words, the Guiding Light card without its picture, no version and frame rate. */
+  compactHud: false,
   /** Phone only: the screen kept on while an action runs or one is queued (`src/ui/phone.ts`). */
   keepAwake: true,
   /** Notices near the top of the screen (`src/ui/notices.ts`): a skill at a new whole number, a knack, a run of work done, a birth, a thing you wear or hold wearing out, food on the ground about to rot. */

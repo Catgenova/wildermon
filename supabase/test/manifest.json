@@ -3186,6 +3186,12 @@
     "why": "An evolved wildermon is named at its stage on its skills card and in a wildermon crate; the ancient lamp's menu label says the lowest-rarity traits it would reroll (or the empty slot it fills) and the chance of a rarity up; an idle worker of yours is tagged idle over its head."
   },
   {
+    "file": "supabase/test/seasoncal.ts",
+    "title": "The season calendar: the season now and the three after, what fruits in each",
+    "shard": 6,
+    "why": "The calendar says the season now and its day, the three after it in order with the days until each, every item FRUITING has in season in each, which start and which end with it; nothing before the first spring."
+  },
+  {
     "file": "supabase/test/fedwell.ts",
     "title": "Food quality matters",
     "shard": 6,

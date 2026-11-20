@@ -16,22 +16,29 @@ begin
      and bp.kind = 'furniture' and fd.takes in ('raw', 'worked') and private.hoard_items(bp.name) is null;
   -- No bin on the settlement is nothing to sort, and nothing else is looked at.
   if v_bins is null then return; end if;
+  -- Each item kind asked of the bins once, and each store whether it may be sorted from once, not each stack.
   for r in
-    select s.kind, s.sid, s.x, s.y, s.cx, s.cy, (s.it).id as iid, (s.it).def as def, (s.it).count as cnt
-      from deed_store_items(p_world, c.keeper) s
-     where abs(s.x - dd.x) <= dd.radius and abs(s.y - dd.y) <= dd.radius
-       and (p_x is null or (s.x = p_x and s.y = p_y))
-       and (s.it).count > 0 and not coalesce((s.it).locked, false)
-       and exists (select 1 from unnest(v_bins) bb join furniture_def fd on fd.id = bb.sub
-                    where furniture_takes(fd.takes, (s.it).def) is null)
-       and case when s.kind = 'crate'
-                then exists (select 1 from crate cr where cr.world_id = p_world and cr.id = s.sid
-                                and cr.lock is null and cr.store_of is null and private.hoard_items(cr.name) is null)
-                else exists (select 1 from placed pl join furniture_def fd on fd.id = pl.sub
-                              where pl.id = s.sid and pl.lock is null and pl.store_of is null and fd.takes is null
-                                and private.hoard_items(pl.name) is null
-                                and store_markable_refusal(pl) is null) end
-     order by (s.cx - p_fx) ^ 2 + (s.cy - p_fy) ^ 2, s.kind, s.sid, (s.it).id
+    with s as materialized (
+      select s.kind, s.sid, s.x, s.y, s.cx, s.cy, (s.it).id as iid, (s.it).def as def, (s.it).count as cnt
+        from deed_store_items(p_world, c.keeper) s
+       where abs(s.x - dd.x) <= dd.radius and abs(s.y - dd.y) <= dd.radius
+         and (p_x is null or (s.x = p_x and s.y = p_y))
+         and (s.it).count > 0 and not coalesce((s.it).locked, false)),
+    defs as materialized (
+      select d.def from (select distinct s.def from s) d
+       where exists (select 1 from unnest(v_bins) bb join furniture_def fd on fd.id = bb.sub
+                      where furniture_takes(fd.takes, d.def) is null)),
+    stores as materialized (
+      select st.kind, st.sid from (select distinct s.kind, s.sid from s join defs on defs.def = s.def) st
+       where case when st.kind = 'crate'
+                  then exists (select 1 from crate cr where cr.world_id = p_world and cr.id = st.sid
+                                  and cr.lock is null and cr.store_of is null and private.hoard_items(cr.name) is null)
+                  else exists (select 1 from placed pl join furniture_def fd on fd.id = pl.sub
+                                where pl.id = st.sid and pl.lock is null and pl.store_of is null and fd.takes is null
+                                  and private.hoard_items(pl.name) is null
+                                  and store_markable_refusal(pl) is null) end)
+    select s.* from s join defs on defs.def = s.def join stores on stores.kind = s.kind and stores.sid = s.sid
+     order by (s.cx - p_fx) ^ 2 + (s.cy - p_fy) ^ 2, s.kind, s.sid, s.iid
   loop
     if not v_room ? r.def then
       v_n := 0;

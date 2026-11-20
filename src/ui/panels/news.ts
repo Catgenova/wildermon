@@ -436,6 +436,16 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The season calendar, the compact HUD on a phone, every button with no word on it titled (batch D).
+  {
+    n: 695,
+    day: '2026-11-20',
+    lines: () => [
+      'New: Season calendar window (window list, or its key in Settings: Keys): the season now and its day; the three after, days until each; what fruits in each, what starts and what ends with it.',
+      'New: Settings, Phone: Compact HUD: status strip lower, its bars with no labels or numbers (tap for the whole of it), the Guiding Light card without its picture, no version or frame rate.',
+      'Changed: every button with no word on it has a tooltip; the build checks it in every window.',
+    ],
+  },
   // Stage names, the idle tag, the lamp's preview, the settlement's stock and meals, walking in another way (batch C).
   {
     n: 694,

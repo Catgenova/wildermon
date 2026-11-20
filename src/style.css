@@ -10389,3 +10389,47 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 .guide-search {
   margin: 0 2px 6px;
 }
+
+/* A phone's compact HUD (settings.compactHud): the strip lower, its bars with no words; the Guiding Light card with no picture; no corner. */
+#ui.phone.hud-compact {
+  --strip-h: max(40px, var(--tap));
+}
+
+#ui.phone.hud-compact .hud-status:not(.hud-open) .hud-bar-row > :is(.hud-bar-label, .hud-bar-value) {
+  display: none;
+}
+
+#ui.phone.hud-compact .hud-status:not(.hud-open) .hud-bar-row > .hud-bar {
+  height: 5px;
+}
+
+#ui.phone.hud-compact :is(.path-card .path-pic, .hud-corner) {
+  display: none;
+}
+
+/* The season calendar (src/ui/panels/seasons.ts). */
+.seasons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  font-size: var(--rc-fs-3, 12px);
+}
+
+.seasons-head {
+  font-weight: 600;
+}
+
+.seasons-season {
+  margin-top: 6px;
+  font-weight: 600;
+  color: var(--ui-accent);
+}
+
+.seasons-fruit {
+  padding-left: 12px;
+}
+
+.seasons-starts {
+  font-weight: 600;
+}

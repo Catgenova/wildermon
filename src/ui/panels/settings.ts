@@ -576,6 +576,14 @@ export class SettingsPanel {
           game.graphicsChanged?.();
         },
       );
+      add(
+        'Compact HUD',
+        'Status strip lower; its bars with no labels or numbers (tap for the whole of it); Guiding Light card without its picture; no version or frame rate in the corner.',
+        () => game.settings.compactHud,
+        (v) => {
+          game.settings.compactHud = v;
+        },
+      );
     }
     head('World view');
     add('Show tile grid', html`Tile outlines. Toggle: ${kbd('grid')}.`, () => game.settings.grid, (v) => (game.settings.grid = v));

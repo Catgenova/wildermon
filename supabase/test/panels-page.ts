@@ -36,6 +36,9 @@ export interface HostileSeen {
   opened: string[];
   /** Journal tabs shown. */
   tabs: string[];
+  /** Buttons with no word on them and no title, where; and how many shown with no word on them were looked at. */
+  untitled: string[];
+  iconButtons: number;
   /** Whether the help was built into its tab. */
   help: boolean;
   /** Each hostile line, whether the log shows it as its own text. */
@@ -71,7 +74,7 @@ export interface HostileSeen {
   done: boolean;
 }
 
-const seen: HostileSeen = { opened: [], tabs: [], help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], guideSearch: [-1, -1, -1], guideTame: [-1, -1, -1, false, -1], menu: [], menuTab: '', respawn: { atOnce: '', held: '', later: '' }, map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
+const seen: HostileSeen = { opened: [], tabs: [], untitled: [], iconButtons: 0, help: false, shown: [], made: [], badLinks: [], logLinks: 0, escaped: false, pwned: false, done: false, guideMs: -1, guideLong: [0, 0, 0], guideSearch: [-1, -1, -1], guideTame: [-1, -1, -1, false, -1], menu: [], menuTab: '', respawn: { atOnce: '', held: '', later: '' }, map: { corner: -1, zoomed: false, panned: false, fit: false, error: '' } };
 (window as unknown as { panels: HostileSeen }).panels = seen;
 
 document.getElementById('boot')?.remove();
@@ -105,11 +108,24 @@ const rest = (ms: number): Promise<void> => new Promise((done) => window.setTime
 for (const text of HOSTILE) game.events.emit('log', { time: Date.now(), text, kind: 'chat' });
 frame();
 
+/** Buttons shown with no word on them (a mark, an arrow, a sign) and nothing on hover or for a reader: every one has a title. */
+const untitled = (where: string, root: ParentNode): void => {
+  for (const b of root.querySelectorAll<HTMLButtonElement>('button')) {
+    const text = (b.textContent ?? '').trim();
+    if (/[A-Za-z]{2,}/.test(text) || !b.getClientRects().length) continue;
+    seen.iconButtons++;
+    if (b.title || b.getAttribute('aria-label')) continue;
+    const said = `${where}: "${text}" .${[...b.classList].join('.')}`;
+    if (!seen.untitled.includes(said)) seen.untitled.push(said);
+  }
+};
 for (const [id, win] of ui.windows.windows) {
   if (!win.isOpen) win.open();
   frame();
   seen.opened.push(id);
+  untitled(id, win.el);
 }
+untitled('screen', uiRoot);
 const TABS: JournalTab[] = ['goals', 'path', 'ledger', 'news', 'boards', 'guide', 'tracker', 'help'];
 for (const tab of TABS) {
   const t0 = performance.now();
@@ -232,6 +248,8 @@ try {
   seen.respawn.later = picked || 'nothing';
   shown.close();
 }
+
+untitled('journal', uiRoot);
 
 // The UI Menu: every window, the journal's tabs and Settings: Keys, each with its key.
 ui.showWindowMenu(10, 10);

@@ -26,7 +26,7 @@
  *
  * Data in, words out; nothing here reads the time for itself.
  */
-import { SEASONS, YEAR_FROM, seasonAt, type Season } from '../world/calendar';
+import { SEASON_DAYS, SEASONS, YEAR_FROM, seasonAt, type Season } from '../world/calendar';
 import { BUSH_DEFS, TREE_DEFS } from '../world/tiles';
 import { ITEM_DEFS } from './items';
 import { capital, listed } from './words';
@@ -122,4 +122,33 @@ export const seasonLine = (id: string): string => `Fruits in ${listed(fruitingSe
 for (const id of Object.keys(FRUITING)) {
   const d = ITEM_DEFS[id];
   if (d) d.description = d.description ? `${d.description} ${seasonLine(id)}` : seasonLine(id);
+}
+
+/** One season of the calendar: when it starts from now, in days (nought for the one now), and what fruits in it. */
+export interface CalendarSeason {
+  season: Season;
+  inDays: number;
+  /** Its fruiting sources ("cherry tree", "lavender"), and which of them start or end with it. */
+  fruits: Array<{ id: string; source: string; starts: boolean; ends: boolean }>;
+}
+/**
+ * The season calendar: the season now and the three after it, each with what fruits in it (`FRUITING`), marked
+ * where it starts with the season (not in the one before) or ends with it (not in the one after). Empty before the
+ * first spring (`YEAR_FROM`), when everything fruits.
+ */
+export function seasonCalendar(now: number): { now: Season | null; day: number; seasons: CalendarSeason[] } {
+  const season = fruitSeason(now);
+  if (season === null) return { now: null, day: 0, seasons: [] };
+  const { day } = seasonAt(now);
+  const at = SEASONS.indexOf(season);
+  const seasons = SEASONS.map((_, k): CalendarSeason => {
+    const s = SEASONS[(at + k) % SEASONS.length];
+    const before = SEASONS[(at + k + SEASONS.length - 1) % SEASONS.length];
+    const after = SEASONS[(at + k + 1) % SEASONS.length];
+    const fruits = Object.keys(FRUITING).filter((id) => fruitsIn(id, s)).map((id) => ({
+      id, source: fruitSource(id), starts: !fruitsIn(id, before), ends: !fruitsIn(id, after),
+    }));
+    return { season: s, inDays: k === 0 ? 0 : SEASON_DAYS * k - (day - 1), fruits };
+  });
+  return { now: season, day, seasons };
 }
