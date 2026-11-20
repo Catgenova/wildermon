@@ -47,8 +47,8 @@ const U = '7e5b0000-0000-4000-8000-0000000f7e01';
 const T = 40;
 const SEED = 313;
 const KINDS = ['graft', 'water_plant', 'hoard', 'bridge', 'smelt', 'casting', 'gem', 'cross', 'spell'];
-/** The trade's first steps brought down to 1 (decided, batch F). */
-const LOWERED = ['make_bow_string', 'make_short_bow', 'make_awl', 'tan_hide', 'make_papyrus', 'make_paper_press', 'make_rope'];
+/** The trade's first steps brought down to 1 (decided, batch F; stone brick, flour and glass after). */
+const LOWERED = ['make_bow_string', 'make_short_bow', 'make_awl', 'tan_hide', 'make_papyrus', 'make_paper_press', 'make_rope', 'make_stone_brick', 'make_flour', 'make_glass'];
 /** The smelter's tile and the anvil's, beside where you stand (`T` + 3.5, `T` + 1.5). */
 const SX = T + 4;
 const SY = T + 1;
@@ -110,7 +110,7 @@ begin
          stats = '{"health":1,"stamina":1,"hunger":1,"thirst":1}'::jsonb where world_id = w and uid = u;
 
   /* ---- the first steps, open at 1 ---- */
-${['bowyery', 'leatherworking', 'papyrusmaking', 'carpentry', 'ropemaking'].map((s) => `  perform pg_temp.skill(w, u, '${s}', 1);`).join('\n')}
+${['bowyery', 'leatherworking', 'papyrusmaking', 'carpentry', 'ropemaking', 'stonecutting', 'milling', 'glassblowing'].map((s) => `  perform pg_temp.skill(w, u, '${s}', 1);`).join('\n')}
 ${LOWERED.map((id) => `  insert into said values ('LOW_${id}', ${refused(`craft_refusal(w, u, '${id}', null)`)});`).join('\n')}
 
   /* ---- Graft ---- */

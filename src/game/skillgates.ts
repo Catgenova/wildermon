@@ -182,6 +182,11 @@ export const CRAFT_GATE_SAID: Readonly<Record<string, { skill: string; level: Ga
   papyrus: { skill: 'papyrusmaking', level: 1 },
   paper_press: { skill: 'carpentry', level: 1 },
   rope: { skill: 'ropemaking', level: 1 },
+  // Stonecutting's stone brick, milling's flour and glassblowing's glass: each skill made nothing at its start (whetstone,
+  // flour and glass were 5, brick 10), and nothing else trains them.
+  stone_brick: { skill: 'stonecutting', level: 1 },
+  flour: { skill: 'milling', level: 1 },
+  glass_lump: { skill: 'glassblowing', level: 1 },
   // And the everyday makings under them (decided, batch G): the bucket papyrus's water comes in, the lye leather is tanned in.
   bucket: { skill: 'carpentry', level: 1 },
   lye_bucket: { skill: 'alchemy', level: 1 },

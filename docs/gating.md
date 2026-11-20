@@ -764,9 +764,11 @@ marked "brought down" are built (batch F, §9); the rest stay proposals.
 
 1. No new gate. Stepping stones and garden steps stay open (decided). Flag: packing a road at 1.
 
-**Stonecutting**. Gated: 12 recipes 5–40.
+**Stonecutting**. Gated: 12 recipes 1–40.
 
-1. No new gate.
+1. Brought down (reported: the Guiding Light's brick step shut to a new body): stone brick at 1 (was 10); stonecutting 1
+   made nothing (the whetstone 5) and nothing else trains it (`CRAFT_GATE_SAID`; `firststeps.ts` holds every making
+   skill to something open at its start).
 
 **Pottery**. Gated: 10 recipes 1–20.
 
@@ -781,7 +783,7 @@ marked "brought down" are built (batch F, §9); the rest stay proposals.
 
 **Milling**. Gated: 16 recipes 5–20; millers.
 
-1. No new gate. Flag: milling 1 makes nothing (flour and juice 5); consider flour at 1 with §10's question 6.
+1. Brought down: flour at 1 (was 5); milling 1 made nothing (`CRAFT_GATE_SAID`).
 
 **Brewing**. Gated: 5 recipes at 20 (spirit).
 
@@ -811,9 +813,9 @@ smelting level, tin 10 … seryll 90); their moulds are formed and poured in bla
    peridot, amethyst, jasper 40; ruby, sapphire, opal 50; diamond 60 (`GEMS` weight 4, 3, 2, 1) · the stones are the
    trade's natural ladder past its last recipe. Gems have other uses (spells, rings), so not unidentified.
 
-**Glassblowing**. Gated: 4 recipes 5–40; glass roofs carpentry 40.
+**Glassblowing**. Gated: 4 recipes 1–40; glass roofs carpentry 40.
 
-1. No new gate.
+1. Brought down: glass at 1 (was 5); glassblowing 1 made nothing (`CRAFT_GATE_SAID`).
 
 **Tailoring**. Gated: 18 recipes 1–20.
 

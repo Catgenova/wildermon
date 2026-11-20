@@ -8239,7 +8239,7 @@ insert into skill_gate values ('sprout', 'pomegranate', 'Pomegranate sprout', 'f
 insert into skill_gate values ('sprout', 'cedar', 'Cedar sprout', 'forestry', 60);
 insert into skill_gate values ('sprout', 'olive', 'Olive sprout', 'forestry', 70);
 insert into skill_gate values ('sprout', 'willow', 'Willow sprout', 'forestry', 80);
-insert into skill_gate values ('recipe', 'make_glass', 'Glass lump', 'glassblowing', 5);
+insert into skill_gate values ('recipe', 'make_glass', 'Glass lump', 'glassblowing', 1);
 insert into skill_gate values ('recipe', 'make_bottle', 'Bottle', 'glassblowing', 20);
 insert into skill_gate values ('recipe', 'make_glass_panel', 'Glass panel', 'glassblowing', 20);
 insert into skill_gate values ('recipe', 'make_stained_glass', 'Stained glass pane', 'glassblowing', 40);
@@ -8377,7 +8377,7 @@ insert into skill_gate values ('material', 'obsidian_glass', 'Obsidian glass bui
 insert into skill_gate values ('recipe', 'make_dragon_glass_fountain', 'Dragon-glass fountain', 'masonry', 99);
 insert into skill_gate values ('recipe', 'make_glass_shard_path', 'Glass shard path', 'masonry', 99);
 insert into skill_gate values ('recipe', 'make_shard_garden', 'Shard garden', 'masonry', 99);
-insert into skill_gate values ('recipe', 'make_flour', 'Flour', 'milling', 5);
+insert into skill_gate values ('recipe', 'make_flour', 'Flour', 'milling', 1);
 insert into skill_gate values ('recipe', 'press_apple_juice', 'Bucket of juice', 'milling', 5);
 insert into skill_gate values ('recipe', 'press_apricot_juice', 'Bucket of juice', 'milling', 5);
 insert into skill_gate values ('recipe', 'press_cherry_juice', 'Bucket of juice', 'milling', 5);
@@ -8529,13 +8529,13 @@ insert into skill_gate values ('smelt', 'adamantine', 'Adamantine smelting', 'sm
 insert into skill_gate values ('smelt', 'glimmersteel', 'Glimmersteel smelting', 'smelting', 70);
 insert into skill_gate values ('smelt', 'mithril', 'Mithril smelting', 'smelting', 80);
 insert into skill_gate values ('smelt', 'seryll', 'Seryll smelting', 'smelting', 90);
+insert into skill_gate values ('recipe', 'make_stone_brick', 'Stone brick', 'stonecutting', 1);
 insert into skill_gate values ('recipe', 'make_whetstone', 'Whetstone', 'stonecutting', 5);
 insert into skill_gate values ('recipe', 'make_marble_brick', 'Marble brick', 'stonecutting', 10);
 insert into skill_gate values ('recipe', 'make_sandstone_brick', 'Sandstone brick', 'stonecutting', 10);
 insert into skill_gate values ('recipe', 'make_sandstone_slab', 'Sandstone slab', 'stonecutting', 10);
 insert into skill_gate values ('recipe', 'make_slate_brick', 'Slate brick', 'stonecutting', 10);
 insert into skill_gate values ('recipe', 'make_slate_slab', 'Slate slab', 'stonecutting', 10);
-insert into skill_gate values ('recipe', 'make_stone_brick', 'Stone brick', 'stonecutting', 10);
 insert into skill_gate values ('recipe', 'make_marble_slab', 'Marble slab', 'stonecutting', 20);
 insert into skill_gate values ('recipe', 'make_stone_bust', 'Stone bust', 'stonecutting', 20);
 insert into skill_gate values ('recipe', 'make_stone_slab', 'Stone slab', 'stonecutting', 20);

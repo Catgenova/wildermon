@@ -437,7 +437,18 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 /** Its card while a hod carrier's gates read its level in the gate's skill, carpentry 1 (663 to 665): any other worker's gate card. */
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
+/** Stonecutting's, milling's and glassblowing's first making, opened at a new body's level (697). */
+const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
+
 export const NEWS: News[] = [
+  // Stone brick, flour and glass: their skills made nothing at a new body's level.
+  {
+    n: 697,
+    day: '2026-11-20',
+    lines: () => [
+      `Fixed: ${FIRST_MAKINGS.map((id) => `${recipeTitle(RECIPE_BY_ID.get(id)!)} at ${RECIPE_BY_ID.get(id)!.skill} ${gateOf('recipe', id)?.level}`).join(', ')}: a new body's level. Each skill had nothing open at it; the Guiding Light's brick step was shut to a new body.`,
+    ],
+  },
   // Batch E: the frame graph, the field guide drawn ahead, far bodies, the reconnect count, a held batch, the craft preview kept, Low memory.
   {
     n: 696,
