@@ -3,7 +3,6 @@
 CREATE OR REPLACE FUNCTION private.job_follow(p_world uuid, p_uid uuid, p_action text, p_target jsonb, p_left integer)
  RETURNS jsonb
  LANGUAGE plpgsql
- STABLE
 AS $function$
 declare v_it item; v_next item; v_all int; v_each int; v_t jsonb; v_from bigint;
 begin

@@ -310,3 +310,22 @@ export function piecesThatFit(plans: PiecePlan[], room: number): { fit: PiecePla
   for (; i < asked.length && n + asked[i].jobs <= room; i++) n += asked[i].jobs;
   return { fit: asked.slice(0, i), left: asked.slice(i) };
 }
+
+/** What a pass's line says it used (the island's perform_item, " Used: 1 iron lump."): the stock's name and how many; null for none. */
+export function usedIn(text: string): [string, number] | null {
+  const m = /Used: (\d+) ([^.]+)\./.exec(text);
+  return m ? [m[2], Number(m[1])] : null;
+}
+
+/** What Improve all will use, kind by kind: the passes planned of it, against what is at hand. */
+export function willUse(g: Game, plans: readonly PiecePlan[]): Array<{ lock: StockLock; passes: number; held: number }> {
+  const out = new Map<string, { lock: StockLock; passes: number; held: number }>();
+  for (const p of plans) {
+    if (!p.lock || !p.plan || p.plan.passes <= 0) continue;
+    const k = lockKey(p.lock);
+    const was = out.get(k) ?? { lock: p.lock, passes: 0, held: lockAtHand(g, p.lock) };
+    was.passes += p.plan.passes;
+    out.set(k, was);
+  }
+  return [...out.values()];
+}

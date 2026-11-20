@@ -434,6 +434,18 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Improve all's Will use and Used, its stop said (mend.ts, mending.ts `willUse`, `usedIn`, `private.improve_all_next`); scale armour improved with scale; bone meal.
+  {
+    n: 693,
+    day: '2026-11-20',
+    lines: () => [
+      'New: Improve window, Improve all: Will use, the passes planned of each stock kind against what is held ("iron lump ×14 (held 30)").',
+      'New: Improve window: Used, last Improve all: each kind used, pass by pass.',
+      'New: Improve all stopped by a stock kind run out: said, with the pieces it left ("Improve all: stopped. Need iron to work into it (2 items).").',
+      `Changed: scale armour improved with ${itemDef('dragon_scale').name.toLowerCase()}, awl and needle, at leatherworking (was metal).`,
+      `New: recipe ${RECIPE_BY_ID.get('grind_bone_meal')?.label ?? 'Grind bone meal'}: ${recipeInputsSaid('grind_bone_meal')}; quern; milling.`,
+    ],
+  },
   // The Guiding Light panel's second round (pathcard.ts, path.ts `PathLine`, `progress`, `find`, `bring`, `seek`, `menuLabels`; the island's `private.thepath_reward`).
   {
     n: 692,

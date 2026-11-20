@@ -60,7 +60,7 @@ export const outOfSaid = (lock: StockLock): string => `Out of ${lockSaid(lock)}.
  * whetstone for metal, a knife and a file for wood, a needle for cloth, an awl
  * for leather — and how much of itself it takes to build it up.
  */
-export type Material = 'metal' | 'wood' | 'cloth' | 'leather' | 'stone' | 'obsidian';
+export type Material = 'metal' | 'wood' | 'cloth' | 'leather' | 'stone' | 'obsidian' | 'scale';
 
 export interface MaterialDef {
   id: Material;
@@ -82,6 +82,8 @@ export const MATERIALS: Record<Material, MaterialDef> = {
   leather: { id: 'leather', name: 'leather', tools: ['awl', 'needle'], stock: ['leather'], skill: 'leatherworking' },
   stone: { id: 'stone', name: 'stone', tools: ['chisel', 'whetstone'], stock: ['rock_shards', 'slate_shards', 'marble_shards', 'sandstone_shards'], skill: 'stonecutting' },  // Obsidian, knapped and riveted (`recipes.ts` KNAPPED, OBSIDIAN_ARMOUR): worked with more of it.
   obsidian: { id: 'obsidian', name: 'obsidian', tools: ['chisel', 'hammer'], stock: ['obsidian'], skill: 'stonecutting' },
+  // Dragon scale armour, riveted with an awl (`make_scale_*`): bettered with more scale, at the leatherworking it was made by.
+  scale: { id: 'scale', name: 'dragon scale', tools: ['awl', 'needle'], stock: ['dragon_scale'], skill: 'leatherworking' },
 };
 
 /** Tools whose heads are metal, whatever the handle is. */
@@ -132,6 +134,7 @@ export function improvableDef(id: string): { material: MaterialDef; skill: strin
   const armour = ARMOUR_BY_ID.get(id);
   if (armour) {
     if (armour.cls === 'obsidian') return { material: MATERIALS.obsidian, skill: 'platesmithing' };
+    if (armour.cls === 'scale') return { material: MATERIALS.scale, skill: 'leatherworking' };
     if (armour.cls === 'cloth') return { material: MATERIALS.cloth, skill: 'tailoring' };
     if (armour.cls === 'leather') return { material: MATERIALS.leather, skill: 'leatherworking' };
     return { material: MATERIALS.metal, skill: armour.cls === 'chain' ? 'chainsmithing' : 'platesmithing' };

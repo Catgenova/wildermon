@@ -3180,6 +3180,7 @@ export function helpText(): string {
       <tr><td><b>Cloth</b></td><td><b>Needle</b>; a length of cloth</td></tr>
       <tr><td><b>Leather</b></td><td><b>Awl</b> + <b>needle</b>; a piece of tanned leather</td></tr>
       <tr><td><b>Stone</b></td><td><b>Chisel</b> + <b>whetstone</b>; shards</td></tr>
+      <tr><td><b>Dragon scale</b></td><td>Scale armour: <b>awl</b> + <b>needle</b>; a dragon scale per pass; leatherworking</td></tr>
     </table>
     <ul>
       <li><b>Whetstone</b>: chiselled from ${bill('make_whetstone')}. <b>Needle</b>, <b>awl</b>: carved from bone with a knife. <b>File</b>: its own mould at the smelter, beaten at an anvil.</li>
@@ -3194,7 +3195,8 @@ export function helpText(): string {
       QL −${+repairGo(startOf('repair')).cost.toFixed(4)} a damage point).</li>
       <li><b>All</b>, at the top: <b>Repair all</b>: every damaged piece Repair takes, most damaged first, one after another. <b>Hone all</b>: the most damaged pieces,
       an ${itemDef(WHETSTONE).name.toLowerCase()} each, while held. <b>Improve all</b>: every piece Improve takes, by item id, one after another: Cycles an item
-      and Target QL as set; each takes the first stock kind it draws; over ${IMPROVE_DAMAGE} damage: a full Repair first.</li>
+      and Target QL as set; each takes the first stock kind it draws; over ${IMPROVE_DAMAGE} damage: a full Repair first. <b>Will use</b>: passes planned of each stock kind, against what is held.
+      <b>Used, last Improve all</b>: each kind used, pass by pass. Stopped by a kind run out: said, with the pieces it left.</li>
       <li><b>Each row</b>: Repair, Hone, <b>Improve</b> (one pass, as on the item's menu; greyed with Improve's refusal). Improve or a click on the name shows the row's item in Improve.</li>
       <li><b>${itemDef(WHETSTONE).name}</b>: an item each, all damage off, QL kept, used up.</li>
       <li><b>Improve</b>, one item: QL and max QL, tools held, each stock kind (carried, in stores within reach), every pass the chosen kind allows (QL if passed, chance,

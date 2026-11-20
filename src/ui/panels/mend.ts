@@ -4,7 +4,7 @@ import { canImprove, IMPROVE_DAMAGE, IMPROVE_FAIL_LEAST, IMPROVE_FAIL_SPREAD, im
 import { itemDef, itemName, type Item } from '../../game/items';
 import {
   byDamage, cyclePlan, goSecs, heldEquipment, honeable, honeQueue, improveTools, improveTop, JOB_GOES_MOST, lockKey, passesAhead, pieceJob, piecePlans,
-  queueRoom, repairCost, repairHealed, repairQlPerPoint, repairQueue, repairRefusal, whetstonesHeld, type CyclePlan, type CycleStop,
+  queueRoom, repairCost, repairHealed, repairQlPerPoint, repairQueue, repairRefusal, usedIn, whetstonesHeld, willUse, type CyclePlan, type CycleStop,
 } from '../../game/mending';
 import { WHETSTONE } from '../../game/relicuse';
 import { SKILL_BY_ID } from '../../game/skills';
@@ -58,6 +58,8 @@ export class MendPanel {
   private readonly locks = new Map<string, string>();
   private cycles = 10;
   private upto: number | null = null;
+  /** What the last Improve all used, by the stock's name, off its passes' lines (`usedIn`); null before one. */
+  private used: Map<string, number> | null = null;
 
   constructor(private readonly win: UIWindow, private readonly game: Game) {
     kitBody(win.body, 'settings-body', 'mend-body');
@@ -65,6 +67,12 @@ export class MendPanel {
     this.body.className = 'mend rc-scroll';
     win.body.append(this.body);
     for (const ev of ['inventory', 'crate', 'skill', 'action'] as const) game.events.on(ev as 'inventory', () => this.repaint.ask());
+    game.events.on('log', (e) => {
+      const u = this.used && usedIn(e.text);
+      if (!u || !this.used) return;
+      this.used.set(u[0], (this.used.get(u[0]) ?? 0) + u[1]);
+      this.repaint.ask();
+    });
     win.onOpen = () => {
       this.repaint.force();
       this.render();
@@ -182,11 +190,22 @@ export class MendPanel {
     il.append(this.button('Improve all', head ? `${plans.length} items in turn: Improve × ${count} each, Repair when damage is over ${IMPROVE_DAMAGE}` : 'No item Improve takes now.',
       !head || !improve || !repair, () => {
         if (!head || !improve || !repair) return;
+        this.used = new Map();
         const t = { kind: 'item', uid: head.it.uid, mend: true, all: plans.length, cycles: count, ...(upto !== undefined ? { upto } : {}) } as Target;
         if (head.first) g.requestAction(repair, t, head.first.goes);
         else g.requestAction(improve, t, count);
       }, 'mend-go'));
     box.append(il);
+    // What it will use, kind by kind, against what is at hand: a kind it uses all of stops the run there.
+    const will = willUse(g, plans);
+    if (will.length) {
+      box.append(this.row([`Will use: ${will.map((w) => `${lockSaid(w.lock)} ×${w.passes} (held ${w.held}${w.passes >= w.held ? ': stops when out' : ''})`).join(' · ')}`], 'mend-dim'));
+    }
+    // What the last one used, pass by pass.
+    if (this.used) {
+      const said = [...this.used].map(([name, n]) => `${name} ×${n}`).join(' · ');
+      box.append(this.row([`Used, last Improve all: ${said || 'nothing yet'}`], 'mend-dim mend-used'));
+    }
     box.append(this.cycleInputs(true));
   }
 

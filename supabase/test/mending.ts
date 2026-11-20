@@ -30,7 +30,7 @@
 import { BASE_QUEUE, Game } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { IMPROVE_DAMAGE, improvable, lockFor, lockTakes, outOfSaid, stockFor, stockKinds } from '../../src/game/improve';
-import { cyclePlan, cycleTarget, heldEquipment, honeQueue, passesAhead, pieceJob, piecePlans, piecesThatFit, queueRoom, repairGoes, repairQueue } from '../../src/game/mending';
+import { cyclePlan, cycleTarget, heldEquipment, honeQueue, passesAhead, pieceJob, piecePlans, piecesThatFit, queueRoom, repairGoes, repairQueue, usedIn, willUse } from '../../src/game/mending';
 import { psql, check, finish } from './harness';
 import { unmendable, unmendableSays } from '../../src/game/items';
 
@@ -295,6 +295,17 @@ begin
     from event where world_id = w and uid = u and n > m0 and text ~ '^(Improved|Improve failed|Fully repaired): ';
   insert into said values ('F_IDLE', coalesce((select act from player where world_id = w and uid = u), 'idle'));
 
+  -- Improve all with the stock for the first piece only: the run over, what ran out said.
+  delete from item where world_id = w and holder = 'player' and holder_uid = u and def in ('iron_lump', 'tin_lump', 'copper_lump');
+  perform give(w, u, 'iron_lump', 2, 20);
+  update item set dmg = 0 where id in (h2, s2);
+  m0 := coalesce((select max(n) from event where world_id = w), 0);
+  insert into said values ('G_ASK', coalesce((rpc_act(w, 'improve_item', jsonb_build_object('kind', 'item', 'uid', h2, 'mend', true,
+    'all', 3, 'cycles', 2), 2))->>'started', 'null'));
+  insert into said values ('G_RUN', pg_temp.run(w, u, 400)::text);
+  insert into said select 'G_SAID', coalesce(string_agg(text, ' | ' order by n), '') from event
+   where world_id = w and uid = u and n > m0 and text like 'Improve all: %';
+
   -- Both sides' words and numbers.
   insert into said values ('FOLLOW', private.job_follow(w, u, 'repair_item', jsonb_build_object('kind', 'item', 'uid', s2, 'mend', true,
     'stock', 'tin_lump', 'stockOf', 'Tin', 'upto', 60, 'cycles', 5), 0)::text);
@@ -357,6 +368,20 @@ check('island: Improve all: 2 passes on the hatchet, then the long sword\'s Repa
   at('F_ASK') === 'true' && at('F_PASSES') === 'hatchet:2,long sword:2' && fOrder.indexOf('long sword') > 0
   && fOrder.slice(0, fOrder.indexOf('long sword')).every((n) => n === 'hatchet') && at('F_IDLE') === 'idle',
   `asked ${at('F_ASK')}, passes ${at('F_PASSES')}, order ${at('F_ORDER')}, ${at('F_IDLE')}`);
+
+check('island: Improve all, its stock run out: what ran out said, "Improve all: stopped. Need metal to work into it (1 item)."',
+  at('G_ASK') === 'true' && /^Improve all: stopped\. Need [a-z ]+ to work into it \(\d+ items?\)\.$/.test(at('G_SAID')), at('G_SAID') || '(nothing said)');
+
+// Will use and Used, the window's two lines.
+check('a pass\'s line read for what it used', JSON.stringify(usedIn('Improved: hatchet, QL 21.0. Used: 1 iron lump.')) === '["iron lump",1]' && usedIn('Improved: hatchet.') === null);
+{
+  const wu = willUse(g3, plans3);
+  check('Will use: the passes planned, kind by kind, against what is held', wu.length > 0 && wu.every((w) => w.passes > 0 && w.held >= 0)
+    && wu.reduce((n, w) => n + w.passes, 0) === plans3.reduce((n, p) => n + (p.plan?.passes ?? 0), 0), JSON.stringify(wu.map((w) => [w.lock.stock, w.passes, w.held])));
+}
+// Dragon scale armour: bettered with dragon scale, at leatherworking.
+check('a scale helm is improved with dragon scale, at leatherworking', improvable('scale_helm')?.material.stock.join() === 'dragon_scale' && improvable('scale_helm')?.skill === 'leatherworking',
+  JSON.stringify(improvable('scale_helm')));
 
 // The run a Repair carries, as the island puts it in front and as the browser asks it of a piece at nought.
 const follow = (JSON.parse(at('FOLLOW')) as Array<{ action: string; target: Record<string, unknown>; goes: number }>)[0];
