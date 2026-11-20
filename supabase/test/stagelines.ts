@@ -39,7 +39,7 @@ check('the lamp says the lowest-rarity traits it would reroll, and the chance up
   lampPreview(full) === `rerolls ${common.map(traitName).join(' or ')} (${TIERS[0]}), 1 in ${LAMP_TIER_ODDS} ${TIERS[1]}`, lampPreview(full));
 check('and an empty slot it would fill', lampPreview(full.slice(0, TRAIT_SLOTS - 1)).startsWith(`fills an empty slot: ${TIERS[0]}`), lampPreview(full.slice(0, TRAIT_SLOTS - 1)));
 const lamp = ACTION_BY_ID.get('use_ancient_lamp')!;
-c.mode = 'follow';
+c.mode = 'active';
 c.traits = full;
 const label = lamp.labelFor?.({ kind: 'creature', id: c.id } as Target, g) ?? '';
 check('its menu label says it', label.endsWith(`: ${lampPreview(full)}`), label);
