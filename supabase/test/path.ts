@@ -26,13 +26,15 @@ import { Game } from '../../src/game/game';
 import { SPECIES } from '../../src/game/creatures';
 import { DEED_STONE_GAP, deedRadiusAt, deedWorkersAt } from '../../src/game/deedsize';
 import { RECIPE_BY_ID } from '../../src/game/recipes';
+import { itemDef } from '../../src/game/items';
 import { MOULDS } from '../../src/game/metal';
 import { FIRE_COST } from '../../src/game/campfire';
 import { guideCounts } from '../../src/game/guide';
 import { trackRefusal } from '../../src/game/tracking';
 import { SEASONS, type Season } from '../../src/world/calendar';
 import {
-  ANVIL_LUMPS, dietInSeason, GUIDE_START, needsSupply, PATH_DETOURS, PATH_FORAGE, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEP_BY_ID, PATH_STEPS,
+  ANVIL_LUMPS, dietInSeason, GUIDE_START, needsSupply, PATH_DETOURS, PATH_FORAGE, PATH_KINDS, PATH_PHASES, PATH_REWARD_QL, PATH_REWARDS, PATH_SITE,
+  PATH_SKILLS, PATH_STEP_BY_ID, PATH_STEPS,
   PATH_SURE, PATH_TAMES, SMELTER_BRICKS, SMELTER_MORTAR, supplyItem, supplySize,
 } from '../../src/game/path';
 import { psql, check, finish } from './harness';
@@ -203,6 +205,14 @@ ${DETOURS.map((id) => `
     insert into said values ('SKIP_BAD', 'went through');
   exception when others then insert into said values ('SKIP_BAD', sqlerrm);
   end;
+  -- A phase's reward: every step of it ticked, given once; a phase short of a step, nothing.
+  update player set ticked = (select jsonb_agg('path:' || s.step) from thepath_phases() s where s.phase = 'stone')
+   where world_id = w and uid = u;
+  perform private.thepath_reward(w, u);
+  perform private.thepath_reward(w, u);
+  insert into said values ('REWARD', coalesce((select string_agg(i.def || ':' || i.ql || ':' || coalesce(i.extra, ''), ',') from item i
+    where i.world_id = w and i.holder_uid = u and not coalesce(i.issued, false) and i.def = '${PATH_REWARDS[0][1]}'), '-'));
+  insert into said values ('REWARDED', (select (thepath->'rewarded')::text from player where world_id = w and uid = u));
   -- Off, and the record stays.
   insert into said values ('OFF', (rpc_thepath(w, false)->>'on'));
   insert into said values ('OFF_KEEPS', (select (thepath->'skip')::text from player where world_id = w and uid = u));
@@ -263,6 +273,10 @@ check('and a step not met dropped', said('TICKS_UNMET') === '[]', said('TICKS_UN
 check('a beat says the record', said('BEAT') === 'true', said('BEAT'));
 check('a skip is kept, and taken back', said('SKIP') === '["fish"]' && said('UNSKIP') === '[]', `${said('SKIP')} ${said('UNSKIP')}`);
 check('a step that is not one is refused', said('SKIP_BAD').includes('not a step of the Guiding Light'), said('SKIP_BAD'));
+check(`a phase's reward: every step of it ticked, ${itemDef(PATH_REWARDS[0][1]).name} (${PATH_REWARDS[0][2]}) QL ${PATH_REWARD_QL}, once`,
+  said('REWARD') === `${PATH_REWARDS[0][1]}:${PATH_REWARD_QL}:${PATH_REWARDS[0][2]}`, said('REWARD'));
+check('and only that phase: the next, short of its steps, not', said('REWARDED') === `["${PATH_REWARDS[0][0]}"]`, said('REWARDED'));
+check('every phase has a reward, on both sides', PATH_PHASES.every(([ph]) => PATH_REWARDS.some(([r]) => r === ph)), PATH_REWARDS.map(([r]) => r).join(','));
 check('off: kept, and the rest of the record with it', said('OFF') === 'false' && said('OFF_KEEPS') === '[]', said('OFF'));
 
 /* ---- the labels say the rules' numbers ------------------------------------------------------------------------- */

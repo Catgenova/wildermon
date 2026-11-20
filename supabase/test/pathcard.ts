@@ -42,12 +42,14 @@ import { DEED_UPGRADES } from '../../src/game/deed';
 import { deedRadiusAt, deedWorkersAt, MAX_DEED_LEVEL } from '../../src/game/deedsize';
 import { EMOTE_BY_ID } from '../../src/game/emotes';
 import { SPECIES } from '../../src/game/creatures';
-import { RECIPE_BY_ID } from '../../src/game/recipes';
+import { RECIPE_BY_ID, RECIPES } from '../../src/game/recipes';
+import { FIRE_COST } from '../../src/game/campfire';
 import { SKILL_BY_ID } from '../../src/game/skills';
 import { itemDef } from '../../src/game/items';
 import { TRACK_SHOW } from '../../src/game/tracking';
 import {
-  ANVIL_LUMPS, currentStep, pathCardSays, pathCheck, PATH_BUILD, PATH_CARD_HOLD, PATH_DETOURS, PATH_STEP_BY_ID, PATH_STEPS,
+  ANVIL_LUMPS, currentStep, howSays, lineDone, menuLabels, pathCardSays, pathCheck, PATH_BUILD, PATH_CARD_HOLD, PATH_DETOURS, PATH_FORAGE,
+  PATH_REWARD_QL, PATH_REWARDS, PATH_STEP_BY_ID, PATH_STEPS, rewardSays, stepSpot,
   MET_MARK, SMELTER_BRICKS, SMELTER_MORTAR, stepNumber, UNMET_MARK, watchPathCards,
 } from '../../src/game/path';
 import { PLACEHOLDER, workClipOf } from '../../src/sculpt/anim';
@@ -61,7 +63,7 @@ import { listedOr } from '../../src/game/words';
 {
   const g = Game.create(5151);
   for (const s of PATH_STEPS) {
-    const how = s.how(g), why = s.why(g);
+    const how = howSays(g, s), why = s.why(g);
     check(`${stepNumber(s)}. ${s.id}: a how and a why`, how.length > 0 && why.length > 0 && [...how, ...why].every((l) => l.trim().length > 0),
       JSON.stringify({ how, why }));
   }
@@ -112,7 +114,8 @@ import { listedOr } from '../../src/game/words';
 {
   const g = Game.create(5152);
   const step = (id: string): string => `step ${stepNumber(PATH_STEP_BY_ID.get(id)!)}`;
-  const how = (id: string): string => PATH_STEP_BY_ID.get(id)!.how(g).join(' | ');
+  const how = (id: string): string => howSays(g, PATH_STEP_BY_ID.get(id)!).join(' | ');
+  const find = (id: string): string => [...(PATH_STEP_BY_ID.get(id)!.find?.(g) ?? []), ...(PATH_STEP_BY_ID.get(id)!.bring?.(g) ?? [])].join(' | ');
   const why = (id: string): string => PATH_STEP_BY_ID.get(id)!.why(g).join(' | ');
   const skill = (id: string): string => SKILL_BY_ID.get(id)!.name;
   const cut = ACTION_BY_ID.get('cut_down')!;
@@ -122,12 +125,13 @@ import { listedOr } from '../../src/game/words';
     how('tree') === `Right-click: a ${fells} · ${cut.label} · ${itemDef(cut.tool!).name} (${g.inventory.count(cut.tool!) > 0 ? 'pack' : 'not carried'}) · ${skill(cut.skill!)}`, how('tree'));
   const shafts = RECIPE_BY_ID.get('make_shafts')!;
   check('a recipe: Crafting, its label, its bill and what it makes, its tool, its skill',
-    how('shafts').startsWith(`Crafting (R): ${shafts.label} · ${itemDef('log').name} ×${shafts.inputs[0].count ?? 1} → ${itemDef('shaft').name} ×${shafts.count}`)
+    how('shafts').startsWith(`Crafting (R): ${shafts.label} · ${itemDef('log').name} ${g.inventory.count('log')}/${shafts.inputs[0].count ?? 1} → ${itemDef('shaft').name} ×${shafts.count}`)
     && how('shafts').endsWith(skill(shafts.skill)), how('shafts'));
   const bevere = SPECIES.bevere;
-  check('a tame step: where its kind lives, Tame and its taming, its bait',
-    how('tame').includes('Within') && how('tame').includes('water') && how('tame').includes(`${ACTION_BY_ID.get('tame')!.label} · ${skill('taming')} ${bevere.tameLevel}`)
-    && how('tame').includes('Bait: '), how('tame'));
+  check('a tame step: Tame and its taming in its Steps; where its kind lives and its bait apart, in Find and Bring',
+    find('tame').includes('Within') && find('tame').includes('water') && how('tame').includes(`${ACTION_BY_ID.get('tame')!.label} · ${skill('taming')} ${bevere.tameLevel}`)
+    && find('tame').includes('Bait: ') && !how('tame').includes('Bait: ') && !how('tame').includes('Within'), `${how('tame')} / ${find('tame')}`);
+  check('every tame step has a Find and a Bring', PATH_STEPS.filter((s) => s.tame && s.id !== 'track' && s.id !== 'assign').every((s) => (s.find?.(g).length ?? 0) > 0 && (s.bring?.(g).length ?? 0) > 0));
   const logs = 2 * (PATH_BUILD + PATH_BUILD) * (layingBill('log', 'solid').total.log ?? 0);
   check(`its why: the logs the walls take, ${logs}, and the walls' step`, why('tame').includes(`×${logs} for log walls (${step('walls')})`), why('tame'));
   const brick = RECIPE_BY_ID.get('make_stone_brick')!;
@@ -144,6 +148,34 @@ import { listedOr } from '../../src/game/words';
   }
   check(`Track: the arrow's seconds, ${TRACK_SHOW}`, why('track').includes(`${TRACK_SHOW} s`), why('track'));
   check('the crate and the campfire: what level 2 asks', why('crate').includes(DEED_UPGRADES[2][0].label) && why('campfire').includes(DEED_UPGRADES[2][1].label));
+  check('a station step names the recipes made at it', why('campfire').includes(`${RECIPES.filter((r) => r.station === 'campfire').length} recipes`)
+    && why('anvil').includes(`${RECIPES.filter((r) => r.station === 'anvil').length} recipes`), `${why('campfire')} / ${why('anvil')}`);
+  // Every step's Why names a number past the steps and levels it points at.
+  for (const s of PATH_STEPS) {
+    const w = s.why(g).join(' | ').replace(/\bstep \d+/g, '').replace(/\b[Ll]evel \d+/g, '').replace(/Upgrade → \d+/g, '');
+    check(`${stepNumber(s)}. ${s.id}: its Why names a number`, /\d/.test(w), s.why(g).join(' | '));
+  }
+  // Each line of Steps marked: the crate's, made and not placed.
+  const crate = PATH_STEP_BY_ID.get('crate')!;
+  const marks = (): boolean[] => crate.how(g).map((l) => lineDone(l, false));
+  const before = marks();
+  g.inventory.add('crate_log', { ql: 20 });
+  const after = marks();
+  check('a Steps line is marked done with its part: the crate made, not placed', before.join() === 'false,false' && after.join() === 'true,false', `${before} → ${after}`);
+  // Progress: Forage against what it asks.
+  check(`Progress: forage counted against ${PATH_FORAGE}`, JSON.stringify(PATH_STEP_BY_ID.get('forage')!.progress?.(g)) === JSON.stringify([['Forage', 0, PATH_FORAGE]]));
+  // A bill against the pack.
+  g.inventory.add('shaft', { ql: 20 });
+  check(`a bill says what the pack holds of it: ${itemDef('shaft').name} 1/${FIRE_COST}`, how('campfire').includes(`${itemDef('shaft').name} 1/${FIRE_COST}`), how('campfire'));
+  // The menu's lit entries: the jobs a step's Steps name.
+  check('the menu entries a step names, lit: Cut down for the tree, Set furniture down and Campfire for the campfire',
+    menuLabels(g, PATH_STEP_BY_ID.get('tree')!).has(cut.label)
+    && menuLabels(g, PATH_STEP_BY_ID.get('campfire')!).has('Set furniture down') && menuLabels(g, PATH_STEP_BY_ID.get('campfire')!).has('Campfire'));
+  // Show me: a settlement step with no settlement has nowhere; the walk, its arrow's place.
+  check('Show me: a settlement step with no settlement, nowhere; the walk, its place', stepSpot(g, crate) === null && stepSpot(g, PATH_STEP_BY_ID.get('walk')!) !== null);
+  // The phase reward, said.
+  check(`a phase's reward said: ${itemDef(PATH_REWARDS[0][1]).name} (${PATH_REWARDS[0][2]}) QL ${PATH_REWARD_QL}`,
+    rewardSays(g, 'stone').startsWith(`Phase reward: ${itemDef(PATH_REWARDS[0][1]).name} (${PATH_REWARDS[0][2]}) QL ${PATH_REWARD_QL}`), rewardSays(g, 'stone'));
 }
 
 // The pictures: a clip of its own, an emote there is, or the walk; a tame step's kind beside it.
@@ -373,10 +405,10 @@ if (!browser) {
     check('panel: up at the current step, its place, phase and goal',
       p0.open && p0.done.startsWith(`Guiding Light · ${at(cur.id)} · `) && p0.done.includes(`goal: settlement level ${MAX_DEED_LEVEL}`), JSON.stringify(p0));
     check('panel: Steps numbered, Why it matters',
-      p0.how.length === curNow.how.length && p0.how.every((l, i) => l === `${i + 1}. ${curNow.how[i]}`)
+      p0.how.length === curNow.how.length && p0.how.every((l, i) => (l === `${UNMET_MARK} ${i + 1}. ${curNow.how[i]}` || l === `${MET_MARK} ${i + 1}. ${curNow.how[i]}`))
       && p0.why.join('|') === curNow.why.join('|') && p0.why.length > 0, JSON.stringify([p0.how, p0.why, curNow]));
-    check('panel: fold, Skip, Next step (not yet), the Guiding Light tab; no Close',
-      p0.buttons.join('|') === '−|Skip|Next step|Guiding Light tab (End)' && p0.nextOff && !p0.skipOff, JSON.stringify(p0));
+    check('panel: fold, Previous step, Skip, Next step (not yet), Show me, the Guiding Light tab; no Close',
+      p0.buttons.join('|') === '−|Previous step|Skip|Next step|Show me|Guiding Light tab (End)' && p0.nextOff && !p0.skipOff, JSON.stringify(p0));
     const j1 = await call<CardView>('startJob', 'forage', PATH_CARD_HOLD + 5);
     const j2 = await call<CardView>('startJob', 'cut_down', PATH_CARD_HOLD + 5);
     check('panel: kept up through jobs started', j1.open && j2.open);
@@ -387,6 +419,9 @@ if (!browser) {
     check(`panel: a step done stays up, marked ${MET_MARK} Done, Next step on, Skip off`,
       pKept.open && pKept.next.startsWith(`${MET_MARK} Done · `) && !pKept.nextOff && pKept.skipOff && pKept.shown === ticked.shown, JSON.stringify(pKept));
     await shot('panel-done.png');
+    const back1 = await call<CardView>('click', 'Previous step');
+    const prevId = PATH_STEPS[PATH_STEPS.indexOf(cur) - 1].id;
+    check('panel: Previous step, the step before, to read: done, Skip off', back1.done.startsWith(`Guiding Light · ${at(prevId)} · `) && back1.skipOff && !back1.nextOff, JSON.stringify(back1));
     const went = await call<CardView>('click', 'Next step');
     const pAfter = PATH_STEP_BY_ID.get((await call<{ id: string }>('current')).id)!;
     check('panel: Next step, the step after', went.done.startsWith(`Guiding Light · ${at(pAfter.id)} · `) && !went.next.startsWith(MET_MARK) && went.nextOff, JSON.stringify(went));

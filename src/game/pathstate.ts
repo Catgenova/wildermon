@@ -25,6 +25,8 @@ export interface PathState {
   skip: string[];
   supply: Record<string, PathSupply>;
   did: Record<string, number>;
+  /** The phases whose reward was given (`private.thepath_reward`). */
+  rewarded?: string[];
 }
 
 /** A suggested place for a settlement (`rpc_thepath_sites`), with its numbers. */
@@ -67,6 +69,7 @@ export function pathStateIn(v: unknown): PathState | null {
     skip: Array.isArray(o.skip) ? o.skip.filter((s): s is string => typeof s === 'string') : [],
     supply,
     did,
+    rewarded: Array.isArray(o.rewarded) ? o.rewarded.filter((s): s is string => typeof s === 'string') : [],
   };
 }
 

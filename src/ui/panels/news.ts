@@ -345,7 +345,7 @@ import {
   STONE_LANTERN_REACH, SUNDIAL, WOVEN_RUG,
 } from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
-import { ASHORE_KINDS, GUIDE_START, MET_MARK, PATH_CRATE, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE, WILD_NEAR } from '../../game/path';
+import { ASHORE_KINDS, GUIDE_START, MET_MARK, PATH_CRATE, PATH_REWARD_QL, PATH_REWARDS, phaseName, SEEK_REACH, UNMET_MARK, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE, WILD_NEAR } from '../../game/path';
 import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
@@ -434,6 +434,20 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // The Guiding Light panel's second round (pathcard.ts, path.ts `PathLine`, `progress`, `find`, `bring`, `seek`, `menuLabels`; the island's `private.thepath_reward`).
+  {
+    n: 692,
+    day: '2026-11-20',
+    lines: () => [
+      `New: Guiding Light panel: each of Steps marked ${MET_MARK} done or ${UNMET_MARK} not yet; Progress, goes against what the step asks ("Forage 2/3", "Stone brick 31/48").`,
+      'New: bills in Steps against the pack: "Shaft 1/2", "Log 0/3".',
+      'Changed: tame steps: Find (where the kind lives) and Bring (its bait) apart from the numbered Steps.',
+      `New: panel buttons Show me (the map at the step's place, or the nearest of what it works on within ${SEEK_REACH} tiles, a mark put there) and Previous step.`,
+      'New: the right-click menu lights the current Guiding Light step\'s jobs ✦.',
+      `New: phase reward, once every step of a phase is done, none skipped: ${PATH_REWARDS.map(([ph, item, extra]) => `${phaseName(ph)}: ${itemDef(item).name} (${extra})`).join(', ')}; QL ${PATH_REWARD_QL}.`,
+      'Changed: Why it matters names a number on every step: a station\'s recipes, a level\'s border and workers, a crate\'s room, finds in season.',
+    ],
+  },
   // The Guiding Light panel (pathcard.ts `pin`, settings.pathPanel), up for a first coming ashore.
   {
     n: 691,

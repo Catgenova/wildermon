@@ -6,7 +6,7 @@
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { EMOTE_BY_ID } from '../../src/game/emotes';
-import { currentStep, pathCheck, PATH_DETOURS, PATH_STEPS } from '../../src/game/path';
+import { currentStep, howSays, pathCheck, PATH_DETOURS, PATH_STEPS } from '../../src/game/path';
 import { setAnimations } from '../../src/engine/motion';
 import { figureStats, flatFigures, sculptedFigures, sculptedReady, sculptSoft } from '../../src/render/figure';
 import { loadWildermon } from '../../src/render/wildermon';
@@ -146,7 +146,7 @@ const api = {
   /** The current step, and its how and why as the page's game says them. */
   current: (): { id: string; how: string[]; why: string[] } | null => {
     const s = currentStep(game);
-    return s ? { id: s.id, how: s.how(game), why: s.why(game) } : null;
+    return s ? { id: s.id, how: howSays(game, s), why: s.why(game) } : null;
   },
   /** Whether the card's picture is shown. */
   pictureShown: (): boolean => !card.preview.el.hidden,

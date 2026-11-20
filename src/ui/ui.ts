@@ -125,7 +125,8 @@ import { ORDER_STANCES } from '../game/visitors';
 import { DELIVER_REACH, settleLine } from '../game/noticeboard';
 import type { LedgerPanel } from './panels/ledger';
 import { JOURNAL_TAB_BIND, JOURNAL_TABS, JournalPanel, type JournalTab } from './panels/journal';
-import { ContextMenu, type MenuItem } from './contextmenu';
+import { ContextMenu, menuGlow, type MenuItem } from './contextmenu';
+import { currentStep, menuLabels } from '../game/path';
 import { AutoEat } from '../game/autoeat';
 import { ShoppingPanel } from './panels/shopping';
 import { MendPanel } from './panels/mend';
@@ -729,7 +730,12 @@ export class UI {
     this.pointerRing = new PointerRing(root, game, canvas);
     this.deedBanner = new DeedBanner(root, game);
     this.pathStrip = new PathStrip(root, game, () => this.journalPanel.open('path'));
-    this.pathCard = new PathCard(root, game, () => this.journalPanel.open('path'));
+    this.pathCard = new PathCard(root, game, () => this.journalPanel.open('path'), (x, y) => this.minimap.showAt(x, y));
+    // The Guiding Light step's jobs lit in the right-click menu and the tile window.
+    menuGlow.labels = () => {
+      const s = game.thePath?.on ? currentStep(game) : null;
+      return s ? menuLabels(game, s) : new Set();
+    };
 
     /*
      * While you were away: what the island counted for you, shown once as you

@@ -79,6 +79,8 @@ const LAVA_RGBA = 0xff1a6aff;
 const LAVA_MAP_EVERY = 5000;
 
 export const MAP_ZOOM_MIN = 16;
+/** Tiles across the map shows round a spot it is opened at (`showAt`). */
+export const SHOW_SPAN = 96;
 /** How much a notch of the wheel zooms the map: this many times wider or narrower. */
 export const MAP_ZOOM_STEP = 1.25;
 /** How far a press moves, in CSS pixels, before it is a drag rather than a click. */
@@ -145,7 +147,7 @@ export class MinimapPanel {
   stalls: () => ReadonlyArray<{ x: number; y: number; mine: boolean }> = () => [];
 
   constructor(
-    win: UIWindow,
+    private readonly mapWin: UIWindow,
     private readonly game: Game,
     private readonly renderer: Renderer,
   ) {
@@ -166,7 +168,7 @@ export class MinimapPanel {
     this.view.width = VIEW_SIZE;
     this.view.height = VIEW_SIZE;
     this.viewCtx = this.view.getContext('2d') as CanvasRenderingContext2D;
-    kitBody(win.body, 'map-body');
+    kitBody(mapWin.body, 'map-body');
     // A row of controls over the map, and the marks listed under it.
     const bar = document.createElement('div');
     bar.className = 'panel-bar rc-bar map-bar';
@@ -225,7 +227,7 @@ export class MinimapPanel {
     }
     this.marksEl = document.createElement('div');
     this.marksEl.className = 'map-marks rc-scroll';
-    win.body.append(bar, this.view, legend, this.marksEl);
+    mapWin.body.append(bar, this.view, legend, this.marksEl);
     new ResizeObserver(() => {
       this.shown = Math.min(this.view.clientWidth, this.view.clientHeight);
     }).observe(this.view);
@@ -298,6 +300,12 @@ export class MinimapPanel {
 
   /** A drag moved the map, so the click it ends with is not one. */
   private dragged = false;
+
+  /** The map open, held at a spot `SHOW_SPAN` tiles across (the Guiding Light's Show me). */
+  showAt(x: number, y: number): void {
+    this.mapWin.open();
+    this.hold({ cx: x, cy: y, span: SHOW_SPAN });
+  }
 
   /** Hold the map at a centre and width, kept on the island; or let it go back to fitting the land seen (null). */
   private hold(at: { cx: number; cy: number; span: number } | null): void {

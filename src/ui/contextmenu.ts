@@ -36,7 +36,15 @@ export interface RowHooks {
  * Build the rows for a list of menu entries. The right-click menu and the tile
  * window both draw their entries with this, so the two can never drift apart.
  */
+/**
+ * The entries lit in a menu (`ctx-guide`): the Guiding Light step's jobs by their labels (`menuLabels`, set in `ui.ts`).
+ * Asked once a menu, at its top level.
+ */
+export const menuGlow: { labels: () => ReadonlySet<string> } = { labels: () => new Set() };
+let glowNow: ReadonlySet<string> = new Set();
+
 export function buildMenuRows(items: MenuItem[], depth: number, hooks: RowHooks = {}, path = ''): HTMLElement[] {
+  if (depth === 0) glowNow = menuGlow.labels();
   /*
    * Two rows of one label are two folds, not one: eight crates on a rack all
    * named Seeds opened and shut together, and a rebuild opened all eight for
@@ -55,7 +63,8 @@ function buildMenuRow(item: MenuItem, depth: number, hooks: RowHooks, path: stri
   const row = document.createElement('div');
   // A row that does nothing and opens nothing is a line of information, not a refused job, and is drawn as one.
   const info = !item.onSelect && !item.children;
-  row.className = 'ctx-item' + (item.disabled ? ' disabled' : '') + (depth ? ' ctx-child' : '') + (info ? ' ctx-info' : '');
+  row.className = 'ctx-item' + (item.disabled ? ' disabled' : '') + (depth ? ' ctx-child' : '') + (info ? ' ctx-info' : '')
+    + (glowNow.has(item.label) ? ' ctx-guide' : '');
   row.style.paddingLeft = `${8 + depth * 14}px`;
   // Reachable from the keyboard (`ContextMenu`'s arrows) without being a stop for Tab.
   if (!info) {

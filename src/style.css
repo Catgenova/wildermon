@@ -6942,6 +6942,45 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
   display: block;
 }
 
+.path-card-find,
+.path-card-progress,
+.path-card-reward {
+  overflow-wrap: anywhere;
+}
+
+.path-card-progress {
+  font-weight: 600;
+}
+
+.path-card-reward {
+  color: var(--ui-accent);
+}
+
+.path-card-find[hidden],
+.path-card-progress[hidden],
+.path-card-reward[hidden] {
+  display: none;
+}
+
+/* A Steps line's mark: its part done, or not yet. */
+.path-mark {
+  color: var(--ui-dim);
+}
+
+.path-mark-on {
+  color: var(--ui-accent);
+}
+
+/* The Guiding Light step's jobs in the right-click menu (src/ui/contextmenu.ts `menuGlow`). */
+.ctx-item.ctx-guide .ctx-label {
+  color: var(--ui-accent);
+  font-weight: 600;
+}
+
+.ctx-item.ctx-guide .ctx-label::after {
+  content: ' ✦';
+}
+
 .path-card-go.path-card-ready {
   border-color: var(--ui-accent);
   color: var(--ui-accent);
@@ -6988,6 +7027,7 @@ body.dragging.drag-no, body.dragging.drag-no * { cursor: no-drop !important; }
 
 .path-card-foot {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   justify-content: flex-end;
 }

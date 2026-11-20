@@ -16,7 +16,10 @@
  */
 import type { Game } from '../game/game';
 import { boundKey } from '../game/keybinds';
-import { currentStep, MET_MARK, PATH_CARD_HOLD, PATH_STEPS, pathCardSays, watchPathCards, type PathCardSays } from '../game/path';
+import {
+  currentStep, MET_MARK, PATH_CARD_HOLD, PATH_STEP_BY_ID, PATH_STEPS, pathCardSays, SEEK_REACH, stepSpot, UNMET_MARK, watchPathCards,
+  type PathCardSays,
+} from '../game/path';
 import { MAX_DEED_LEVEL } from '../game/deedsize';
 import { underTopBars } from './notices';
 import { PathPreview } from './pathpreview';
@@ -33,6 +36,13 @@ export class PathCard {
   private readonly nextEl: HTMLDivElement;
   private readonly howEl: HTMLDivElement;
   private readonly whyEl: HTMLDivElement;
+  private readonly findEl: HTMLDivElement;
+  private readonly progressEl: HTMLDivElement;
+  private readonly rewardEl: HTMLDivElement;
+  private readonly prevBtn: HTMLButtonElement;
+  private readonly seekBtn: HTMLButtonElement;
+  /** The mark Show me last put down, taken up when it puts the next. */
+  private seekMark: number | null = null;
   private readonly skip: HTMLButtonElement;
   private readonly closeBtn: HTMLButtonElement;
   private readonly nextBtn: HTMLButtonElement;
@@ -53,7 +63,13 @@ export class PathCard {
   /** Cards put up since the page opened, for the tests. */
   shown = 0;
 
-  constructor(private readonly root: HTMLElement, private readonly game: Game, private readonly openTab: () => void) {
+  constructor(
+    private readonly root: HTMLElement,
+    private readonly game: Game,
+    private readonly openTab: () => void,
+    /** The map opened at a spot (`MinimapPanel.showAt`). */
+    private readonly showAt: (x: number, y: number) => void = () => {},
+  ) {
     this.el = document.createElement('div');
     this.el.className = 'path-card';
     this.el.hidden = true;
@@ -80,7 +96,13 @@ export class PathCard {
     this.howEl.className = 'path-card-lines';
     this.whyEl = document.createElement('div');
     this.whyEl.className = 'path-card-lines path-card-why';
-    text.append(this.nextEl, this.howEl, this.whyEl);
+    this.findEl = document.createElement('div');
+    this.findEl.className = 'path-card-find';
+    this.progressEl = document.createElement('div');
+    this.progressEl.className = 'path-card-progress';
+    this.rewardEl = document.createElement('div');
+    this.rewardEl.className = 'path-card-reward';
+    text.append(this.nextEl, this.progressEl, this.howEl, this.findEl, this.whyEl, this.rewardEl);
     mid.append(this.preview.el, text);
     const foot = document.createElement('div');
     foot.className = 'path-card-foot';
@@ -95,7 +117,9 @@ export class PathCard {
       if (this.pinned) game.settings.pathPanel = false;
       this.close();
     });
-    foot.append(this.closeBtn, this.skip, this.nextBtn, this.tabBtn);
+    this.prevBtn = this.button('Previous step', 'The step before, to read', () => this.prevStep());
+    this.seekBtn = this.button('Show me', `Map: where this step is done, or the nearest of what it works on within ${SEEK_REACH} tiles; a mark put there`, () => this.seek());
+    foot.append(this.closeBtn, this.prevBtn, this.skip, this.nextBtn, this.seekBtn, this.tabBtn);
     this.el.append(top, mid, foot);
     root.append(this.el);
     watchPathCards(game, (done) => this.open(done));
@@ -127,6 +151,30 @@ export class PathCard {
     this.shown++;
     this.el.hidden = false;
     this.refresh();
+  }
+
+  /** The panel back a step, to read. */
+  private prevStep(): void {
+    const at = this.says().next?.number ?? PATH_STEPS.length + 1;
+    if (at <= 1) return;
+    this.viewId = PATH_STEPS[at - 2].id;
+    this.refresh();
+  }
+
+  /** Show me: the map at where the step is done, a mark there. */
+  private seek(): void {
+    const g = this.game;
+    const s = PATH_STEP_BY_ID.get(this.says().next?.id ?? '');
+    if (!s) return;
+    const spot = stepSpot(g, s);
+    if (!spot) {
+      g.logMsg(`Guiding Light: nothing for this step within ${SEEK_REACH} tiles.`, 'info');
+      return;
+    }
+    if (this.seekMark !== null && g.marks.some((m) => m.id === this.seekMark)) g.removeMark(this.seekMark);
+    const x = Math.floor(spot.x), y = Math.floor(spot.y);
+    this.seekMark = g.addMark(x, y, `Guiding Light: ${spot.name}`).id;
+    this.showAt(x, y);
   }
 
   /** The panel on to the current step. */
@@ -216,8 +264,8 @@ export class PathCard {
       this.doneEl.textContent = c.done.length ? `Done: ${c.done.join(' · ')}` : 'Guiding Light';
       this.nextEl.textContent = n ? `Next ${n.line}` : 'Guiding Light: every step done';
     }
-    // (the card: "How: " before the first line; the panel: a heading over them, the steps numbered)
-    const lines = (el: HTMLElement, head: string, xs: readonly string[], numbered: boolean): void => {
+    // (the card: "How: " before the first line; the panel: a heading over them, the steps numbered and marked)
+    const lines = (el: HTMLElement, head: string, xs: readonly string[], marks?: readonly boolean[]): void => {
       el.replaceChildren();
       if (pinned && xs.length) {
         const h = document.createElement('b');
@@ -227,13 +275,34 @@ export class PathCard {
       for (const [i, x] of xs.entries()) {
         const row = document.createElement('div');
         const h = document.createElement('b');
-        h.textContent = pinned ? (numbered ? `${i + 1}. ` : '') : i === 0 ? `${head}: ` : '';
+        h.textContent = pinned ? (marks ? `${i + 1}. ` : '') : i === 0 ? `${head}: ` : '';
+        if (pinned && marks) {
+          const m = document.createElement('span');
+          m.className = marks[i] ? 'path-mark path-mark-on' : 'path-mark';
+          m.textContent = marks[i] ? MET_MARK : UNMET_MARK;
+          row.append(m, ' ');
+        }
         row.append(h, x);
         el.append(row);
       }
     };
-    lines(this.howEl, pinned ? 'Steps' : 'How', n?.how ?? [], true);
-    lines(this.whyEl, pinned ? 'Why it matters' : 'Why', n?.why ?? [], false);
+    lines(this.howEl, pinned ? 'Steps' : 'How', n?.how ?? [], n?.howDone ?? []);
+    const finds = [...(n?.find ?? []).map((l) => `Find: ${l}`), ...(n?.bring ?? []).map((l) => `Bring: ${l}`)];
+    this.findEl.replaceChildren(...finds.map((l) => {
+      const row = document.createElement('div');
+      row.textContent = l;
+      return row;
+    }));
+    this.findEl.hidden = !finds.length;
+    lines(this.whyEl, pinned ? 'Why it matters' : 'Why', n?.why ?? []);
+    this.progressEl.textContent = n?.progress.length ? `Progress: ${n.progress.join(' · ')}` : '';
+    this.progressEl.hidden = !n?.progress.length;
+    this.rewardEl.textContent = pinned ? n?.reward ?? '' : '';
+    this.rewardEl.hidden = !pinned || !n?.reward;
+    this.prevBtn.hidden = !pinned || !n;
+    this.prevBtn.disabled = !n || n.number <= 1;
+    this.seekBtn.hidden = !pinned || !n;
+    this.seekBtn.disabled = !n?.seeks;
     this.closeBtn.hidden = pinned && !!n;
     this.nextBtn.hidden = !pinned || !n;
     this.nextBtn.disabled = !n?.passed;

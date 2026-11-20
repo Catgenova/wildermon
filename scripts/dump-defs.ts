@@ -276,7 +276,7 @@ import {
 } from '../src/game/vineyard';
 import { CELLAR_AGEING, keepsQl } from '../src/game/ageing';
 import { HOUR, LOOK_SKEP, SKEP, SKEP_CLUMP_HOURS, SKEP_HOLDS, SKEP_IDLE, SKEP_REACH, SKEP_SAID, SKEP_SKILL, SKEP_WAX_EVERY, TAKE_HONEY, VESP_REST } from '../src/game/bees';
-import { ANVIL_LUMPS, ASHORE_KINDS, GUIDE_START, PATH_CRATE, PATH_CRATES, WILD_NEAR, PATH_CLAY, PATH_DETOURS, PATH_STOCKS, PATH_FISH, PATH_FORAGE, PATH_KINDS, PATH_SITE, PATH_SKILLED, PATH_STEPS, PATH_SURE, PATH_TAMES, SMELTER_BRICKS, SMELTER_MORTAR } from '../src/game/path';
+import { ANVIL_LUMPS, ASHORE_KINDS, GUIDE_START, PATH_CRATE, PATH_CRATES, WILD_NEAR, PATH_CLAY, PATH_DETOURS, PATH_STOCKS, PATH_FISH, PATH_FORAGE, PATH_KINDS, PATH_REWARD_QL, PATH_REWARDS, PATH_SITE, PATH_SKILLED, PATH_STEPS, PATH_SURE, PATH_TAMES, phaseName, SMELTER_BRICKS, SMELTER_MORTAR } from '../src/game/path';
 import { UPGRADE_WORKERS } from '../src/game/deed';
 
 const q = (v: unknown): string => {
@@ -3367,6 +3367,11 @@ for (const [fn, v] of [
  */
 out.push(`create or replace function thepath_steps() returns text[] language sql immutable as $fn$ select ${arr(PATH_STEPS.map((s) => s.id))} $fn$;`);
 out.push(`create or replace function thepath_detours() returns text[] language sql immutable as $fn$ select ${arr(PATH_DETOURS.map((s) => s.id))} $fn$;`);
+/* Each step's phase, and what a phase gives once every step of it is done (`PATH_REWARDS`, `private.thepath_reward`). */
+out.push(`create or replace function thepath_phases() returns table (step text, phase text) language sql immutable as $fn$ select * from (values ${
+  PATH_STEPS.map((s) => `(${q(s.id)}, ${q(s.phase)})`).join(', ')}) v (step, phase) $fn$;`);
+out.push(`create or replace function thepath_rewards() returns table (phase text, name text, item text, extra text, ql int) language sql immutable as $fn$ select * from (values ${
+  PATH_REWARDS.map(([ph, item, extra]) => `(${q(ph)}, ${q(phaseName(ph))}, ${q(item)}, ${q(extra)}, ${PATH_REWARD_QL})`).join(', ')}) v (phase, name, item, extra, ql) $fn$;`);
 out.push(`create or replace function thepath_kinds() returns text[] language sql immutable as $fn$ select ${arr([...PATH_KINDS])} $fn$;`);
 /* The kinds every body's field guide starts with marked seen (`GUIDE_START`), marked at the join (`guide_begin`); and those a wild one of is put near it (`ASHORE_KINDS`). */
 out.push(`create or replace function guide_start() returns text[] language sql immutable as $fn$ select ${arr([...GUIDE_START])} $fn$;`);
