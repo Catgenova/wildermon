@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.compost_takes()
  RETURNS text[]
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select array['mixed_grass', 'moss', 'ash']::text[] $function$
+AS $function$ select array['mixed_grass', 'moss', 'ash', 'bone']::text[] $function$

@@ -349,6 +349,8 @@ import { ASHORE_KINDS, GUIDE_START, MET_MARK, PATH_CRATE, PATH_REWARD_QL, PATH_R
 import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
 import { STOCK_SHOWN } from './deed';
 import { IDLE_TAG } from '../../game/owner';
+import { GRAPH_FRAMES } from '../../render/timings';
+import { LOW_MEMORY_SHARE, LOW_MEMORY_STILLS, LOW_MEMORY_UNSEEN, QUALITY_FAR } from '../../render/bodies';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
 const GARDEN_MOUNT = (m: Mount): string => MOUNT_SAID[m];
@@ -436,6 +438,20 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Batch E: the frame graph, the field guide drawn ahead, far bodies, the reconnect count, a held batch, the craft preview kept, Low memory.
+  {
+    n: 696,
+    day: '2026-11-20',
+    lines: () => [
+      `New: Show drawing times: a graph of the last ${GRAPH_FRAMES} frames' times under the frame rate, lines at 60 and 30 frames a second.`,
+      'Changed: the field guide\'s pictures drawn ahead while the page is idle: the tab shows them at once.',
+      `Changed: a body far off drawn less often as frames run long: at least ${QUALITY_FAR.map((f) => `${Math.round(f * 100)}%`).join(', ')} of its rate, by quality step.`,
+      'New: Reconnecting: how many tries got no answer and the seconds to the next; Try now.',
+      'Changed: Put all and Take all refused for a job in hand: the rest asked again as one batch once the hands are free, not one ask a thing.',
+      'Changed: the crafting preview\'s measure of each piece kept in this browser for this version: a piece shown at once on a later visit.',
+      `New: Settings, Low memory: bodies' pictures for loops ${Math.round(100 / LOW_MEMORY_SHARE)}% of the room; a body's picture let go ${LOW_MEMORY_UNSEEN} s after it is off screen, past ${LOW_MEMORY_STILLS} kept.`,
+    ],
+  },
   // The season calendar, the compact HUD on a phone, every button with no word on it titled (batch D).
   {
     n: 695,
@@ -467,7 +483,7 @@ export const NEWS: News[] = [
       'New: Improve window: Used, last Improve all: each kind used, pass by pass.',
       'New: Improve all stopped by a stock kind run out: said, with the pieces it left ("Improve all: stopped. Need iron to work into it (2 items).").',
       `Changed: scale armour improved with ${itemDef('dragon_scale').name.toLowerCase()}, awl and needle, at leatherworking (was metal).`,
-      `New: recipe ${RECIPE_BY_ID.get('grind_bone_meal')?.label ?? 'Grind bone meal'}: ${recipeInputsSaid('grind_bone_meal')}; quern; milling.`,
+      'New: a compost bin takes bone: a carcass\'s bones into the heap, compost out, spread on a field or planter.',
     ],
   },
   // The Guiding Light panel's second round (pathcard.ts, path.ts `PathLine`, `progress`, `find`, `bring`, `seek`, `menuLabels`; the island's `private.thepath_reward`).

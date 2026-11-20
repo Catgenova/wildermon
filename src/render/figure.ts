@@ -14,7 +14,7 @@ import { HALF_H, HALF_W, HEIGHT_SCALE, UNITS_PER_TILE } from './iso';
 import { rarityOf } from '../game/items';
 import { BASE_SPEED, CADENCE } from '../game/player';
 import { BODY_BUDGET_MS } from './bodybudget';
-import { ask, asked, bodiesBehind, bodyClock, bodyCost, KeptPics, qualityRate, qualityScale, picBegin, picDrop, picEnd, picNew, picPut, spent, takeAsked, zoomSettled, type Job, type Pic } from './bodies';
+import { ask, asked, bodiesBehind, bodyClock, bodyCost, KeptPics, LOW_MEMORY_STILLS, LOW_MEMORY_UNSEEN, memoryKnobs, qualityFar, qualityRate, qualityScale, picBegin, picDrop, picEnd, picNew, picPut, spent, takeAsked, zoomSettled, type Job, type Pic } from './bodies';
 import type { GlTile } from '../sculpt/gl';
 export { bodyKnobs, bodiesFrame } from './bodies';
 
@@ -12783,7 +12783,8 @@ function rateShare(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   const bySize = 0.5 + 0.5 * Math.max(0, Math.min(1, (tall - SMALL / 2) / (SMALL / 2)));
   // Tiles from your body on the screen (two half-widths a tile across at this zoom); on another canvas, as near.
   const tiles = mine.canvas === ctx.canvas ? Math.hypot(x - mine.x, y - mine.y) / (2 * HALF_W * zoom * dev) : 0;
-  const byFar = 1 - 0.5 * Math.max(0, Math.min(1, (tiles - NEAR) / (FAR - NEAR)));
+  // Down to the quality step's floor (`qualityFar`): a far body drawn less often still while frames run long.
+  const byFar = 1 - (1 - qualityFar()) * Math.max(0, Math.min(1, (tiles - NEAR) / (FAR - NEAR)));
   // In quarters, so a loop's count of pictures (and so its pictures) does not change with every step a body takes.
   return (Math.round(Math.min(bySize, byFar) * 4) / 4) * qualityRate();
 }
@@ -12892,9 +12893,10 @@ function drawStill(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: 
   if (!st) {
     st = { pic: null, key: '', at: 0, seen: now, dev };
     stills.set(id, st);
-    if (stills.size > 96) {
+    // Fewer kept, and let go sooner, with Low memory on (`memoryKnobs`).
+    if (stills.size > (memoryKnobs.low ? LOW_MEMORY_STILLS : 96)) {
       for (const [k2, v] of stills) {
-        if (now - v.seen <= 5 && now >= v.seen) continue;
+        if (now - v.seen <= (memoryKnobs.low ? LOW_MEMORY_UNSEEN : 5) && now >= v.seen) continue;
         picDrop(v.pic);
         stills.delete(k2);
       }

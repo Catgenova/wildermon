@@ -112,7 +112,8 @@ const g = globalThis as unknown as Record<string, unknown>;
 g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) };
 const el = (): Record<string, unknown> => ({
   hidden: false, style: {}, textContent: '', className: '', offsetWidth: 800, offsetTop: 0, offsetLeft: 0, offsetHeight: 0,
-  setAttribute() {}, append() {}, querySelectorAll: () => [],
+  setAttribute() {}, addEventListener() {}, querySelectorAll: () => [],
+  append(this: { kids?: unknown[] }, ...k: unknown[]) { this.kids = [...(this.kids ?? []), ...k]; },
 });
 let online = true;
 g.document = { hidden: false, addEventListener: on, createElement: el, visibilityState: 'visible' };
@@ -122,7 +123,7 @@ Object.defineProperty(globalThis, 'navigator', { value: { get onLine() { return 
 const { supabase } = await import('../../src/net/supabase');
 const { Island, REJOIN_WAIT_MS } = await import('../../src/net/island');
 const { blankWorld } = await import('../../src/net/landpack');
-const { CUT_POLL_MS, CUT_QUIET_MS, RECONNECTING, watchReturn } = await import('../../src/ui/phone');
+const { CUT_POLL_MS, CUT_QUIET_MS, RECONNECTING, reconnectSays, watchReturn } = await import('../../src/ui/phone');
 
 /** What was asked, in order: `rpc:<door>` and `get:<table>`, and when the channels were joined. */
 const asked: string[] = [];
@@ -275,7 +276,9 @@ console.log('--- the notice');
   const stand = { deaf: () => cut, cut: () => cut, armed: () => true, comeBack: () => { calls++; return answer(); } };
   watchReturn(stand, root);
   const banner = kids[0];
-  check('the notice says what it is', banner?.textContent === RECONNECTING && banner.hidden === true, String(banner?.textContent));
+  const words = (banner?.kids as Array<{ textContent: string }> | undefined)?.[0];
+  const tryNow = (banner?.kids as Array<{ hidden: boolean; textContent: string }> | undefined)?.[2];
+  check('the notice says what it is', words?.textContent === RECONNECTING && banner.hidden === true && tryNow?.hidden === true, String(words?.textContent));
 
   // A cut mended at once: come back from, and nothing said.
   cut = true;
@@ -310,6 +313,18 @@ console.log('--- the notice');
   fire('online');
   await sleep(50);
   check('and the network back is come back from at once', calls === 1 && banner.hidden === true, `${calls} ${banner.hidden}`);
+
+  // No answer: the notice counts to the next try, and offers it now.
+  answer = async () => false;
+  cut = true;
+  fire('online');
+  await sleep(50);
+  check('no answer: the notice says how many and the seconds to the next try, and Try now',
+    words?.textContent === reconnectSays(1, 1000) && tryNow?.hidden === false && tryNow.textContent === 'Try now', `${words?.textContent} / ${tryNow?.hidden}`);
+  answer = async () => { cut = false; return true; };
+  await sleep(1200);
+  check('answered on the next try: the notice gone, its words back', banner.hidden === true && words?.textContent === RECONNECTING && tryNow?.hidden === true,
+    `${banner.hidden} ${words?.textContent}`);
 }
 
 for (const line of [...ok, ...bad]) console.log(line);

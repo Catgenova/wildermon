@@ -77,6 +77,10 @@ export interface Started {
 type Telling = (phase: BootPhase, detail?: string, done?: number, total?: number) => void;
 
 /** How long the front door waits for an answer before giving up on the keeper. */
+/** The least time between two tries of a batch held for a job in hand (`heldMany`), in milliseconds. */
+export const MANY_AGAIN_MS = 500;
+/** Tries a held batch is given before what is left of it is given up, and said. */
+export const MANY_TRIES = 5;
 const ASK_HOME_MS = 8000;
 
 /**
@@ -315,12 +319,32 @@ export async function startIsland(params: URLSearchParams, tell: Telling, pick?:
    * Many things into a store or out of one, a few dozen to an ask (`Island.actMany`). With a job in hand the
    * island does none of them, and the rest go one at a time, as before, to be queued behind it.
    */
+  /*
+   * Those the island would not take for a job in hand: held here and asked again as one batch call once the hands
+   * are free (`MANY_AGAIN_MS` at the least between tries), not one call a thing, most of them past the queue's room.
+   */
+  let heldMany: { def: ActionDef; targets: Array<Record<string, unknown>>; tries: number } | null = null;
+  const sendMany = (def: ActionDef, targets: Array<Record<string, unknown>>, tries = 0): void => {
+    void island.actMany(def.id, targets).then(({ rest, busy }) => {
+      if (!busy || !rest.length) heldMany = null;
+      else if (tries < MANY_TRIES) heldMany = { def, targets: rest, tries: tries + 1 };
+      else {
+        heldMany = null;
+        game.logMsg(`${def.label}: ${rest.length} not done; the hands were never free.`, 'error');
+      }
+    });
+  };
+  window.setInterval(() => {
+    if (!heldMany || game.action || game.queue.length) return;
+    const { def, targets, tries } = heldMany;
+    heldMany = null;
+    sendMany(def, targets, tries);
+  }, MANY_AGAIN_MS);
   game.askAll = (def: ActionDef, targets: Target[]) => {
     if (!ACT_MANY_JOBS.has(def.id)) return false;
     lastTarget = targets[targets.length - 1] ?? null;
-    void island.actMany(def.id, targets as unknown as Array<Record<string, unknown>>).then(({ rest, busy }) => {
-      if (busy) for (const t of rest) void island.act(def.id, t, 1);
-    });
+    heldMany = null;
+    sendMany(def, targets as unknown as Array<Record<string, unknown>>);
     return true;
   };
   game.stop = () => {

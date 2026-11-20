@@ -221,7 +221,8 @@ export function spent(ms: number, jobs: Job[], left: number): void {
  * held `HOLD_MS` at least either way: so it does not go up and down from one moment to the next. Only how bodies are
  * drawn: nothing of the game.
  */
-const STEPS = [{ scale: 1, rate: 1 }, { scale: 0.75, rate: 0.75 }, { scale: 0.5, rate: 0.5 }];
+/** Each step's `far`: the least share of its rate a body `FAR` tiles off or more is drawn at (`rateShare`), lower as frames run long. */
+const STEPS = [{ scale: 1, rate: 1, far: 0.5 }, { scale: 0.75, rate: 0.75, far: 0.35 }, { scale: 0.5, rate: 0.5, far: 0.25 }];
 /** How many quality steps there are. */
 export const QUALITY_STEPS = STEPS.length;
 const SLOW_MS = 40, QUICK_MS = 28, WINDOW_MS = 2000, UP_AFTER = 4000, HOLD_MS = 2000, LOOK_EVERY = 500;
@@ -236,6 +237,9 @@ let bodiesThisFrame = 0;
 export const qualityStep = (): number => step;
 export const qualityScale = (): number => STEPS[step].scale;
 export const qualityRate = (): number => STEPS[step].rate;
+export const qualityFar = (): number => STEPS[step].far;
+/** Every step's far floor, for What's new and the tests. */
+export const QUALITY_FAR: readonly number[] = STEPS.map((q) => q.far);
 
 /** A frame begins: the last one's length counted, and the quality looked at again twice a second. */
 function frameBegins(): void {
@@ -288,6 +292,15 @@ export const picturesHeld = (): number => held;
  * Pictures shared between bodies (the frames of a loop: a stride, standing about), by key, up to `most` device pixels of
  * them, the longest unused let go first.
  */
+/**
+ * Low memory (`settings.lowMemory`): pictures kept for loops held to a `LOW_MEMORY_SHARE`th of their room, and a
+ * body's own picture let go `LOW_MEMORY_UNSEEN` seconds after it was last on screen, past `LOW_MEMORY_STILLS` of them.
+ */
+export const memoryKnobs = { low: false };
+export const LOW_MEMORY_SHARE = 4;
+export const LOW_MEMORY_STILLS = 24;
+export const LOW_MEMORY_UNSEEN = 1;
+
 export class KeptPics {
   private map = new Map<string, Pic>();
   private px = 0;
@@ -317,7 +330,8 @@ export class KeptPics {
       this.px -= old.w * old.h;
       picDrop(old);
     }
-    while (this.px + p.w * p.h > this.most && this.map.size) {
+    const most = memoryKnobs.low ? this.most / LOW_MEMORY_SHARE : this.most;
+    while (this.px + p.w * p.h > most && this.map.size) {
       const [k, gone] = this.map.entries().next().value as [string, Pic];
       this.map.delete(k);
       this.px -= gone.w * gone.h;

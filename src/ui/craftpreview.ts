@@ -63,6 +63,7 @@ import { furnishTrim } from '../render/furnishlook';
 import { fittingTrim } from '../render/fittinglook';
 import { adornTrim } from '../render/adornlook';
 import { CLIP_OF_TOOL, clipOfJob } from '../sculpt/anim/routes';
+import { VERSION } from '../version';
 
 /** What a preview draws: a piece set down, a hull or a vehicle, a piece worn, a thing held, or a thing's own model alone. */
 export type PreviewKind = 'furniture' | 'vehicle' | 'gear' | 'held' | 'model';
@@ -236,6 +237,33 @@ const TELL_AT: [number, number] = [128, 200];
 const GIVE_UP = 1.5;
 /** The things whose stages and box are kept, the least lately shown let go past this. */
 const KNOWN_KEPT = 24;
+/**
+ * The stages and box of each piece measured (`known`), kept in this browser between visits for this build only
+ * (`VERSION`): a second visit shows a piece at once rather than drawing every stage of it again to find them. A
+ * picture's measure and nothing else; any failure (no storage, a private window, a full one) keeps nothing.
+ */
+const KNOWN_KEY = `wildermon.craftpreview.${VERSION}`;
+type KnownMap = Map<string, { stages: Stage[]; box: Box }>;
+function knownRead(): KnownMap {
+  try {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('wildermon.craftpreview.') && k !== KNOWN_KEY) localStorage.removeItem(k);
+    }
+    const raw = localStorage.getItem(KNOWN_KEY);
+    const got = raw ? (JSON.parse(raw) as Array<[string, { stages: Stage[]; box: Box }]>) : [];
+    return new Map(Array.isArray(got) ? got.filter((e) => Array.isArray(e) && Array.isArray(e[1]?.box) && Array.isArray(e[1]?.stages)) : []);
+  } catch {
+    return new Map();
+  }
+}
+function knownWrite(known: KnownMap): void {
+  try {
+    localStorage.setItem(KNOWN_KEY, JSON.stringify([...known]));
+  } catch {
+    // Nothing kept.
+  }
+}
 
 /** Whether a preview is drawn still: a harness on software GL that is there to see it move clears `stillOnSoft`. */
 export const craftPreviewKnobs = { stillOnSoft: true };
@@ -339,7 +367,7 @@ export class CraftPreview {
   private drawn = false;
   private blank = false;
   /** Stages and boxes worked out, by what was shown and whether still. */
-  private readonly known = new Map<string, { stages: Stage[]; box: Box }>();
+  private readonly known: KnownMap = knownRead();
   /** Told the stage on the page whenever it changes: its label, or null for a thing with one stage or none. */
   onStage: ((label: string | null) => void) | null = null;
   /** The stage label on the page now. */
@@ -653,6 +681,7 @@ export class CraftPreview {
           if (drawn) {
             this.known.set(known, { stages, box });
             if (this.known.size > KNOWN_KEPT) this.known.delete(this.known.keys().next().value as string);
+            knownWrite(this.known);
           }
         }
       }

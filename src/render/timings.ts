@@ -33,6 +33,8 @@ export const LAYERS = {
 
 export type Layer = keyof typeof LAYERS;
 
+/** Frames the graph under the timings line shows (`Timings.gaps`). */
+export const GRAPH_FRAMES = 120;
 /** How long the figures are averaged over before the line is written again, in seconds. */
 export const TIMING_WINDOW = 0.5;
 /** How long each layer is left out for when measuring (`measure`), in seconds; the first quarter is let settle and not counted. */
@@ -149,8 +151,22 @@ export class Timings {
   begin(): void {
     const now = performance.now();
     if (this.trial) this.step(now);
-    if (this.on) this.frameAt = now;
+    if (this.on) {
+      // The gap since the last frame began, for the graph (`gaps`).
+      if (this.frameAt) {
+        this.gapRing[this.gapAt] = now - this.frameAt;
+        this.gapAt = (this.gapAt + 1) % GRAPH_FRAMES;
+      }
+      this.frameAt = now;
+    }
   }
+
+  /** The last `GRAPH_FRAMES` frames' lengths, in milliseconds, oldest first; none until timings are on. */
+  gaps(): number[] {
+    return [...this.gapRing.slice(this.gapAt), ...this.gapRing.slice(0, this.gapAt)].filter((g) => g > 0);
+  }
+  private gapRing: number[] = new Array<number>(GRAPH_FRAMES).fill(0);
+  private gapAt = 0;
 
   /** A frame is starting at `now`: the gap since the last one counts to the layer left out, and the next layer goes out when its second is up. */
   private step(now: number): void {

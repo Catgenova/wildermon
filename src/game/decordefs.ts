@@ -25,7 +25,8 @@ export const STONE_LANTERN_REACH = 4;
 /** What a compost bin makes, and what spreading it gives (`farming.ts` reads it at the harvest). */
 export const COMPOST = 'compost';
 /** Things a bin takes besides spoiled food: weeds (mixed grass, moss) and ash. */
-export const COMPOST_TAKES: readonly string[] = ['mixed_grass', 'moss', 'ash'];
+// Bone (`butcher.ts`): a carcass's bones into the heap, compost out (asked for: bone meal, fertiliser for gardens).
+export const COMPOST_TAKES: readonly string[] = ['mixed_grass', 'moss', 'ash', 'bone'];
 /** Damage at which food is spoiled and goes in a bin: what a clearer takes off the ground as rotting (`ROT_DMG`). */
 export const COMPOST_SPOILED = 40;
 /** Things a bin holds at once. */

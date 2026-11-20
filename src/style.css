@@ -10433,3 +10433,17 @@ img:is(.rc-plate, .rc-niche, .ui-frame, .ui-frame-edge):not([src]) {
 .seasons-starts {
   font-weight: 600;
 }
+
+/* The frame graph under the timings line (src/ui/hud.ts `drawFrameGraph`). */
+.hud-frame-graph {
+  display: block;
+  width: 120px;
+  height: 28px;
+  margin-left: auto;
+  background: var(--ui-bg, rgba(0, 0, 0, 0.4));
+  image-rendering: pixelated;
+}
+
+.hud-frame-graph[hidden] {
+  display: none;
+}

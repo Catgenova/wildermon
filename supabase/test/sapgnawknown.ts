@@ -181,7 +181,7 @@ ${GOES.map((g) => `
   insert into said values ('CHIP_SEEN', (select count(*)::text from guide where world_id = w and uid = '${LIGHT}' and species = 'quarra' and not tamed));
   insert into said values ('CHIP_STOCKED', coalesce((select thepath->'stocked'->>'chiptail' from player where world_id = w and uid = '${LIGHT}'), '-'));
   insert into said values ('CHIP_SAID', coalesce((select string_agg(text, ' / ' order by n) from event where world_id = w and uid = '${LIGHT}' and n > v_n
-    and text like 'Guiding Light:%'), '-'));
+    and text like 'Guiding Light:%' and text not like '% done. Reward: %'), '-'));
   insert into said values ('CRATES', ${CR} || '|' || (select string_agg(i.issued || ':' || coalesce(i.creature::text, '-'), ',') from item i
     where i.world_id = w and i.holder = 'player' and i.holder_uid = '${LIGHT}' and i.def = '${PATH_CRATE}')
     || '|' || coalesce((select (thepath->'crates'->>'chiptail') = (select max(i.id)::text from item i where i.world_id = w and i.holder_uid = '${LIGHT}'

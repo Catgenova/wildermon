@@ -10,6 +10,8 @@ import { drawCreaturePortrait } from '../../render/sprites';
 import { drawSoon, drawWildermonPortrait } from '../../render/wildermon';
 import { made, meaning } from '../kit';
 
+/** At the latest, how long after the page asks the field guide's pictures are drawn ahead (`GuidePanel.warm`), in ms. */
+export const GUIDE_WARM_AFTER = 20000;
 /** How big a kind is drawn on the index and on its own page, in CSS pixels. */
 const CARD = { w: 76, h: 56 };
 const PAGE = { w: 150, h: 104 };
@@ -103,6 +105,20 @@ export class GuidePanel {
       if (this.showing()) this.draw();
     });
     // Nothing is drawn until the tab is turned to: forty pictures nobody may look at.
+  }
+
+  /**
+   * Every card's picture drawn ahead, while the page is idle (`requestIdleCallback`, `GUIDE_WARM_AFTER` ms after it is
+   * asked at the latest), a few a frame (`drawSoon`): the tab turned to later shows them at once.
+   */
+  warm(): void {
+    const go = (): void => {
+      const g = this.game.guide;
+      for (const entry of guideEntries()) this.picture(entry, g.seen.has(entry.key), CARD.w, CARD.h);
+    };
+    const idle = (window as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+    if (idle) idle(go, { timeout: GUIDE_WARM_AFTER });
+    else window.setTimeout(go, GUIDE_WARM_AFTER);
   }
 
   /** The tab has just been turned to, or the journal opened at it: draw, and ask the island. */

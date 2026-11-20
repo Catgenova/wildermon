@@ -132,6 +132,7 @@ import { ShoppingPanel } from './panels/shopping';
 import { MendPanel } from './panels/mend';
 import { QueueView } from './panels/craftqueue';
 import { SeasonsView } from './panels/seasons';
+import { memoryKnobs } from '../render/bodies';
 import { rotLine, rotSaid, rotSeconds } from '../game/rot';
 import { changeWallRows, frameFootprintEntries, frameHoverLines, frameJettyEntries, frameRoofEntries } from './frameMenu';
 import { storeyHost, wallAcross } from '../game/storeyview';
@@ -598,6 +599,8 @@ export class UI {
      * Opened from a creature's own menu too, at that kind's page.
      */
     this.guide = new GuidePanel(this.journalPanel.guidePage, game, this.island, () => journal.isOpen && this.journalPanel.tab === 'guide', () => this.journalPanel.open('guide'));
+    // Its pictures drawn ahead while the page is idle.
+    this.guide.warm();
     const stores = this.windows.create({ id: 'stores', title: 'Stores', x: 12, y: 486, width: 360, height: 300, anchor: 'tr', open: false });
     this.stores = new StoresPanel(
       stores,
@@ -1154,6 +1157,7 @@ export class UI {
   }
 
   update(fps: number): void {
+    memoryKnobs.low = this.game.settings.lowMemory;
     // Compact HUD on a phone (`settings.compactHud`, src/style.css `#ui.phone.hud-compact`).
     if (this.uiEl.classList.contains('hud-compact') !== this.game.settings.compactHud) this.uiEl.classList.toggle('hud-compact', this.game.settings.compactHud);
     // The redraws asked for since the last frame, once each (`nextFrame`).

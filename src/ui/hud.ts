@@ -1,3 +1,4 @@
+import { GRAPH_FRAMES } from '../render/timings';
 import { boundKey, keyName, type Keybinds } from '../game/keybinds';
 import { SLEEP_BONUS_MULT, sleepBonusLabel } from '../game/sleep';
 import { balance, fedWord, NUTRIENTS, NUTRIENT_NAMES, NUTRIENT_NOTES, tableMul } from '../game/nutrition';
@@ -155,6 +156,7 @@ export class Hud {
   private stackEl = document.createElement('div');
   private posEl: HTMLDivElement;
   private fpsEl: HTMLDivElement;
+  private graphEl: HTMLCanvasElement;
   private actionEl: HTMLDivElement;
   private actionLabel: HTMLDivElement;
   private actionFill: HTMLDivElement;
@@ -457,7 +459,14 @@ export class Hud {
     corner.className = 'hud-corner';
     this.fpsEl = document.createElement('div');
     this.fpsEl.className = 'hud-fps';
-    corner.append(updateButton(), this.fpsEl);
+    // With timings on, each of the last frames' length as a bar: a line at 60 and at 30 frames a second (`drawFrameGraph`).
+    this.graphEl = document.createElement('canvas');
+    this.graphEl.className = 'hud-frame-graph';
+    this.graphEl.width = GRAPH_FRAMES;
+    this.graphEl.height = GRAPH_H;
+    this.graphEl.hidden = true;
+    this.graphEl.title = `Last ${GRAPH_FRAMES} frames: bar height = frame time; lines at ${(1000 / 60).toFixed(1)} ms (60 fps) and ${(1000 / 30).toFixed(1)} ms (30 fps)`;
+    corner.append(updateButton(), this.fpsEl, this.graphEl);
     root.append(corner);
 
     this.actionEl = document.createElement('div');
@@ -963,6 +972,8 @@ export class Hud {
     const timed = !this.game.settings.timings ? ''
       : (t.line && fps > 0 ? `\nframe ${(1000 / fps).toFixed(1)} ms · ${t.line}` : '') + (bodiesLine() ? `\n${bodiesLine()}` : '')
         + (t.measuring ?? t.measured ? `\n${t.measuring ?? t.measured}` : '');
+    this.graphEl.hidden = !this.game.settings.timings;
+    if (this.game.settings.timings) drawFrameGraph(this.graphEl, t.gaps());
     this.say(this.fpsEl, `${VERSION} · ${fps} fps · ${renderer.tilesDrawn} tiles${watched} · ${renderer.camera.zoom.toFixed(2)}×${this.game.settings.timings ? ` · ${+renderer.pixelRatio.toFixed(2)} px/px` : ''}${timed}`);
     const svg = this.compass.firstElementChild as HTMLElement | null;
     if (svg) svg.style.transform = `rotate(${renderer.camera.northAngle().toFixed(1)}deg)`;
@@ -1099,4 +1110,21 @@ export class Hud {
   private queueWords(queue: Game['queue']): string {
     return queue.map((q) => `${q.def.label.toLowerCase()}${(q.goes ?? 1) > 1 ? ` \u00d7${q.goes}` : ''}`).join(' \u2192 ');
   }
+}
+
+/** The frame graph's height in pixels, and the frame time its top stands for, in milliseconds. */
+const GRAPH_H = 28;
+const GRAPH_TOP_MS = 50;
+/** Each frame's length a bar, its height by `GRAPH_TOP_MS`, and lines at 60 and 30 frames a second. */
+function drawFrameGraph(cv: HTMLCanvasElement, gaps: readonly number[]): void {
+  const g = cv.getContext('2d');
+  if (!g) return;
+  g.clearRect(0, 0, cv.width, cv.height);
+  const y = (ms: number): number => cv.height - Math.min(1, ms / GRAPH_TOP_MS) * cv.height;
+  gaps.forEach((ms, i) => {
+    g.fillStyle = ms > 1000 / 30 ? '#e2553c' : ms > 1000 / 60 ? '#e8c35a' : '#7ad46a';
+    g.fillRect(cv.width - gaps.length + i, y(ms), 1, cv.height - y(ms));
+  });
+  g.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  for (const ms of [1000 / 60, 1000 / 30]) g.fillRect(0, Math.round(y(ms)), cv.width, 1);
 }

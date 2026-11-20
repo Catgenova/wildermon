@@ -15,7 +15,7 @@
  *     more; and nothing refused marks the first tame spent;
  *   * never a monster: refused, and not a first tame;
  *   * in the browser: the card says "First tame: sure" in place of the odds, the
- *     Tame entry says it beside it, the Guiding Light's tame step says it; and
+ *     Tame entry says it beside it, the Guiding Light's tame step says it (Bring); and
  *     none of them once it is spent.
  *
  * New (`NEW_DAYS`, `src/game/badges.ts`, `player.joined_at`):
@@ -245,10 +245,10 @@ check(`a monster (${MONSTER.name}): refused, and never a first tame`, isle('MONS
   const step = PATH_STEP_BY_ID.get('tame')!;
   g.player.firstTame = true;
   check(`the card, a first tame to come: "${FIRST_TAME_SAYS}" in place of the odds`, card().includes(FIRST_TAME_SAYS) && !card().includes('% chance per offering'), card());
-  check('the Guiding Light\'s tame step says it', (step.how?.(g) ?? []).includes(FIRST_TAME_SAYS), (step.how?.(g) ?? []).join(' / '));
+  check('the Guiding Light\'s tame step says it, under Bring', (step.bring?.(g) ?? []).includes(FIRST_TAME_SAYS), (step.bring?.(g) ?? []).join(' / '));
   check('never for a monster', !firstTameSure(true, MONSTER.id) && firstTameSure(true, KIND) && !creatureLines(g, monster).join(' ').includes(FIRST_TAME_SAYS));
   g.player.firstTame = false;
-  check('spent: the odds again, and the step without it', card().includes('% chance per offering') && !card().includes(FIRST_TAME_SAYS) && !(step.how?.(g) ?? []).includes(FIRST_TAME_SAYS), card());
+  check('spent: the odds again, and the step without it', card().includes('% chance per offering') && !card().includes(FIRST_TAME_SAYS) && !(step.bring?.(g) ?? []).includes(FIRST_TAME_SAYS), card());
 }
 
 /* ---- New, on the island ---------------------------------------------------------------------- */

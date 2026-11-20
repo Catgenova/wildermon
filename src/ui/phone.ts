@@ -15,6 +15,9 @@ import { underTopBars } from './notices';
 
 /** The notice while the island is being listened to again. */
 export const RECONNECTING = 'Reconnecting…';
+/** The notice while a try that got no answer waits for the next: its number and the seconds to it. */
+export const reconnectSays = (tries: number, msLeft: number): string =>
+  `${RECONNECTING} No answer ${tries} ${tries === 1 ? 'time' : 'times'}; next try in ${Math.max(1, Math.ceil(msLeft / 1000))} s.`;
 /** How long a page may be in the background, in milliseconds, before the island is read again on its return even with nothing cut. */
 export const REREAD_AFTER_MS = 5000;
 /** How soon a coming back that got no answer is tried again, in milliseconds, while the notice is up: doubled each time it fails again, to `RECONNECT_RETRY_MOST_MS`. */
@@ -23,6 +26,8 @@ export const RECONNECT_RETRY_MS = 1000;
 export const RECONNECT_RETRY_MOST_MS = 10_000;
 /** How often the live connection is looked at while the page is in front, in milliseconds: a cut one is come back from at once. */
 export const CUT_POLL_MS = 250;
+/** How often the notice's count to the next try is said again, in milliseconds. */
+export const COUNT_EVERY_MS = 250;
 /** How long a cut found while in front may last before `RECONNECTING` is shown, in milliseconds: a blip mended in that time says nothing. */
 export const CUT_QUIET_MS = 1000;
 /** How often the wake lock is matched to the work in hand, in milliseconds. */
@@ -250,9 +255,29 @@ export function watchReturn(island: Pick<Island, 'deaf' | 'cut' | 'comeBack' | '
   const bar = document.createElement('div');
   bar.className = 'saving-banner reconnect-banner';
   bar.setAttribute('role', 'status');
-  bar.textContent = RECONNECTING;
+  const said = document.createElement('span');
+  said.textContent = RECONNECTING;
+  // Tried again at once, rather than waiting out the count.
+  const now = document.createElement('button');
+  now.type = 'button';
+  now.className = 'tb-btn tb-small reconnect-now';
+  now.textContent = 'Try now';
+  now.title = 'Ask the island again now';
+  now.hidden = true;
+  now.addEventListener('click', () => {
+    window.clearTimeout(again);
+    retryAt = 0;
+    void back('retry');
+  });
+  bar.append(said, ' ', now);
   bar.hidden = true;
   root.append(bar);
+  /** When the next try is due, in `performance.now()` milliseconds; nought for none waiting. */
+  let retryAt = 0;
+  window.setInterval(() => {
+    if (bar.hidden || !retryAt) return;
+    said.textContent = reconnectSays(fails, retryAt - performance.now());
+  }, COUNT_EVERY_MS);
   let going = false;
   let owed: 'return' | 'online' | 'cut' | null = null;
   let again = 0;
@@ -292,10 +317,20 @@ export function watchReturn(island: Pick<Island, 'deaf' | 'cut' | 'comeBack' | '
       window.clearTimeout(showing);
       bar.hidden = true;
       fails = 0;
+      retryAt = 0;
+      said.textContent = RECONNECTING;
+      now.hidden = true;
     } else {
       show();
-      again = window.setTimeout(() => void back('retry'), Math.min(RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS * 2 ** fails));
+      const wait = Math.min(RECONNECT_RETRY_MOST_MS, RECONNECT_RETRY_MS * 2 ** fails);
+      again = window.setTimeout(() => {
+        retryAt = 0;
+        void back('retry');
+      }, wait);
       fails++;
+      retryAt = performance.now() + wait;
+      said.textContent = reconnectSays(fails, wait);
+      now.hidden = false;
     }
     const next = owed;
     owed = null;

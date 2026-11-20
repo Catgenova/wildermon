@@ -3192,6 +3192,12 @@
     "why": "The calendar says the season now and its day, the three after it in order with the days until each, every item FRUITING has in season in each, which start and which end with it; nothing before the first spring."
   },
   {
+    "file": "supabase/test/perfknobs.ts",
+    "title": "The frame graph's frames, far bodies' floors by quality step, Low memory's numbers",
+    "shard": 6,
+    "why": "Timings graph the last GRAPH_FRAMES frames only while on; each quality step draws far bodies at a lower floor of their rate than the one before; Low memory keeps less room for loops, fewer bodies' pictures, and lets them go sooner."
+  },
+  {
     "file": "supabase/test/fedwell.ts",
     "title": "Food quality matters",
     "shard": 6,
