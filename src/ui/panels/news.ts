@@ -349,7 +349,7 @@ import { ASHORE_KINDS, GUIDE_START, MET_MARK, PATH_CRATE, PATH_REWARD_QL, PATH_R
 import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
 import { STOCK_SHOWN } from './deed';
 import { IDLE_TAG } from '../../game/owner';
-import { GRAPH_FRAMES } from '../../render/timings';
+import { GRAPH_FPS_LINES, GRAPH_FRAMES } from '../../render/timings';
 import { LOW_MEMORY_SHARE, LOW_MEMORY_STILLS, LOW_MEMORY_UNSEEN, QUALITY_FAR } from '../../render/bodies';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
@@ -443,7 +443,7 @@ export const NEWS: News[] = [
     n: 696,
     day: '2026-11-20',
     lines: () => [
-      `New: Show drawing times: a graph of the last ${GRAPH_FRAMES} frames' times under the frame rate, lines at 60 and 30 frames a second.`,
+      `New: Show drawing times: a graph of the last ${GRAPH_FRAMES} frames' times under the frame rate, lines at ${GRAPH_FPS_LINES.join(' and ')} frames a second.`,
       'Changed: the field guide\'s pictures drawn ahead while the page is idle: the tab shows them at once.',
       `Changed: a body far off drawn less often as frames run long: at least ${QUALITY_FAR.map((f) => `${Math.round(f * 100)}%`).join(', ')} of its rate, by quality step.`,
       'New: Reconnecting: how many tries got no answer and the seconds to the next; Try now.',

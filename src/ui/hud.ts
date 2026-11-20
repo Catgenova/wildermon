@@ -1,4 +1,4 @@
-import { GRAPH_FRAMES } from '../render/timings';
+import { GRAPH_FPS_LINES, GRAPH_FRAMES } from '../render/timings';
 import { boundKey, keyName, type Keybinds } from '../game/keybinds';
 import { SLEEP_BONUS_MULT, sleepBonusLabel } from '../game/sleep';
 import { balance, fedWord, NUTRIENTS, NUTRIENT_NAMES, NUTRIENT_NOTES, tableMul } from '../game/nutrition';
@@ -465,7 +465,7 @@ export class Hud {
     this.graphEl.width = GRAPH_FRAMES;
     this.graphEl.height = GRAPH_H;
     this.graphEl.hidden = true;
-    this.graphEl.title = `Last ${GRAPH_FRAMES} frames: bar height = frame time; lines at ${(1000 / 60).toFixed(1)} ms (60 fps) and ${(1000 / 30).toFixed(1)} ms (30 fps)`;
+    this.graphEl.title = `Last ${GRAPH_FRAMES} frames: bar height = frame time; lines at ${GRAPH_FPS_LINES.map((f) => `${(1000 / f).toFixed(1)} ms (${f} fps)`).join(' and ')}`;
     corner.append(updateButton(), this.fpsEl, this.graphEl);
     root.append(corner);
 
@@ -1122,9 +1122,9 @@ function drawFrameGraph(cv: HTMLCanvasElement, gaps: readonly number[]): void {
   g.clearRect(0, 0, cv.width, cv.height);
   const y = (ms: number): number => cv.height - Math.min(1, ms / GRAPH_TOP_MS) * cv.height;
   gaps.forEach((ms, i) => {
-    g.fillStyle = ms > 1000 / 30 ? '#e2553c' : ms > 1000 / 60 ? '#e8c35a' : '#7ad46a';
+    g.fillStyle = ms > 1000 / GRAPH_FPS_LINES[1] ? '#e2553c' : ms > 1000 / GRAPH_FPS_LINES[0] ? '#e8c35a' : '#7ad46a';
     g.fillRect(cv.width - gaps.length + i, y(ms), 1, cv.height - y(ms));
   });
   g.fillStyle = 'rgba(255, 255, 255, 0.5)';
-  for (const ms of [1000 / 60, 1000 / 30]) g.fillRect(0, Math.round(y(ms)), cv.width, 1);
+  for (const f of GRAPH_FPS_LINES) g.fillRect(0, Math.round(y(1000 / f)), cv.width, 1);
 }

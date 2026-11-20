@@ -42,7 +42,7 @@ import { fullscreenOffered, isFullscreen, setFullscreen, wakeOffered } from '../
 import { PATH_STEPS } from '../../game/path';
 import { MAX_DEED_LEVEL } from '../../game/deedsize';
 import { LOW_MEMORY_SHARE, LOW_MEMORY_STILLS, LOW_MEMORY_UNSEEN } from '../../render/bodies';
-import { GRAPH_FRAMES } from '../../render/timings';
+import { GRAPH_FPS_LINES, GRAPH_FRAMES } from '../../render/timings';
 
 interface Toggle {
   input: HTMLInputElement;
@@ -540,7 +540,7 @@ export class SettingsPanel {
       `Under the frame rate: frame time; ms a frame on the update (rules, the word to the island), the windows and laying the island's answers (creatures, ground); ms per layer (ground, ${listed(Object.keys(LAYERS))}), `
         + `averaged over ${TIMING_WINDOW * 1000} ms. Frame time far above update, windows and drawing together: the graphics chip, the island's answers being laid, or garbage collection. `
         + `Bodies: ms a frame on bodies (budget ${BODY_BUDGET_MS} ms), bodies drawn a frame, bodies waiting a frame, quality step (${QUALITY_STEPS}/${QUALITY_STEPS} best). `
-        + `Graph: the last ${GRAPH_FRAMES} frames' times, lines at 60 and 30 frames a second.`,
+        + `Graph: the last ${GRAPH_FRAMES} frames' times, lines at ${GRAPH_FPS_LINES.join(' and ')} frames a second.`,
       () => game.settings.timings,
       (v) => (game.settings.timings = v),
     );

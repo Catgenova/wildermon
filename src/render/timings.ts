@@ -35,6 +35,8 @@ export type Layer = keyof typeof LAYERS;
 
 /** Frames the graph under the timings line shows (`Timings.gaps`). */
 export const GRAPH_FRAMES = 120;
+/** The frame rates the graph draws a line at. */
+export const GRAPH_FPS_LINES: readonly number[] = [60, 30];
 /** How long the figures are averaged over before the line is written again, in seconds. */
 export const TIMING_WINDOW = 0.5;
 /** How long each layer is left out for when measuring (`measure`), in seconds; the first quarter is let settle and not counted. */
