@@ -8077,6 +8077,7 @@ insert into skill_gate values ('hoard', 'sound', 'Sound map', 'digging', 20);
 insert into skill_gate values ('hoard', 'fine', 'Fine map', 'digging', 40);
 insert into skill_gate values ('hoard', 'grand', 'Grand map', 'digging', 60);
 insert into skill_gate values ('vehicle', 'wagon', 'Wagon', 'driving', 30);
+insert into skill_gate values ('recipe', 'make_lanterns_grace_scroll', 'Lantern''s Grace scroll', 'enchanting', 1);
 insert into skill_gate values ('recipe', 'make_bountiful_scroll', 'Bountiful scroll', 'enchanting', 20);
 insert into skill_gate values ('recipe', 'make_bulwark_scroll', 'Bulwark scroll', 'enchanting', 20);
 insert into skill_gate values ('recipe', 'make_concussion_scroll', 'Concussion scroll', 'enchanting', 20);
@@ -8086,7 +8087,6 @@ insert into skill_gate values ('recipe', 'make_farsight_scroll', 'Farsight scrol
 insert into skill_gate values ('recipe', 'make_flamearrow_scroll', 'Flamearrow scroll', 'enchanting', 20);
 insert into skill_gate values ('recipe', 'make_frostbite_scroll', 'Frostbite scroll', 'enchanting', 20);
 insert into skill_gate values ('recipe', 'make_gale_scroll', 'Gale scroll', 'enchanting', 20);
-insert into skill_gate values ('recipe', 'make_lanterns_grace_scroll', 'Lantern''s Grace scroll', 'enchanting', 20);
 insert into skill_gate values ('recipe', 'make_lodestone_scroll', 'Lodestone scroll', 'enchanting', 20);
 insert into skill_gate values ('recipe', 'make_nightblade_scroll', 'Nightblade scroll', 'enchanting', 20);
 insert into skill_gate values ('recipe', 'make_razoredge_scroll', 'Razoredge scroll', 'enchanting', 20);
@@ -8477,8 +8477,8 @@ insert into skill_gate values ('vein', 'mithril_ore', 'Mithril vein', 'prospecti
 insert into skill_gate values ('vein', 'seryll_ore', 'Seryll vein', 'prospecting', 90);
 insert into skill_gate values ('recipe', 'make_repair_kit', 'Repair kit', 'repair', 20);
 insert into skill_gate values ('recipe', 'make_sealant', 'Sealant', 'repair', 20);
+insert into skill_gate values ('relic', 'old pot', 'Old pot', 'restoration', 1);
 insert into skill_gate values ('bauble', 'minor', 'Minor bauble', 'restoration', 10);
-insert into skill_gate values ('relic', 'old pot', 'Old pot', 'restoration', 10);
 insert into skill_gate values ('relic', 'bone comb', 'Bone comb', 'restoration', 20);
 insert into skill_gate values ('relic', 'old whetstone', 'Old whetstone', 'restoration', 20);
 insert into skill_gate values ('relic', 'seed jar', 'Seed jar', 'restoration', 20);
@@ -8700,6 +8700,7 @@ insert into skill_gate_item values ('treasure_map', 'worn', 'hoard', 'worn', 'ma
 insert into skill_gate_item values ('treasure_map', 'sound', 'hoard', 'sound', 'map');
 insert into skill_gate_item values ('treasure_map', 'fine', 'hoard', 'fine', 'map');
 insert into skill_gate_item values ('treasure_map', 'grand', 'hoard', 'grand', 'map');
+insert into skill_gate_item values ('enchant_formula', 'lantern''s grace scroll', 'recipe', 'make_lanterns_grace_scroll', 'formula');
 insert into skill_gate_item values ('enchant_formula', 'bountiful scroll', 'recipe', 'make_bountiful_scroll', 'formula');
 insert into skill_gate_item values ('enchant_formula', 'bulwark scroll', 'recipe', 'make_bulwark_scroll', 'formula');
 insert into skill_gate_item values ('enchant_formula', 'concussion scroll', 'recipe', 'make_concussion_scroll', 'formula');
@@ -8709,7 +8710,6 @@ insert into skill_gate_item values ('enchant_formula', 'farsight scroll', 'recip
 insert into skill_gate_item values ('enchant_formula', 'flamearrow scroll', 'recipe', 'make_flamearrow_scroll', 'formula');
 insert into skill_gate_item values ('enchant_formula', 'frostbite scroll', 'recipe', 'make_frostbite_scroll', 'formula');
 insert into skill_gate_item values ('enchant_formula', 'gale scroll', 'recipe', 'make_gale_scroll', 'formula');
-insert into skill_gate_item values ('enchant_formula', 'lantern''s grace scroll', 'recipe', 'make_lanterns_grace_scroll', 'formula');
 insert into skill_gate_item values ('enchant_formula', 'lodestone scroll', 'recipe', 'make_lodestone_scroll', 'formula');
 insert into skill_gate_item values ('enchant_formula', 'nightblade scroll', 'recipe', 'make_nightblade_scroll', 'formula');
 insert into skill_gate_item values ('enchant_formula', 'razoredge scroll', 'recipe', 'make_razoredge_scroll', 'formula');
@@ -8773,8 +8773,8 @@ insert into skill_gate_item values ('sprout', 'pomegranate', 'sprout', 'pomegran
 insert into skill_gate_item values ('sprout', 'cedar', 'sprout', 'cedar', 'sprout');
 insert into skill_gate_item values ('sprout', 'olive', 'sprout', 'olive', 'sprout');
 insert into skill_gate_item values ('sprout', 'willow', 'sprout', 'willow', 'sprout');
-insert into skill_gate_item values ('tarnished_bauble', 'minor', 'bauble', 'minor', 'bauble');
 insert into skill_gate_item values ('fragment', 'old pot', 'relic', 'old pot', 'fragment');
+insert into skill_gate_item values ('tarnished_bauble', 'minor', 'bauble', 'minor', 'bauble');
 insert into skill_gate_item values ('fragment', 'bone comb', 'relic', 'bone comb', 'fragment');
 insert into skill_gate_item values ('fragment', 'old whetstone', 'relic', 'old whetstone', 'fragment');
 insert into skill_gate_item values ('fragment', 'seed jar', 'relic', 'seed jar', 'fragment');

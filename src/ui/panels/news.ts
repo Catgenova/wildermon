@@ -158,7 +158,8 @@ import { ORDER_LIFE } from '../../game/orders';
 import { POST_LIFE_MIN } from '../../game/posts';
 import { ACTION_BY_ID, deedAcrossAt, DROP_RAISE, PACKED_FIRST, SPADEFUL, GLAZE_ASH, GRASS_PER_CUT, GRASS_PLANT, KIT_MEND, MOSS_PER_CUT, MOSS_PLANT, WATER_MOTE_USES, WEAR_PER_GO } from '../../game/actions';
 import { CIRCLET_SHARE, CIRCLET_STONES, GEMS } from '../../game/gems';
-import { CRAFT_REACH, KNAPPED, knapRecipeId, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT } from '../../game/recipes';
+import { CRAFT_REACH, KNAPPED, knapRecipeId, lockedRecipes, ranOutSaid, RECIPE_BY_ID, RECIPES, recipeTitle, TRADE_BOOK_AT, type Recipe } from '../../game/recipes';
+import { FIRST_FORMULA, FIRST_RELIC } from '../../game/craftgates';
 import { BOOKS, bookDrops, RECIPE_DROP_ODDS, RECIPE_DROPPERS } from '../../game/recipebook';
 import { BOARD_TOP, RECORD_STATS } from '../../game/boards';
 import { BANNER_MS, LEAVING_MS } from '../deedbanner';
@@ -437,10 +438,21 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 /** Its card while a hod carrier's gates read its level in the gate's skill, carpentry 1 (663 to 665): any other worker's gate card. */
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
+/** Restoration's first relic and enchanting's first Formula, opened at a new body's level (698). */
+const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll`)!;
 /** Stonecutting's, milling's and glassblowing's first making, opened at a new body's level (697). */
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Restoration and enchanting: nothing open at a new body's level, and nothing else trained them.
+  {
+    n: 698,
+    day: '2026-11-20',
+    lines: () => [
+      `Fixed: restoring the ${FIRST_RELIC} at restoration ${gateOf('relic', FIRST_RELIC)?.level}: a new body's level. Restoring is all that trains restoration, and nothing was open at it.`,
+      `Fixed: ${recipeTitle(firstScroll())} written at enchanting ${gateOf('recipe', firstScroll().id)?.level}: a new body's level. A scroll is all that trains enchanting, and no Formula was open at it.`,
+    ],
+  },
   // Stone brick, flour and glass: their skills made nothing at a new body's level.
   {
     n: 697,

@@ -849,10 +849,14 @@ smelting level, tin 10 … seryll 90); their moulds are formed and poured in bla
 **Enchanting**. Gated: 43 Formulas 20–50.
 
 1. No new gate: a written scroll is used by anybody.
+2. Brought down (the sweep after the stone brick report): Lantern's Grace, the one Formula on a light, at 1 (was 20).
+   A scroll, written or used, is all that trains enchanting, and every Formula was 20 or more: enchanting 1 could do
+   nothing (`FIRST_FORMULA`).
 
-**Restoration**. Gated: relics 10–70 (14), baubles 10/40/70.
+**Restoration**. Gated: relics 1–70 (14), baubles 10/40/70.
 
-1. No new gate.
+1. Brought down (the sweep after the stone brick report): the old pot at 1 (was 10). Restoring is all that trains
+   restoration: at 1 nothing could be restored (`FIRST_RELIC`).
 
 **Repair**. Gated: kit and sealant (perk recipes) 20.
 

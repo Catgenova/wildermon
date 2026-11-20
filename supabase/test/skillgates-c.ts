@@ -242,8 +242,8 @@ const said = (k: string): string => isle.get(k) ?? '';
       && gateOf('recipe', 'make_leeching_scroll')?.level === 50);
   check('cooking by difficulty: baked potato 1, bread 5, cheese 10, apple pie 20, cottage pie 30',
     ['bake_potato:1', 'bake_bread:5', 'make_cheese:10', 'make_apple_pie:20', 'make_cottage_pie:30'].every((s) => { const [id, lv] = s.split(':'); return gateOf('recipe', id)?.level === Number(lv); }));
-  check('relics and baubles by their restoring difficulty: old pot 10, old lamp 40, ancient helm 70; minor 10, major 40, ancient 70',
-    gateOf('relic', 'old pot')?.level === 10 && gateOf('relic', 'old lamp')?.level === 40 && gateOf('relic', 'ancient helm')?.level === 70
+  check('relics and baubles by their restoring difficulty: old pot 1 (restoration\'s first step, firststeps.ts), old lamp 40, ancient helm 70; minor 10, major 40, ancient 70',
+    gateOf('relic', 'old pot')?.level === 1 && gateOf('relic', 'old lamp')?.level === 40 && gateOf('relic', 'ancient helm')?.level === 70
       && gateOf('bauble', 'minor')?.level === 10 && gateOf('bauble', 'major')?.level === 40 && gateOf('bauble', 'ancient')?.level === 70);
   check('stone brick building at masonry 10, as decided; clay bricks 10 and sandstone 30 kept',
     gateOf('material', 'stone_brick')?.level === 10 && gateOf('material', 'clay_bricks')?.level === 10 && gateOf('material', 'sandstone')?.level === 30);

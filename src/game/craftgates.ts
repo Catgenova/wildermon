@@ -73,6 +73,12 @@ export const FORMULA_GATE: Readonly<Record<EnchantOn, GateLevel>> = {
 };
 /** A scroll written with two elements. */
 export const FORMULA_TWO_ELEMENTS: GateLevel = 50;
+/**
+ * Enchanting's first step at 1: a scroll is the only thing that trains it (written, or used), and every Formula was 20
+ * or more, so enchanting 1 could do nothing ever. The one Formula on a light, Lantern's Grace, opens at 1.
+ */
+export const FIRST_FORMULA = 'lanterns_grace';
+const FIRST_FORMULA_SCROLL = `${FIRST_FORMULA}_scroll`;
 
 /**
  * A recipe's level: obsidian's for anything made with it (`OBSIDIAN_LEVEL`), named (`CRAFT_GATE_SAID`), a Formula's
@@ -80,6 +86,7 @@ export const FORMULA_TWO_ELEMENTS: GateLevel = 50;
  */
 export const recipeLevel = (r: Recipe): GateLevel => {
   if (ofObsidian(r.inputs.map((i) => i.item))) return OBSIDIAN_LEVEL;
+  if (r.result === FIRST_FORMULA_SCROLL) return 1;
   const said = CRAFT_GATE_SAID[r.result];
   if (said && said.skill === r.skill) return said.level;
   const scroll = scrollOf(r.result);
@@ -204,6 +211,13 @@ const wallIn = (skill: string, type: (typeof WALL_TYPES)[number]): boolean => sk
 const relicId = (r: RelicDef): string => r.name.toLowerCase();
 
 /**
+ * Restoration's first step at 1: restoring is all that trains it, and the old pot, the plainest relic, was 10 by its
+ * difficulty, so restoration 1 restored nothing ever. Every other relic and bauble keeps its difficulty's level.
+ */
+export const FIRST_RELIC = 'old pot';
+const relicLevel = (r: RelicDef): GateLevel => (relicId(r) === FIRST_RELIC ? 1 : craftLevel(r.difficulty));
+
+/**
  * A recipe's gate name: its title (`recipeTitle`), unless another recipe or gate in its skill has that name at another
  * level (five dye boils, three yarns, a smoked fish and the fish): then its label where that is its own ("Smoke the
  * trout"), else its title and first input ("Yarn (wool)").
@@ -226,7 +240,7 @@ const recipeRows = (others: readonly SkillGate[]): SkillGate[] => {
 };
 
 const OTHER_ROWS: SkillGate[] = [
-  ...RELICS.map((r): SkillGate => ({ kind: 'relic', id: relicId(r), name: capital(r.name), skill: 'restoration', level: craftLevel(r.difficulty) })),
+  ...RELICS.map((r): SkillGate => ({ kind: 'relic', id: relicId(r), name: capital(r.name), skill: 'restoration', level: relicLevel(r) })),
   ...BAUBLE_TIERS.map((t): SkillGate => ({ kind: 'bauble', id: t.id, name: `${t.name} bauble`, skill: 'restoration', level: craftLevel(t.difficulty) })),
   ...[...MATERIALS, GLASS_ROOF, GARDEN_BED].map((m): SkillGate => {
     // Obsidian glass and anything else built of obsidian: obsidian's level.
