@@ -260,7 +260,8 @@ import { LETTER_MAX } from '../../net/island';
 import { KEYS as NUMBER_KEYS } from './tile';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import { NEED_KINDS, NEED_LABEL } from './care';
-import { ORDER_HINTS } from './deed';
+import { ORDER_HINTS, STOCK_SHOWN } from './deed';
+import { IDLE_TAG } from '../../game/owner';
 import { ORDER_STANCES, VISIT_KEEP_DAYS } from '../../game/visitors';
 import { STANCE_NAMES, STOKE_SAYS, STOKE_SMELT_SAYS, STOKE_SMELTS_AT } from '../../game/creatures';
 import {
@@ -3661,8 +3662,9 @@ export function helpText(): string {
       <li>Right-click any tile of your settlement: <b>settlement menu</b>: its wildermon, their <b>orders</b>, <b>upgrade</b>, rename, disband.</li>
       <li>Orders (settlement menu, or Settlement window, <b>Workers</b> tab): every settlement worker on it, the founder's and the citizens', and every one assigned after.
       ${ORDER_STANCES.map((st) => `<b>${STANCE_NAMES[st]}</b>: ${ORDER_HINTS[st]}`).join(' ')} Guards and hunters fight at their trade whatever the orders.</li>
-      <li>Settlement window, <b>Workers</b> tab: each worker's upkeep (fed, time to unfed), each task's workers against ${SPECIALTY_AT} for a specialty, with your
-      wildermon that would add to it (<b>Assign</b>), guards and orders.</li>
+      <li>Settlement window, <b>Workers</b> tab: each worker's upkeep (fed, time to unfed); <b>Meals in store</b>: items any of your workers eats in the settlement's stores,
+      and days of them at one a worker a day; <b>Stock</b>: every store on it summed by item, the ${STOCK_SHOWN} most; each task's workers against ${SPECIALTY_AT} for a specialty, with your
+      wildermon that would add to it (<b>Assign</b>), guards and orders. A worker of yours with nothing to do: <b>${IDLE_TAG.trim()}</b> after its name over its head.</li>
       <li>Settlement window, <b>Visitors</b> tab: everybody not a citizen who came onto it, by the hour: first and last hour and hours seen, kept ${VISIT_KEEP_DAYS} days.
       Founder and ranks with <b>${POWER.visitors.label}</b>.</li>
       <li>Each upgrade: border +${DEED_RADIUS_PER_LEVEL} tiles; +${deedWorkersAt(2) - deedWorkersAt(1)} working wildermon. Requirements: ${UPGRADES_SAID}. In order; each level asks only

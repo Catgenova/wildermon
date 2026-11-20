@@ -1374,6 +1374,19 @@ export function lowestSlot(traits: string[], rand: () => number, skip = 0): { sl
   return { slot: pick(lowest, rand), from: TIERS[low] };
 }
 
+/**
+ * What a lamp would take, before it is used: an empty slot and the rarity it fills at, or the lowest-rarity traits
+ * one of which it rerolls (random among ties), with the chance of a rarity up. The lamp's menu label says it.
+ */
+export function lampPreview(traits: string[]): string {
+  const up = (from: TraitTier): string => (nextTier(from) ? `, 1 in ${LAMP_TIER_ODDS} ${nextTier(from)}` : '');
+  if (traits.length < TRAIT_SLOTS) return `fills an empty slot: ${TIERS[0]}${up(TIERS[0])}`;
+  const rank = (id: string): number => TIERS.indexOf(traitTier(id));
+  const low = Math.min(...traits.map(rank));
+  const lowest = traits.filter((id) => rank(id) === low);
+  return `rerolls ${lowest.map(traitName).join(' or ')} (${TIERS[low]})${up(TIERS[low])}`;
+}
+
 export function rekindle(traits: string[], rand: () => number): { traits: string[]; did: Rekindled } | null {
   const { slot, from } = lowestSlot(traits, rand);
   const above = rand() < 1 / LAMP_TIER_ODDS ? nextTier(from) : null;

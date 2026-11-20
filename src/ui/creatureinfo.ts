@@ -216,7 +216,7 @@ export function creatureLines(g: Game, c: Creature): string[] {
  */
 export function creatureSkills(g: Game, c: Creature): string[] {
   const def = SPECIES[c.species] ?? SPECIES.rabba;
-  const lines: string[] = [`${c.mode === 'wild' ? `Wild ${def.name}` : c.name}: skills`];
+  const lines: string[] = [`${c.mode === 'wild' ? `Wild ${kindName(c)}` : c.name}: skills`];
   const known = Object.entries(c.skills).sort((a, b) => b[1] - a[1]);
   const trade = workSkill(def);
   if (!known.length) {

@@ -17,6 +17,7 @@ import {
   hybridStage,
   type Creature,
   type SpeciesDef,
+  kindName,
 } from './creatures';
 import { CROSS_CARE, CROSS_CHANCE, crossOf } from './hybridlist';
 import { kindGateRefusal } from './skillgates';
@@ -408,14 +409,13 @@ export const HUSBANDRY_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       const c = creatureOf(g, t);
       if (!c) return;
-      const def = SPECIES[c.species];
       // Blood does not read itself. Without the skill you can see that there is
       // something in it; with the skill you can see what.
       const seen = c.traits.filter((id) => readsTrait(g, id));
       const hidden = c.traits.length - seen.length;
       const carrying = c.due > 0 ? ` Pregnant, due in ${clockLeft(c.due - g.time)}.` : '';
       g.logMsg(
-        `${c.name}, ${SEX_NAMES[c.sex]} ${def.name.toLowerCase()}, ${ageOf(c, g.time)}, ${careWord(c.care)}. Traits: ${seen.length ? traitList(seen) : 'none readable'}${hidden ? `, ${hidden} unreadable` : ''}.${carrying}`,
+        `${c.name}, ${SEX_NAMES[c.sex]} ${kindName(c).toLowerCase()}, ${ageOf(c, g.time)}, ${careWord(c.care)}. Traits: ${seen.length ? traitList(seen) : 'none readable'}${hidden ? `, ${hidden} unreadable` : ''}.${carrying}`,
         'event',
       );
     },

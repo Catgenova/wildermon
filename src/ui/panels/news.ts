@@ -347,6 +347,8 @@ import {
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
 import { ASHORE_KINDS, GUIDE_START, MET_MARK, PATH_CRATE, PATH_REWARD_QL, PATH_REWARDS, phaseName, SEEK_REACH, UNMET_MARK, PATH_CRATES, PATH_DETOURS, PATH_KINDS, PATH_SITE, PATH_SKILLS, PATH_STEPS, PATH_SURE, WILD_NEAR } from '../../game/path';
 import { SEAM_FROM, VEIN_LOOKS, type VeinLook } from '../../render/seams/runecut';
+import { STOCK_SHOWN } from './deed';
+import { IDLE_TAG } from '../../game/owner';
 
 /** Where a piece fixed in this way goes, as the help says it (`garden.ts`). */
 const GARDEN_MOUNT = (m: Mount): string => MOUNT_SAID[m];
@@ -434,6 +436,18 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
 export const NEWS: News[] = [
+  // Stage names, the idle tag, the lamp's preview, the settlement's stock and meals, walking in another way (batch C).
+  {
+    n: 694,
+    day: '2026-11-20',
+    lines: () => [
+      'Fixed: an evolved wildermon named as its first stage on its skills card, in a wildermon crate, a trap, its panniers\' refusal, a brushing\'s line and "moved out of reach".',
+      `New: a worker of yours with nothing to do: "${IDLE_TAG.trim()}" after its name over its head.`,
+      'New: the ancient lamp\'s menu entry says what it would reroll: the lowest-rarity traits (or the empty slot) and the chance of a rarity up.',
+      `New: Settlement window, Workers tab: Stock, every store on it summed by item (the ${STOCK_SHOWN} most); Meals in store, items your workers eat and days of them at one a worker a day.`,
+      'Changed: walked to a job and arrived out of reach: walked again by another way in first, not the one that fell short.',
+    ],
+  },
   // Improve all's Will use and Used, its stop said (mend.ts, mending.ts `willUse`, `usedIn`, `private.improve_all_next`); scale armour improved with scale; bone meal.
   {
     n: 693,

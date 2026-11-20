@@ -5170,8 +5170,9 @@ export class Game {
       if (foe ? !inFightReach(this, def.id, foe) : !this.inRange(def, target)) {
         // Arrived out of its reach -- a creature that moved off, a way that ended short: walked again, `WALK_TRIES` times.
         const tries = a.tries ?? 0;
-        if (!foe && tries < WALK_TRIES && !cellarGate(this, def.id, target) && this.walkToward(def, target) && this.player.path) {
-          this.action = { ...a, tries: tries + 1 };
+        const tried = new Set(a.tried ?? []);
+        if (!foe && tries < WALK_TRIES && !cellarGate(this, def.id, target) && this.walkToward(def, target, tried) && this.player.path) {
+          this.action = { ...a, tries: tries + 1, tried: this.walkedTo === null ? [...tried] : [...tried, this.walkedTo] };
           this.events.emit('action');
           return;
         }
@@ -5819,6 +5820,7 @@ export class Game {
           this.logMsg(this.noWayTo(def, target), 'error');
           return;
         }
+        if (this.walkedTo !== null) this.action.tried = [this.walkedTo];
         this.events.emit('action');
         return;
       }
@@ -6367,7 +6369,14 @@ export class Game {
     return def.id === 'place_furniture' || FARM_ACTION_BY_ID.has(def.id) ? target.level : undefined;
   }
 
-  private walkToward(def: ActionDef, target: Target): boolean {
+  /**
+   * The tile the last walk to a job set out for (`walkToward`), by `tileKey`: kept on the job so that a walk again
+   * after arriving out of reach tries another way in first (`ActiveAction.tried`).
+   */
+  private walkedTo: number | null = null;
+
+  private walkToward(def: ActionDef, target: Target, avoid?: ReadonlySet<number>): boolean {
+    this.walkedTo = null;
     if (target.kind === 'item' && !this.intoStore(def, target)) return true;
     const tile = target.kind === 'item' ? this.intoStore(def, target) : this.targetTile(target);
     if (!tile) return false;
@@ -6393,6 +6402,11 @@ export class Game {
       if (within.length) candidates = within;
     }
     candidates.sort((a, b) => this.distanceToPlayer(a.x, a.y) - this.distanceToPlayer(b.x, b.y));
+    // Walked again after one that fell short: the ways in not yet tried first, then the rest.
+    if (avoid?.size) {
+      const fresh = candidates.filter((c) => !avoid.has(tileKey(c.x, c.y)));
+      candidates = [...fresh, ...candidates.filter((c) => avoid.has(tileKey(c.x, c.y)))];
+    }
     const { rule, levels, below, lift } = this.movement();
     // To the storey the thing is on: down to a crate in the cellar, up to a tree out of one.
     const at = below || this.player.level < 0 ? targetFloor(this, def.id, target) : null;
@@ -6403,6 +6417,7 @@ export class Game {
       if (on !== undefined && !this.standable(c.x, c.y, on)) continue;
       const aim = on ?? (at === CELLAR_LEVEL ? CELLAR_LEVEL : at === 0 && this.player.level < 0 ? 0 : undefined);
       if (!this.player.walkTo(this.world, c.x, c.y, rule, levels, below, aim, lift)) continue;
+      this.walkedTo = tileKey(c.x, c.y);
       // Already on the tile, but in the corner of it furthest from the store:
       // to the middle of it, which every tile beside a store is near enough from.
       if (target.kind === 'item' && !this.player.path && !this.inRange(def, target)) {

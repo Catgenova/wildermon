@@ -14,6 +14,7 @@ import { CREATURE_REACH, Game, WALK_TRIES } from '../../src/game/game';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { TileType } from '../../src/world/tiles';
 import { check, finish } from './harness';
+import { keyX, keyY } from '../../src/game/tileindex';
 
 const g = Game.create(4242, 64);
 const px = g.spawn.x, py = g.spawn.y;
@@ -57,4 +58,19 @@ c.x = px + 3.5; c.y = py + 3.5;
 for (let i = 0; i < 600 && !asked.length; i++) g.update(0.05);
 check(`moved off on the way: walked to again (${WALK_TRIES} times at most) and asked, never "too far"`,
   asked.length === 1 && !said.some((s) => /too far/i.test(s)), `asked ${asked.length}; said ${said.filter((s) => /far/i.test(s)).join(' / ') || 'nothing'}`);
+// Walked again after arriving out of reach: the ways in not yet tried first (`ActiveAction.tried`).
+{
+  const forage = ACTION_BY_ID.get('forage');
+  if (!forage) throw new Error('no forage');
+  const ft = { kind: 'tile', x: px, y: py } as Target;
+  g.putBody(px - 5.5, py + 0.5, 0);
+  const w = g as unknown as { walkToward(def: unknown, t: Target, avoid?: ReadonlySet<number>): boolean; walkedTo: number | null };
+  w.walkToward(forage, ft);
+  const first = w.walkedTo;
+  w.walkToward(forage, ft, new Set(first === null ? [] : [first]));
+  const second = w.walkedTo;
+  const ok = (k: number | null): boolean => k !== null && Math.max(Math.abs(keyX(k) - px), Math.abs(keyY(k) - py)) <= 1;
+  check('walked again: another way in than the one tried, still beside the tile', first !== null && second !== null && first !== second && ok(first) && ok(second),
+    `${first === null ? '-' : `${keyX(first)},${keyY(first)}`} then ${second === null ? '-' : `${keyX(second)},${keyY(second)}`}`);
+}
 finish('Walked to a creature, then asked');

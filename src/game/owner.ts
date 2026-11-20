@@ -16,6 +16,9 @@ export function creatureLabel(c: Pick<Creature, 'name' | 'mode' | 'mine' | 'keep
   return owner ? `${c.name} · ${owner}` : c.name;
 }
 
+/** After a worker of yours's name over its head while it has nothing to do (`Creature.idle`). */
+export const IDLE_TAG = ' · idle';
+
 /** "Owner: catgenova", for a card, a menu or a hover; null for a wild one or an owner not known. */
 export function ownerLine(c: Pick<Creature, 'mode' | 'mine' | 'keeperName'>, me: string): string | null {
   const owner = ownerOf(c, me);

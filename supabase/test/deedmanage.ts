@@ -43,7 +43,7 @@ import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { lacksSaid, powerBit, RANK_POWERS } from '../../src/game/ranks';
 import { VISIT_KEEP_DAYS, VISIT_LIST_MAX, type DeedWatch } from '../../src/game/visitors';
 import { DEED_TABS } from '../../src/ui/panels/deed';
-import { SPECIALTY_AT, UNFED_PACE, UPKEEP_FOR } from '../../src/game/creatures';
+import { mealDays, mealsInStock, SPECIALTY_AT, SPECIES, UNFED_PACE, UPKEEP_FOR } from '../../src/game/creatures';
 import { percent, waitWords } from '../../src/game/words';
 import type { Social } from '../../src/net/island';
 import { psql, ok, bad, check } from './harness';
@@ -136,6 +136,20 @@ try {
   check('a rank without Visitor log is told why, in the browser\'s words', !cit.visitors && cit.visitorsWhy === lacksSaid(deedName, citRank, 'visitors'),
     `${cit.visitorsWhy}`);
   check('and may not set the orders', cit.order === false && boss.order === true, `${cit.order} ${boss.order}`);
+  // Its stock: every store on it summed by item.
+  psql(`
+  insert into crate (world_id, id, kind, x, y, sx, sy, deed)
+    select '${W}', (select coalesce(max(id), 0) + 1 from crate where world_id = '${W}'), kind, ${DX + 1}, ${DY + 1}, 0, 0, false from crate_def limit 1;
+  insert into item (world_id, holder, crate, def, ql, count)
+    values ('${W}', 'crate', (select max(id) from crate where world_id = '${W}'), 'log', 20, 7),
+           ('${W}', 'crate', (select max(id) from crate where world_id = '${W}'), 'potato', 20, 5);`);
+  const stocked = JSON.parse(as(BOSS, `select rpc_deed_watch('${W}', '${BOSS}')::text;`)) as DeedWatch;
+  check('the watch says its stock, every store on it summed by item', stocked.stock?.log === 7 && stocked.stock?.potato === 5, JSON.stringify(stocked.stock));
+  {
+    const meals = mealsInStock(stocked.stock ?? {}, [{ species: 'bevere' }, { species: 'bevere' }]);
+    check(`meals in store: what the workers eat, ${meals}; days at one a worker a day`, meals === (SPECIES.bevere.diet.includes('potato') ? 5 : 0)
+      && mealDays(meals, 2) === Math.floor(meals / 2) && mealDays(meals, 0) === 0, `${meals}`);
+  }
   const stranger = JSON.parse(as(STRANGER, `select rpc_deed_watch('${W}', '${BOSS}')::text;`)) as { why?: string };
   check('a stranger reads nothing of it', stranger.why === `You are not a citizen of ${deedName}.`, JSON.stringify(stranger));
 

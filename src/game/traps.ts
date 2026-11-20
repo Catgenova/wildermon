@@ -3,7 +3,7 @@ import { enchantTail, swingEnchant, type Enchant } from './enchant';
 import type { ActionDef, Target } from './actions';
 import { SUBTILES } from './crates';
 import type { Game } from './game';
-import { isBaitFor, SPECIES, tameLearn, tameNeeds, tameRefusal, type Creature } from './creatures';
+import { isBaitFor, kindName, SPECIES, tameLearn, tameNeeds, tameRefusal, type Creature } from './creatures';
 import { emptyCrate, shutIn } from './creaturecrate';
 import { tameRoomRefusal } from './creatureActions';
 import { itemDef, itemName, markOf, type Item, type Mark } from './items';
@@ -129,7 +129,7 @@ function trapStateOf(t: PlacedTrap, g: Game): string {
   }
   if (t.caught !== null) {
     const c = g.creatures.get(t.caught);
-    if (c) return `${SPECIES[c.species]?.name ?? 'Something'} in it`;
+    if (c) return `${kindName(c)} in it`;
   }
   const left = trapLeft(t, trapKeep(g, t.kind));
   const mins = Math.ceil(left / 60);
@@ -247,7 +247,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
     labelFor: (t, g) => {
       const trap = trapOf(g, t);
       const c = trap?.caught !== null && trap ? g.creatures.get(trap.caught as number) : undefined;
-      return c ? `Take the ${SPECIES[c.species]?.name.toLowerCase() ?? 'catch'} out` : 'Take what is in it';
+      return c ? `Take the ${kindName(c).toLowerCase()} out` : 'Take what is in it';
     },
     check: (t, g) => {
       const trap = trapOf(g, t);

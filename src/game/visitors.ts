@@ -56,6 +56,8 @@ export interface DeedWatch {
   stances: Partial<Record<string, number>>;
   /** How many of them are at the guard trade. */
   guards: number;
+  /** Everything in its stores, summed by item (`deed_store_stock`). */
+  stock?: Record<string, number>;
   visitors?: Visitor[];
   /** How many visitors it had in all, of which `VISIT_LIST_MAX` at most are listed. */
   total?: number;

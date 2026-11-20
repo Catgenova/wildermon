@@ -19,7 +19,7 @@
  */
 import type { ActionDef, Target } from './actions';
 import { STORE_REACH, crateKindOfItem } from './crates';
-import { bloodMul, SPECIES, stageOf, type Creature } from './creatures';
+import { bloodMul, kindName, SPECIES, stageOf, type Creature } from './creatures';
 import type { Game } from './game';
 import { itemDef, itemName, type Item } from './items';
 
@@ -56,7 +56,7 @@ export const pannierExitRefusal = (c: Creature): string | null => (pannierUnits(
  */
 export function pannierRefusal(g: Game, c: Creature | undefined): string | null {
   if (!c) return 'Gone.';
-  if (!hasPanniers(c.species)) return `${SPECIES[c.species]?.name ?? c.name}: no panniers.`;
+  if (!hasPanniers(c.species)) return `${kindName(c)}: no panniers.`;
   if (c.mode === 'stored') return `${c.name} is in a wildermon crate: open it first.`;
   if (c.mode === 'wild' || (c.mine === false && !c.panniersOpen)) return `Not yours: ${pannierName(c)}.`;
   if (Math.hypot(c.x - g.player.x, c.y - g.player.y) > STORE_REACH) return `Stand next to ${c.name}.`;

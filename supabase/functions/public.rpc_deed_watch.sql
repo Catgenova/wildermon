@@ -24,6 +24,9 @@ begin
       'stances', coalesce((select jsonb_object_agg(s.stance, s.n)
                              from (select w.stance, count(*)::int as n from private.deed_workers(p_world, v_d.founded_by) w
                                     group by w.stance) s), '{}'::jsonb),
+      'stock', coalesce((select jsonb_object_agg(s.def, s.n)
+                           from (select k.def, sum(k.n)::int as n from deed_store_stock(p_world, v_d.founded_by) k
+                                  group by k.def) s), '{}'::jsonb),
       'guards', (select count(*)::int from private.deed_workers(p_world, v_d.founded_by) w
                    join species_def sd on sd.id = w.species where coalesce(w.job, sd.gathers) = 'guard'))
     into v_out;

@@ -253,7 +253,7 @@ export class WildermonPanel {
     const traits = c.traits.map((id) => traitOf(id)?.name ?? '').join(' ');
     const age = ageOf(c, this.game.time);
     const job = def.gathers ? GATHER_VERB[def.gathers] : '';
-    return `${c.name} ${def.name} ${c.mode} ${placeOf(c)} ${c.stance} ${job} ${SEX_NAMES[c.sex]} ${age} ${traits}`.toLowerCase().includes(this.query);
+    return `${c.name} ${def.name} ${kindName(c)} ${c.mode} ${placeOf(c)} ${c.stance} ${job} ${SEX_NAMES[c.sex]} ${age} ${traits}`.toLowerCase().includes(this.query);
   }
 
   /** The best tier any of its traits reached, for ordering by breeding. */

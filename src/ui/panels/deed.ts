@@ -2,7 +2,7 @@ import { DEED_RADIUS_PER_LEVEL, MAX_DEED_LEVEL, deedWorkersAt, type Deed, type G
 import { DEED_ACTION_BY_ID, standingWord, upgradeProgress, upgradeReason } from '../../game/deed';
 import { furnitureDef, furnitureName } from '../../game/furniture';
 import {
-  BLOW_MEMORY, GATHER_VERB, SPECIALTY_AT, SPECIALTY_BONUS, SPECIES, STANCE_NAMES, UNFED_PACE, UPKEEP_FOR, unfedNow,
+  BLOW_MEMORY, GATHER_VERB, SPECIALTY_AT, SPECIALTY_BONUS, SPECIES, STANCE_NAMES, UNFED_PACE, UPKEEP_FOR, unfedNow, mealDays, mealsInStock,
   type Creature, type GatherKind,
 } from '../../game/creatures';
 import { capital, percent, timeWords, waitWords } from '../../game/words';
@@ -70,6 +70,9 @@ export interface DeedRoll {
  * guards and orders; who came onto it; its notices; and the work it wants
  * with its ledger.
  */
+/** Kinds of item the Workers tab's Stock lists, the most first. */
+export const STOCK_SHOWN = 12;
+
 export type DeedTab = 'overview' | 'ranks' | 'workers' | 'visitors' | 'notices' | 'work';
 export const DEED_TABS: ReadonlyArray<[DeedTab, string, string]> = [
   ['overview', 'Settlement', 'Level, border, upgrade, structures, store log.'],
@@ -948,7 +951,8 @@ export class DeedPanel {
       others.map((c) => [c.id, c.name, c.mode, this.assignWhy(c, null)])];
     if (this.same(key)) return;
     this.body.replaceChildren();
-    this.drawUpkeep(mine);
+    this.drawUpkeep(mine, w?.stock ?? null);
+    this.drawStock(w?.stock ?? null);
     this.drawSpecialties(mine, others);
     this.drawGuards(mine, others, w);
   }
@@ -1003,11 +1007,21 @@ export class DeedPanel {
   }
 
   /** What each worker of yours is owed: fed, and how long at work until it is unfed (`UPKEEP_FOR`), soonest first. */
-  private drawUpkeep(mine: Creature[]): void {
+  private drawUpkeep(mine: Creature[], stock: Readonly<Record<string, number>> | null): void {
     const unfed = mine.filter((c) => unfedNow(c)).length;
     this.body.append(this.head(`Upkeep (${unfed} unfed of ${mine.length})`));
     this.body.append(this.note(
       `Meals: settlement stores, when hungry. Unfed after ${timeWords(UPKEEP_FOR)} at work without one: task pace ${percent(UNFED_PACE)} until fed.`));
+    // Days of meals in store: what any of them eats, one a worker a day.
+    if (stock && mine.length) {
+      const meals = mealsInStock(stock, mine);
+      const days = mealDays(meals, mine.length);
+      const el = this.row('Meals in store', `${meals} · ${days} ${days === 1 ? 'day' : 'days'} at ${mine.length} ${mine.length === 1 ? 'worker' : 'workers'}`,
+        `Items any of your workers eats, in the settlement's stores; one a worker every ${timeWords(UPKEEP_FOR)}.`);
+      el.classList.add(days < 1 ? 'deed-unmet' : 'deed-upkeep');
+      meaning(el, days < 1 ? 'dim' : null);
+      this.body.append(el);
+    }
     if (!mine.length) {
       this.body.append(this.note('No workers. Assign wildermon below.'));
       return;
@@ -1033,6 +1047,20 @@ export class DeedPanel {
       row.append(b);
       this.body.append(row);
     }
+  }
+
+  /** Everything in the settlement's stores, summed by item, the most first (`DeedWatch.stock`). */
+  private drawStock(stock: Readonly<Record<string, number>> | null): void {
+    if (!stock) return;
+    const rows = Object.entries(stock).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || itemDef(a[0]).name.localeCompare(itemDef(b[0]).name));
+    const all = rows.reduce((n, [, k]) => n + k, 0);
+    this.body.append(this.head(`Stock (${rows.length} kinds, ${all} items)`));
+    if (!rows.length) {
+      this.body.append(this.note('Settlement stores empty.'));
+      return;
+    }
+    for (const [id, n] of rows.slice(0, STOCK_SHOWN)) this.body.append(this.row(itemDef(id).name, String(n), `${itemDef(id).name}: ${n} in the settlement's stores.`));
+    if (rows.length > STOCK_SHOWN) this.body.append(this.note(`+${rows.length - STOCK_SHOWN} more kinds: Stores window.`));
   }
 
   /**

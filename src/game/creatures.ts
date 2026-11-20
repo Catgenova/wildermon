@@ -1094,6 +1094,13 @@ export const UPKEEP_FOR = DAY_SECONDS;
 export const UNFED_PACE = 0.5;
 /** Whether it has gone `UPKEEP_FOR` at work without a meal. */
 export const unfedNow = (c: Pick<Creature, 'unfed'>): boolean => (c.unfed ?? 0) >= UPKEEP_FOR;
+/** Meals a settlement's stores hold for its workers: every item any of them eats, counted once (`DeedWatch.stock`). */
+export function mealsInStock(stock: Readonly<Record<string, number>>, workers: ReadonlyArray<Pick<Creature, 'species'>>): number {
+  const eats = new Set(workers.flatMap((c) => SPECIES[c.species]?.diet ?? []));
+  return [...eats].reduce((n, id) => n + (stock[id] ?? 0), 0);
+}
+/** Days of meals in store: one a worker every `UPKEEP_FOR`. */
+export const mealDays = (meals: number, workers: number): number => (workers > 0 ? Math.floor(meals / workers) : 0);
 
 /*
  * Specialties. Asked for: "Three or more workers of one trade on a deed unlock a +10% bonus for that trade." With

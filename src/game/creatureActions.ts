@@ -7,7 +7,7 @@ import { perkN } from './creatures';
 import { fedOn, tameLearn, tameNeeds, tameRefusal, BASE_STATS, BRACE_MOST, BRACE_STEP, bracePoints, BRIDLE_PACE, COLLAR_CUT, fitted, mirrored, mirrorNames, combedBorn, FILE_RARITY_ODDS, POT_MOST, POT_STEP, potPoints, potRoom, type BaseStat, kindDescription, kindName, markOn, stageName, sparFloor, sparring, sparSaid, yielded, isShod, shoeable, SHOE_DAYS, SHOES_PER_MOUNT, TACK, AGES, ageDef, ageOf, attackOf, bloodMul, careWord, PLAYER_ATTACKER, coaxBonus, COAX_STEP, creatureLevel, GRAZE_FILL, forgetCoaxing, isBaitFor, maxHealth, raritySays, SEX_NAMES, SPECIES, STANCE_NAMES, COMPANION_LEASH, MOUNT_STOREY_SAID, mountGroundSaid, workRangeOf, type Creature, type SpeciesDef, type Stance, type GatherKind, takeArms } from './creatures';
 import { studBook } from './husbandry';
 import { article, capital, percent } from './words';
-import { bestTier, LAMP_TIER_ODDS, mirrorTrait, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
+import { bestTier, lampPreview, LAMP_TIER_ODDS, mirrorTrait, nextTier, pct, rekindle, traitList, traitName, traitOf, traitSays, traitTier, type Rekindled } from './traits';
 import type { Game } from './game';
 import { BUCKET_LITRES, furnitureCentre, furnitureName, tracesStoreyRefusal, vehicleOf } from './furniture';
 import { MILK_PART, MILK_READY, milkedSays, milkLitres, toppedQl, WHEY_BUCKET, WHEY_FEED, wheyFedSays } from './dairy';
@@ -328,6 +328,13 @@ function artifactAction(id: string, label: string, verb: string): ActionDef {
       return artifactOn(c) && g.inventory.has(ARTIFACT_FOR[id]);
     },
     check: (t, g) => artifactRefusal(g, creatureOf(g, t), id),
+    // The lamp says what it would reroll before it is lit (`lampPreview`).
+    ...(id === 'use_ancient_lamp' ? {
+      labelFor: (t: Target, g: Game): string => {
+        const c = creatureOf(g, t);
+        return c ? `${label}: ${lampPreview(c.traits)}` : label;
+      },
+    } : {}),
     perform: (t, g) => {
       const c = creatureOf(g, t);
       if (artifactRefusal(g, c, id) || !c) return;
@@ -445,9 +452,8 @@ export const CREATURE_ACTIONS: ActionDef[] = [
     perform: (t, g) => {
       const c = creatureOf(g, t);
       if (!c || c.mode !== 'wild') return;
-      const def = SPECIES[c.species];
       if (!nearPlayer(g, c)) {
-        g.logMsg(`${def.name} moved out of reach.`, 'wildermon');
+        g.logMsg(`${kindName(c)} moved out of reach.`, 'wildermon');
         return;
       }
       const food = offering(g, c);

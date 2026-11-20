@@ -41,7 +41,7 @@ export function crateLine(g: Game, crate: { creature?: number }): string {
   const c = crate.creature === undefined ? undefined : g.creatures.get(crate.creature);
   if (crate.creature === undefined) return 'empty';
   if (!c) return 'a wildermon inside';
-  return `${c.name}, ${ageOfWord(c, g.time)}${SPECIES[c.species].name.toLowerCase()}, inside`;
+  return `${c.name}, ${ageOfWord(c, g.time)}${kindName(c).toLowerCase()}, inside`;
 }
 const ageOfWord = (c: Creature, now: number): string => (ageDef(c, now).name === 'grown' ? '' : `${ageDef(c, now).name} `);
 

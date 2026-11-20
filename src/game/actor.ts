@@ -32,6 +32,8 @@ export interface ActiveAction {
   goes?: number;
   /** Walks to it made again after one ended out of its reach (`WALK_TRIES`): a creature moved off, a way that ended short. */
   tries?: number;
+  /** The tiles walked to for it so far, by `tileKey`: a walk again tries the others first (`Game.walkToward`). */
+  tried?: number[];
 }
 
 /** Where somebody's news goes: on screen. */

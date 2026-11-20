@@ -470,7 +470,7 @@ function drawStill(g: CanvasRenderingContext2D, px: number, py: number, zoom: nu
 import { FLOAT_COLOURS, Floaters } from './floaters';
 import { inkOr, WORLD_INK } from './inks';
 import { NameLabels } from './namelabels';
-import { creatureLabel } from '../game/owner';
+import { creatureLabel, IDLE_TAG } from '../game/owner';
 import { badgeIds } from '../game/badges';
 import { drawSpeech } from './bubble';
 import { SKILL_BY_ID } from '../game/skills';
@@ -5937,7 +5937,8 @@ export class Renderer {
     }
     this.names.add({
       // A tamed one's owner after its name, whoever's it is (`creatureLabel`).
-      text: creatureLabel(cr, this.game.player.name),
+      // A worker of yours with nothing to do: "· idle" after its name (`Creature.idle`, its card says why).
+      text: creatureLabel(cr, this.game.player.name) + (cr.mode === 'deed' && cr.mine !== false && cr.idle ? IDLE_TAG : ''),
       ink: hostile ? 'hostile' : cr.mode === 'wild' ? 'wild' : cr.mine === false ? 'theirs' : 'mine',
       x,
       head,
