@@ -845,6 +845,13 @@ const ACROSS_OF: Record<Side, [number, number]> = { s: [1, 0], e: [0, -1], n: [-
 
 /** Specks of grain laid on each tile once you are close enough to see them. */
 const GRAIN_SPECKS = 14;
+/**
+ * A wildermon in its glow form (`Renderer.glowBeasts`): how much of its halo's reach the night is taken off, and how strong
+ * its halo is by day and at the dead of night.
+ */
+const GLOW_HOLE = 0.75;
+const GLOW_DAY = 0.12;
+const GLOW_NIGHT = 0.5;
 /** The share of the screen's size the lights' holes in the night and their casts are worked out at: soft enough not to show it. */
 export const LIGHT_RES = 0.5;
 /** A rectangle: x, y, width, height. */
@@ -1399,6 +1406,12 @@ export class Renderer {
    * painted over it.
    */
   private glows: Array<{ sx: number; sy: number; kind: string; view: PieceView }> = [];
+  /**
+   * The wildermon in their glow form drawn this frame: the middle of each on the screen, how far its light reaches, and
+   * its markings' colour. The night is taken off each as off an altar's stars, and its halo laid over the night
+   * (`drawGlowHalos`).
+   */
+  private glowBeasts: Array<{ sx: number; sy: number; r: number; colour: string }> = [];
   /** The lava drawn this frame, ten numbers a tile (its four corners on screen, then the tile), and how many (`glowLava`). */
   private lavaSeen: number[] = [];
   private lavaN = 0;
@@ -4428,6 +4441,7 @@ export class Renderer {
     this.furnitureHits.length = 0;
     this.hitSeq = 0;
     this.glows.length = 0;
+    this.glowBeasts.length = 0;
     this.swirlsSeen.length = 0;
     // The lava drawn this frame, for its glow over the night (`glowLava`), and whether any can be in view at all.
     this.lavaN = 0;
@@ -7250,8 +7264,14 @@ export class Renderer {
           variant: cr.variant,
           act: actOf(cr, this.game.time),
           tacked: cr.tacked,
+          // In its spirit form: see-through, edged in a pale light, no shadow (`drawSpiritBody`).
+          spirit: cr.formAura === 'spirit',
         };
         const draw = (g: CanvasRenderingContext2D, px: number, py: number): void => drawCreature(g, px, py, zoom, look);
+        // In its glow form: the night taken off it and a halo of its markings' colour laid over it (`drawGlowHalos`).
+        if (cr.formAura === 'glow') {
+          this.glowBeasts.push({ sx: ent.sx + csx, sy: ent.sy + csy - tall * 0.45 * zoom, r: Math.max(16, tall * 0.95) * zoom, colour: look.colors[1] });
+        }
         this.paint(ctx, zoom, hit > 0 || tint ? 'flash' : hovering ? 'hover' : 'none', tint ? tint.share : hit * 0.92, ent.sx + csx, ent.sy + csy, draw,
           tint?.colour,
           beastBox,
@@ -11365,6 +11385,27 @@ export class Renderer {
     ctx.lineWidth = 1;
   }
 
+  /**
+   * The halo round each wildermon in its glow form drawn this frame (`glowBeasts`): a soft disc of its markings' colour,
+   * added to what is under it, `GLOW_DAY` of full by day and `GLOW_NIGHT` at the dead of night.
+   */
+  private drawGlowHalos(ctx: CanvasRenderingContext2D, dark: number): void {
+    const a = GLOW_DAY + (GLOW_NIGHT - GLOW_DAY) * Math.max(0, Math.min(1, dark));
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (const b of this.glowBeasts) {
+      const n = parseInt(b.colour.slice(1), 16);
+      const rgb = `${n >> 16},${(n >> 8) & 255},${n & 255}`;
+      const grad = ctx.createRadialGradient(b.sx, b.sy, 0, b.sx, b.sy, b.r);
+      grad.addColorStop(0, `rgba(${rgb},${a.toFixed(3)})`);
+      grad.addColorStop(0.45, `rgba(${rgb},${(a * 0.45).toFixed(3)})`);
+      grad.addColorStop(1, `rgba(${rgb},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(b.sx - b.r, b.sy - b.r, 2 * b.r, 2 * b.r);
+    }
+    ctx.restore();
+  }
+
   private drawOverlays(ctx: CanvasRenderingContext2D, zoom: number): void {
     const game = this.game;
     const w = game.world;
@@ -11415,7 +11456,7 @@ export class Renderer {
     if (washes.length) {
       // Gathered once at the top of the frame when it is dark enough to want them (`lightsNow`).
       const lights = dark > 0.02 ? this.lightsNow : game.lights();
-      if (!lights.length && !this.glows.length && !this.runeNight.active) {
+      if (!lights.length && !this.glows.length && !this.glowBeasts.length && !this.runeNight.active) {
         for (const wash of washes) {
           ctx.fillStyle = `rgba(${wash.colour}, ${wash.alpha.toFixed(3)})`;
           ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -11464,6 +11505,8 @@ export class Renderer {
         for (const n of this.glows) {
           for (const h of furnitureHoles(n.sx, n.sy, zoom, n.kind, n.view)) softHole(nc, h.x, h.y, h.r, h.a);
         }
+        // And off a wildermon in its glow form, its own light (`glowBeasts`).
+        for (const b of this.glowBeasts) softHole(nc, b.sx, b.sy, b.r * GLOW_HOLE, 1);
         nc.setTransform(1, 0, 0, 1, 0, 0);
         // And off the runestones' runes, in their own shapes, less whatever stands in front of them.
         if (!patch) this.runeNight.cut(nc);
@@ -11485,6 +11528,8 @@ export class Renderer {
         if (this.glassNight.length) this.roofs.drawGlassGlow(ctx, dark);
       }
     }
+    // A wildermon's glow form's halo, over the night, strongest in the dark (`drawGlowHalos`).
+    if (this.glowBeasts.length) this.drawGlowHalos(ctx, dark);
     // The fireflies, which are lights: over the night, not under it.
     if (!this.fast) this.life.glow(ctx);
     // And the mote swirls' glow and glints, the same way (`glowSwirl`).

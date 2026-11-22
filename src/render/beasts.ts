@@ -1193,6 +1193,8 @@ export interface BeastPose {
   rare?: number;
   /** What it is doing this moment, and how far through it (`Anim.act`): drawn afresh every frame while it does it. */
   act?: { kind: BeastAct; t: number };
+  /** Without its shadow and its light (`drawKind`'s `bare`): a spirit form, which casts none. Kept as pictures of its own. */
+  bare?: boolean;
 }
 
 /** How long a turn of an eighth takes, and how fast a body gets going or settles, per second. */
@@ -1487,7 +1489,7 @@ function keep(key: string, f: Frame, now: number): void {
  * for as long as it was in view. Drawn straight onto a canvas of that box, at
  * the same whole pixels as on the whole box.
  */
-function pictureOf(kind: Kind, kit: readonly Piece[], r: Reach, pal: Palette, facing: number, a: Anim, step: number, k: number, set: string, shine?: BeastShine): Frame {
+function pictureOf(kind: Kind, kit: readonly Piece[], r: Reach, pal: Palette, facing: number, a: Anim, step: number, k: number, set: string, shine?: BeastShine, bare = false): Frame {
   beastStats.made++;
   const w = Math.max(1, Math.ceil((r.right - r.left) * k)), h = Math.max(1, Math.ceil((r.bottom - r.top) * k));
   const ox = Math.round(-r.left * k), oy = Math.round(-r.top * k);
@@ -1498,7 +1500,7 @@ function pictureOf(kind: Kind, kit: readonly Piece[], r: Reach, pal: Palette, fa
   canvas.height = Math.max(1, c.y1 - c.y0 + 1);
   const g = canvas.getContext('2d') as CanvasRenderingContext2D;
   g.setTransform(k, 0, 0, k, ox - c.x0, oy - c.y0);
-  drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step, false, shine);
+  drawKind(g, kind, kit, pal, facing, a, inkAt(step, kind.size), 1 / step, bare, shine);
   return { canvas, ox: ox - c.x0, oy: oy - c.y0, k, px: canvas.width * canvas.height, set };
 }
 
@@ -2013,7 +2015,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
     const shine = p.rare ? { rare: p.rare, seed: typeof p.id === 'number' ? p.id % 97 : 0, now } : undefined;
     // Evolving: the light it is changing in, under it and over it (`evolveBurst`).
     if (a.act?.kind === 'evolve') evolveBurst(ctx, species, kind, pal, a.act.t, true);
-    drawKind(ctx, kind, kit, pal, facing, a, inkAt(zoom, kind.size), 1 / zoom, false, shine);
+    drawKind(ctx, kind, kit, pal, facing, a, inkAt(zoom, kind.size), 1 / zoom, !!p.bare, shine);
     if (a.act?.kind === 'evolve') evolveBurst(ctx, species, kind, pal, a.act.t, false);
     ctx.restore();
     if (t0) spent += performance.now() - t0;
@@ -2062,7 +2064,8 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   const fleece = Math.round(clamp(a.fleece) * 6);
   a.fleece = fleece / 6;
   // A rare one held still keeps pictures of its own, its shine in them (`STILL_T`).
-  const coat = still && p.rare ? `${colors[1]}|r${p.rare}` : colors[1];
+  // And one drawn bare keeps pictures of its own, without its shadow.
+  const coat = `${still && p.rare ? `${colors[1]}|r${p.rare}` : colors[1]}${p.bare ? '|b' : ''}`;
   const keyAt = (w: number): string => `${species}|${colors[0]}|${coat}|${w}|${step}|${dev}|${prefix}${i}|${fleece}`;
   // Part way round: at the nearest of its ways, drawn now if it is not yet and a new picture may be; or else at the nearest of
   // them that is drawn; or, none, at the nearest of the eight, put down from the pictures nearest it as any body waiting is.
@@ -2109,7 +2112,7 @@ export function drawBeast(ctx: CanvasRenderingContext2D, sx: number, sy: number,
   } else {
     made = performance.now();
     f = pictureOf(kind, kit, reachOf(species, kind, kit), pal, facing, a, step, step * dev, base,
-      still && p.rare ? { rare: p.rare, seed: typeof p.id === 'number' ? p.id % 97 : 0, now: 0 } : undefined);
+      still && p.rare ? { rare: p.rare, seed: typeof p.id === 'number' ? p.id % 97 : 0, now: 0 } : undefined, !!p.bare);
     keep(key, f, now);
     if (h) {
       h.waiting = undefined;

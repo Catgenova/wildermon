@@ -79,7 +79,7 @@ import {
 import { DEED_UPGRADES } from '../../game/deed';
 import { FLIGHT_TILES, idleSays, LEDGER_ITEMS, LEDGER_SHOWN, workDoneLine } from '../../game/workerlog';
 import { IDLE_STALE, WORK_ITEMS, WORK_SHOWN } from '../../game/workstats';
-import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, PALE_AT, SIZE_FORM_ODDS } from '../../game/wildforms';
+import { AURA_FORM_ODDS, COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, PALE_AT, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BANNER_AGAIN, BANNER_DEPTH, BANNER_MS, LEAVING_MS } from '../deedbanner';
 import { NAME_MAX } from '../../game/naming';
 import { DEFAULT_RANKS, NEWCOMER_RANK, permsOf, POWER, RANK_CAP, RANK_NAME_MAX, RANK_POWERS, rankMay, STORE_LOG_CAP } from '../../game/ranks';
@@ -4012,7 +4012,8 @@ export function helpText(): string {
       ${TIERS[TIERS.length - 1]} stays ${TIERS[TIERS.length - 1]}), in its lowest-rarity slot. Announced at birth; card marks it <b>mutation</b>.</li>
       <li><b>Wild forms</b>: rolled at each wild spawn, independently, never on monsters. Colour form: 1 in ${COLOUR_FORM_ODDS}, a palette none of its variants has (pale for a kind with no coat lighter than
       ${percent(PALE_AT)} lightness, dark for the rest). Size form: 1 in ${SIZE_FORM_ODDS}, half each: ${formName(SPECIES.rabba, 'large').toLowerCase()} (${formGives('large')}),
-      ${formName(SPECIES.rabba, 'small').toLowerCase()} (${formGives('small')}). Kept when tamed. Young: each form at ${percent(FORM_PASS)} per parent that has it.
+      ${formName(SPECIES.rabba, 'small').toLowerCase()} (${formGives('small')}). ${formName(SPECIES.rabba, 'glow')} and ${formName(SPECIES.rabba, 'spirit').toLowerCase()}: 1 in ${AURA_FORM_ODDS} each, never both (${formGives('glow')}).
+      Glow: lit through the night, a halo in its markings' colour. Spirit: drawn see-through and pale, no shadow. Kept when tamed. Young: each form at ${percent(FORM_PASS)} per parent that has it.
       Card names it; the Field guide page marks each form seen and tamed.</li>
       <li>Preview (<b>Breed with a mate</b>, before <b>Yes</b>), worked out exactly from the mating's own draw at your husbandry, care and perks: take chance; per trait, inheritance and rarity-up chance;
       chance of each parent trait; line depth and carry chance per thing; rarity odds.</li>

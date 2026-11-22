@@ -16,10 +16,16 @@
  *   * Both are rolled where one is put out in the wild, each off a roll of
  *     its own (`wildFormRoll`), and never for a monster. A young one has each
  *     at `FORM_PASS` for each parent that has it (`bredForm`).
+ *   * The glow and spirit forms (one or the other, never both) are rarer:
+ *     glow one in `AURA_FORM_ODDS`, spirit the next one in it, off a roll of
+ *     their own (`wildAuraRoll`), never for a monster. A young one has a
+ *     parent's at `FORM_PASS` for each parent that has one (`bredAura`).
+ *     They change how it is drawn and nothing else.
  *
- * The island keeps them on the creature (`form_colour`, `form_size`), rolls
- * them in `wild_form_put` and `wild_form_roll`, passes them on in
- * `bred_form`, and sends them with the creature (`formColour`, `formSize`).
+ * The island keeps them on the creature (`form_colour`, `form_size`,
+ * `form_aura`), rolls them in `wild_form_put`, `wild_form_roll` and
+ * `wild_aura_roll`, passes them on in `bred_form` and `bred_aura`, and sends
+ * them with the creature (`formColour`, `formSize`, `formAura`).
  */
 import type { SpeciesDef } from './creatures';
 import type { TraitChannel } from './traits';
@@ -37,17 +43,23 @@ export const SMALL_SIZE = 0.85;
 export const SMALL_SPEED = 1.1;
 /** The chance a young one has a form for each parent that has it. The island's `form_pass`. */
 export const FORM_PASS = 0.25;
+/** One wild spawn in this many comes in the glow form, and as many again in the spirit form. The island's `aura_form_odds`. */
+export const AURA_FORM_ODDS = 5000;
 
 export type SizeForm = 'large' | 'small';
 export const SIZE_FORMS: readonly SizeForm[] = ['large', 'small'];
-/** A form a guide page marks: the colour form, or a size. */
-export type FormId = 'colour' | SizeForm;
-export const FORM_IDS: readonly FormId[] = ['colour', 'large', 'small'];
+/** The glow form and the spirit form: one or the other, or neither. The island's `form_aura`. */
+export type AuraForm = 'glow' | 'spirit';
+export const AURA_FORMS: readonly AuraForm[] = ['glow', 'spirit'];
+/** A form a guide page marks: the colour form, a size, or glow or spirit. */
+export type FormId = 'colour' | SizeForm | AuraForm;
+export const FORM_IDS: readonly FormId[] = ['colour', 'large', 'small', 'glow', 'spirit'];
 
 /** What a creature carries of them. */
 export interface Forms {
   formColour?: boolean;
   formSize?: SizeForm | null;
+  formAura?: AuraForm | null;
 }
 
 /**
@@ -62,6 +74,27 @@ export function wildFormRoll(def: Pick<SpeciesDef, 'monster'>, colourRoll: numbe
     formColour: colourRoll < 1 / COLOUR_FORM_ODDS,
     formSize: sizeRoll < 1 / (2 * SIZE_FORM_ODDS) ? 'large' : sizeRoll < 1 / SIZE_FORM_ODDS ? 'small' : null,
   };
+}
+
+/**
+ * Its glow or spirit form off a roll of its own, a share of one: glow under
+ * one in `AURA_FORM_ODDS`, spirit under the next one in it. Never for a
+ * monster. The island's `wild_aura_roll`.
+ */
+export function wildAuraRoll(def: Pick<SpeciesDef, 'monster'>, roll: number): AuraForm | null {
+  if (def.monster) return null;
+  return roll < 1 / AURA_FORM_ODDS ? 'glow' : roll < 2 / AURA_FORM_ODDS ? 'spirit' : null;
+}
+
+/**
+ * A young one's glow or spirit form off its dam's and its sire's and a roll:
+ * at `FORM_PASS` for each parent that has one, the dam's before the sire's
+ * where both have one. The island's `bred_aura`.
+ */
+export function bredAura(dam: Forms, sire: Forms, roll: number): AuraForm | null {
+  const auras = [dam.formAura, sire.formAura].filter((a): a is AuraForm => !!a);
+  const k = Math.floor(roll / FORM_PASS);
+  return k < auras.length ? auras[k] : null;
 }
 
 /**
@@ -129,28 +162,58 @@ export function formCoat(def: Pick<SpeciesDef, 'id' | 'variants'>): [string, str
   return had;
 }
 
-/** The two colours it is drawn in: its colour form's, or its variant's. */
-export const coatOf = (c: Forms & { variant: number }, def: Pick<SpeciesDef, 'id' | 'variants'>): [string, string] =>
-  (c.formColour ? formCoat(def) : def.variants[c.variant] ?? def.variants[0]);
+/** How far a spirit form's two colours are taken toward `SPIRIT_TINT`, a white-blue. */
+export const SPIRIT_PALE = 0.55;
+const SPIRIT_TINT = [222, 234, 255];
+const spirits = new Map<string, [string, string]>();
+/** Two colours as a spirit form is drawn in them: each taken `SPIRIT_PALE` of the way to `SPIRIT_TINT`. */
+export function spiritCoat(coat: readonly [string, string]): [string, string] {
+  const key = coat.join();
+  let had = spirits.get(key);
+  if (!had) {
+    const pale = (h: string): string => {
+      const n = parseInt(h.slice(1), 16);
+      const rgb = [n >> 16, (n >> 8) & 255, n & 255].map((v, i) => Math.round(v + (SPIRIT_TINT[i] - v) * SPIRIT_PALE));
+      return `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+    };
+    had = [pale(coat[0]), pale(coat[1])];
+    spirits.set(key, had);
+  }
+  return had;
+}
 
-/** What a form is called, for a kind: "Pale form", "Dark form", "Large form", "Small form". */
+/** The two colours it is drawn in: its colour form's, or its variant's; paled for a spirit form (`spiritCoat`). */
+export const coatOf = (c: Forms & { variant: number }, def: Pick<SpeciesDef, 'id' | 'variants'>): [string, string] => {
+  const coat = c.formColour ? formCoat(def) : def.variants[c.variant] ?? def.variants[0];
+  return c.formAura === 'spirit' ? spiritCoat(coat) : coat;
+};
+
+/** What a form is called, for a kind: "Pale form", "Dark form", "Large form", "Small form", "Glow form", "Spirit form". */
 export function formName(def: Pick<SpeciesDef, 'variants'>, form: FormId): string {
   if (form === 'colour') return paleKind(def) ? 'Pale form' : 'Dark form';
+  if (form === 'glow') return 'Glow form';
+  if (form === 'spirit') return 'Spirit form';
   return form === 'large' ? 'Large form' : 'Small form';
 }
 
-/** What a form does, as a label: "size +15%, health +10%". The colour form changes its colours and nothing else. */
+/**
+ * What a form does, as a label: "size +15%, health +10%". The colour form changes its colours and nothing else; the
+ * glow and spirit forms how it is drawn and nothing else.
+ */
 export function formGives(form: FormId): string {
   if (form === 'large') return `size +${percent(LARGE_SIZE - 1)}, health +${percent(LARGE_HEALTH - 1)}`;
   if (form === 'small') return `size −${percent(1 - SMALL_SIZE)}, speed +${percent(SMALL_SPEED - 1)}`;
+  if (form === 'glow' || form === 'spirit') return 'looks only';
   return 'colours only';
 }
 
 /** How often the wild puts one out in a form. */
-export const formOdds = (form: FormId): number => (form === 'colour' ? COLOUR_FORM_ODDS : 2 * SIZE_FORM_ODDS);
+export const formOdds = (form: FormId): number =>
+  (form === 'colour' ? COLOUR_FORM_ODDS : form === 'glow' || form === 'spirit' ? AURA_FORM_ODDS : 2 * SIZE_FORM_ODDS);
 
 /** The forms it carries, by id. */
-export const formsOf = (c: Forms): FormId[] => [...(c.formColour ? ['colour' as const] : []), ...(c.formSize ? [c.formSize] : [])];
+export const formsOf = (c: Forms): FormId[] =>
+  [...(c.formColour ? ['colour' as const] : []), ...(c.formSize ? [c.formSize] : []), ...(c.formAura ? [c.formAura] : [])];
 
 /** Its forms as the card says them: "Pale form: colours only", "Large form: size +15%, health +10%". */
 export const formLabels = (c: Forms, def: Pick<SpeciesDef, 'variants'>): string[] =>

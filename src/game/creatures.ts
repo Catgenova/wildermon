@@ -67,7 +67,7 @@ import { IDLE_WANTS, IDLE_WHYS, ledgerAdd, ledgerRoll, type Idle, type IdleWhy, 
 import { gateOf, nameGates, skillGateRefusal, sproutGate, TAME_GATE, TAME_STAGE_GATE, treeGate, workerGateOpen, workerItemOpen, type SkillGate } from './skillgates';
 import { kindNames } from './journal-b';
 import { workFromLedger, workTime, type WorkStats } from './workstats';
-import { bredForm, formMul, wildFormRoll, type SizeForm } from './wildforms';
+import { bredAura, bredForm, formMul, wildAuraRoll, wildFormRoll, type AuraForm, type SizeForm } from './wildforms';
 import { BACK_PACE, BACK_SLACK, BLINDSIDE, blowEvery, BODKIN_HIDE, KNIFE_BLEED, STUN_SECS, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS, circlePoint, CIRCLE_ARC, CIRCLE_R, COMPANION_BLOW, COMPANION_LEASH, COMPANION_PACE, COMPANION_REACH, COMPANION_SIGHT, COWARD_DRAG, FIGHT_GIVE_UP, FIGHT_LEASH, FLEE_PACE, FLEE_SECS, GUARD_RANGE, HEAVY_EVERY, HEAVY_HIT, HUNT_REACH, KEEP_OFF, KNIFE_BLEED_SECS, PACK_CALL, PACK_MOST, PACK_RANGE, slotAngle, THROW_HIT, THROW_REACH, turnsAt, turnTo, WIND_UP, type Hide } from './fight';
 
 /**
@@ -122,8 +122,9 @@ export interface Unborn {
   /** Its forms, off its parents' (`bredForm`); none from a covering made before forms were kept, or with none. */
   formColour?: boolean;
   formSize?: SizeForm;
+  formAura?: AuraForm;
   /** A second young, bred at the same covering (a Herdsman's Twins): its own traits, sex and line, the same sire. */
-  twin?: { traits: string[]; sex: Sex; from?: Record<string, TraitSource>; line?: Line; formColour?: boolean; formSize?: SizeForm };
+  twin?: { traits: string[]; sex: Sex; from?: Record<string, TraitSource>; line?: Line; formColour?: boolean; formSize?: SizeForm; formAura?: AuraForm };
 }
 
 /**
@@ -5409,9 +5410,10 @@ export interface IslandCreature {
   species: string;
   name: string;
   variant: number;
-  /** Its wild forms (`wildforms.ts`): the island's `form_colour` and `form_size`. */
+  /** Its wild forms (`wildforms.ts`): the island's `form_colour`, `form_size` and `form_aura`. */
   formColour?: boolean;
   formSize?: SizeForm | null;
+  formAura?: AuraForm | null;
   /** For a lair's boss, its lair's kind (`lairs.ts`). */
   boss?: string | null;
   mode: string;
@@ -5573,9 +5575,10 @@ export interface Creature {
   species: string;
   name: string;
   variant: number;
-  /** Its kind's colour form, and a size form, rolled in the wild and bred on (`wildforms.ts`). Saved. The island's `form_colour`, `form_size`. */
+  /** Its kind's colour form, a size form, and the glow or spirit form, rolled in the wild and bred on (`wildforms.ts`). Saved. The island's `form_colour`, `form_size`, `form_aura`. */
   formColour?: boolean;
   formSize?: SizeForm | null;
+  formAura?: AuraForm | null;
   /** The lair kind it is the boss of (`lairs.ts`), its health and blow that kind's multiples; absent for anything else. The island's `boss`. */
   boss?: string;
   x: number;
@@ -5851,6 +5854,7 @@ export interface CreatureJSON {
   variant: number;
   formColour?: boolean;
   formSize?: SizeForm | null;
+  formAura?: AuraForm | null;
   x: number;
   y: number;
   mode: CreatureMode;
@@ -6404,6 +6408,7 @@ export class Creatures {
       c.variant = r.variant ?? c.variant;
       if (r.formColour !== undefined) c.formColour = !!r.formColour;
       if (r.formSize !== undefined) c.formSize = r.formSize;
+      if (r.formAura !== undefined) c.formAura = r.formAura;
       c.boss = r.boss ?? undefined;
       c.mode = r.mode as CreatureMode;
       c.stance = r.stance as Stance;
@@ -7124,6 +7129,9 @@ export class Creatures {
       c.formSize = form.formSize;
       c.health = maxHealth(c, def);
     }
+    // And now and then in its glow or spirit form, off a roll of its own (`wildAuraRoll`).
+    const aura = wildAuraRoll(def, game.rand());
+    if (aura) c.formAura = aura;
     return c;
   }
 
@@ -10021,7 +10029,10 @@ export class Creatures {
       const line = bredLine(bred.traits, { traits: dam.traits, line: dam.pedigree?.line }, { traits: sire.traits, line: sire.pedigree?.line });
       // And its parents' forms, at `FORM_PASS` for each that has one (`bredForm`).
       const form = bredForm(dam, sire, game.rand(), game.rand());
-      return { traits: bred.traits, sex: born, from: bred.from, line, ...(form.formColour ? { formColour: true } : {}), ...(form.formSize ? { formSize: form.formSize } : {}) };
+      // And a parent's glow or spirit form, the same way (`bredAura`): rolled for only where a parent has one, so a covering
+      // of two in neither draws what it always drew.
+      const aura = dam.formAura || sire.formAura ? bredAura(dam, sire, game.rand()) : null;
+      return { traits: bred.traits, sex: born, from: bred.from, line, ...(form.formColour ? { formColour: true } : {}), ...(form.formSize ? { formSize: form.formSize } : {}), ...(aura ? { formAura: aura } : {}) };
     };
     dam.unborn = { ...young(), sire: { id: sire.id, name: sire.name } };
     // And a second at the same covering, now and then (a Herdsman's Twins, and the dam's blood: `twinChance`).
@@ -10095,6 +10106,7 @@ export class Creatures {
     c.sex = coming.sex;
     if (coming.formColour) c.formColour = true;
     if (coming.formSize) c.formSize = coming.formSize;
+    if (coming.formAura) c.formAura = coming.formAura;
     /*
      * And its pedigree, for good: the dam as she is now, and the sire and
      * where each trait came from as the covering wrote them down. A young one
@@ -10118,7 +10130,7 @@ export class Creatures {
       if (mutationOf(coming.from)) game.note('mutated');
       const depth = Math.max(0, ...Object.values(coming.line ?? {}).map((d) => d ?? 0));
       if (depth > 1) game.note(`line:${depth}`);
-      if (c.formColour || c.formSize) game.note('bred:form');
+      if (c.formColour || c.formSize || c.formAura) game.note('bred:form');
     }
     game.events.emit('creature');
     return c;
@@ -11984,6 +11996,7 @@ export class Creatures {
         variant: c.variant,
         formColour: c.formColour || undefined,
         formSize: c.formSize ?? undefined,
+        formAura: c.formAura ?? undefined,
         x: c.x,
         y: c.y,
         mode: c.mode,
@@ -12036,7 +12049,7 @@ export class Creatures {
     for (const [r, n] of data.banked ?? []) cs.banked.set(r, n);
     for (const j of data.list ?? []) {
       const c = Creatures.make(j.id, j.species, j.x, j.y, j.mode, Math.random);
-      Object.assign(c, { name: j.name, variant: j.variant, formColour: j.formColour, formSize: j.formSize, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, laden: j.laden?.length ? j.laden : undefined, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), fedBonus: j.fedBonus, fedUntil: j.fedUntil, ledger: j.ledger ?? null, work: j.work ?? null, worn: j.worn, restUntil: j.restUntil, bed: j.bed, unfed: j.unfed });
+      Object.assign(c, { name: j.name, variant: j.variant, formColour: j.formColour, formSize: j.formSize, formAura: j.formAura, stance: j.stance, health: j.health, hunger: j.hunger, carrying: j.carrying ?? null, laden: j.laden?.length ? j.laden : undefined, pouch: j.pouch ?? null, xp: j.xp ?? 0, fleece: j.fleece ?? 1, tacked: !!j.tacked, tack: j.tack, tackEnchant: j.tackEnchant, shodAt: j.shodAt ?? -1e9, pannier: j.pannier ?? [], post: j.post ?? null, trapped: j.trapped ?? null, born: j.born ?? 0, sex: j.sex ?? (j.id % 2 ? 'male' : 'female'), traits: j.traits ?? rollTraits(Math.random), rare: j.rare ?? 0, boosts: j.boosts ?? undefined, care: j.care ?? 0, bredAt: j.bredAt ?? -1e9, due: j.due ?? 0, unborn: j.unborn ?? null, pedigree: j.pedigree ?? null, homeX: j.homeX ?? j.x, homeY: j.homeY ?? j.y, trade: j.trade && (SPECIES[j.species]?.trades ?? []).includes(j.trade) ? j.trade : null, skills: carriedSkills(SPECIES[j.species] ?? SPECIES.rabba, j.skills), fedBonus: j.fedBonus, fedUntil: j.fedUntil, ledger: j.ledger ?? null, work: j.work ?? null, worn: j.worn, restUntil: j.restUntil, bed: j.bed, unfed: j.unfed });
       if (j.gear) c.gear = j.gear;
       // A rest it was taking when the game was saved goes on where it left off, or the walk to its bed (`restStep`).
       if (c.restUntil !== undefined) c.state = 'rest';

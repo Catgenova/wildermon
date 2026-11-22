@@ -19,7 +19,7 @@
 import { itemDef, rarityStep } from './items';
 import { creatureLevel, kindName, lineLines, pedigreeLine, rarityLine, SEX_NAMES, SPECIES, type Age, type Pedigree, type Sex } from './creatures';
 import { traitOf, traitSays } from './traits';
-import { formLabels, type SizeForm } from './wildforms';
+import { formLabels, type AuraForm, type SizeForm } from './wildforms';
 
 /**
  * How far apart two people may stand and trade, in tiles, measured as the
@@ -134,6 +134,8 @@ export interface BarterBeast {
   traits: string[];
   formColour: boolean;
   formSize: SizeForm | null;
+  /** Its glow or spirit form; left off by the island for one in neither. */
+  formAura?: AuraForm | null;
   rare: string | null;
   pedigree: Pedigree | null;
   /** Carrying young: refused on a side (`young`). */

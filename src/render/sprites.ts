@@ -1199,6 +1199,8 @@ export interface CreaturePose {
   rare?: number;
   /** Saddled and bridled (`Creature.tacked`), for a kind that is drawn with its tack on. */
   tacked?: boolean;
+  /** In its spirit form (`Forms.formAura`): drawn see-through, edged in a pale light, with no shadow under it (`drawSpiritBody`). */
+  spirit?: boolean;
 }
 
 /**
@@ -1650,6 +1652,28 @@ export function drawCreature(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   zoom *= pose.scale ?? 1;
   // Animations off: standing, head up, at nought on its clock, glided while it moves (`drawBeast` for the models).
   if (animationsOff()) pose = { ...pose, phase: 0, moving: false, gait: 0, graze: false, act: undefined };
+  // A spirit form: its body without a shadow, see-through, and its health bar over it as any other's.
+  if (pose.spirit) {
+    const top = (modelled(pose.species) ? wildermonTop(pose.species as string, pose.stage, pose.variant) : undefined) ?? CREATURE_TOP;
+    drawSpiritBody(ctx, sx, sy, zoom, top, (g, x, y) => {
+      if (modelled(pose.species)) {
+        drawWildermon(g, x, y, zoom, pose.species as string, pose.colors, {
+          id: pose.id, facing: pose.facing, phase: pose.phase, moving: pose.moving, gait: pose.gait, fleece: pose.fleece, graze: pose.graze, rare: pose.rare,
+          act: pose.act, bare: true,
+        }, pose.stage, pose.tacked, pose.variant);
+        return;
+      }
+      // Drawn by hand, live: its standing picture has its shadow in it.
+      bareBody = true;
+      try {
+        drawBody(g, x, y, zoom, pose);
+      } finally {
+        bareBody = false;
+      }
+    });
+    drawCreatureOverlay(ctx, sx, sy, zoom, pose, top);
+    return;
+  }
   // A kind that is a model now is drawn as one; the rest as they always were.
   if (modelled(pose.species)) {
     drawWildermon(ctx, sx, sy, zoom, pose.species as string, pose.colors, {
@@ -1668,6 +1692,41 @@ export function drawCreature(ctx: CanvasRenderingContext2D, sx: number, sy: numb
 
 /** The canvas a rare body drawn by hand is laid on before its shine, kept between frames. */
 let rareCanvas: HTMLCanvasElement | null = null;
+
+/** How much of a spirit form's body shows (`drawSpiritBody`), and the light round its edge. */
+export const SPIRIT_ALPHA = 0.55;
+const SPIRIT_EDGE = 'rgba(205, 228, 255, 0.9)';
+/** The canvas a spirit form's body is laid on before it is put down see-through, kept between frames. */
+let spiritCanvas: HTMLCanvasElement | null = null;
+
+/**
+ * A spirit form's body (`draw`, with its feet at the point it is handed, in `ctx`'s units): drawn whole on a canvas of
+ * its own, wide and tall enough for a body `top` high at `zoom` and a stride either way, and laid down at
+ * `SPIRIT_ALPHA` with a soft pale light round its edge. Whole first, so where its legs cross its body it is one pane
+ * and not two.
+ */
+function drawSpiritBody(ctx: CanvasRenderingContext2D, sx: number, sy: number, zoom: number, top: number, draw: (g: CanvasRenderingContext2D, x: number, y: number) => void): void {
+  const t = ctx.getTransform();
+  const dev = Math.hypot(t.a, t.b) || 1;
+  const half = Math.max(48, top * 1.8) * zoom, up = (top * 1.3 + 12) * zoom, down = 14 * zoom;
+  const W = Math.max(1, Math.ceil(2 * half * dev)), H = Math.max(1, Math.ceil((up + down) * dev));
+  spiritCanvas ??= document.createElement('canvas');
+  if (spiritCanvas.width < W || spiritCanvas.height < H) {
+    spiritCanvas.width = Math.max(spiritCanvas.width, W);
+    spiritCanvas.height = Math.max(spiritCanvas.height, H);
+  }
+  const g = spiritCanvas.getContext('2d') as CanvasRenderingContext2D;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, W, H);
+  g.setTransform(dev, 0, 0, dev, 0, 0);
+  draw(g, half, up);
+  ctx.save();
+  ctx.globalAlpha *= SPIRIT_ALPHA;
+  ctx.shadowColor = SPIRIT_EDGE;
+  ctx.shadowBlur = Math.max(2, 4 * zoom * dev);
+  ctx.drawImage(spiritCanvas, 0, 0, W, H, sx - half, sy - up, W / dev, H / dev);
+  ctx.restore();
+}
 
 /**
  * A rare one still drawn by hand, shining as a rare thing worn does

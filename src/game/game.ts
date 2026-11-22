@@ -913,7 +913,7 @@ export class Game {
   }
 
   /** A creature's kind marked, its stage's page where it is tamed past its first, and each wild form it is in (`formKey`), as the island's taming marks them. */
-  guideMarkKind(c: Pick<Creature, 'species' | 'formColour' | 'formSize' | 'skills'>, what: GuideMark): void {
+  guideMarkKind(c: Pick<Creature, 'species' | 'formColour' | 'formSize' | 'formAura' | 'skills'>, what: GuideMark): void {
     this.guideMark(c.species, what);
     if (what === 'tamed' && stageOf(c) > 0) this.guideMark(stageKey(c.species, stageOf(c)), what);
     for (const f of formsOf(c)) this.guideMark(formKey(c.species, f), what);

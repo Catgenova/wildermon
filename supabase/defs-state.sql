@@ -7094,6 +7094,7 @@ create or replace function colour_form_odds() returns double precision language 
 create or replace function size_form_odds() returns double precision language sql immutable as $fn$ select 200::double precision $fn$;
 create or replace function large_health() returns double precision language sql immutable as $fn$ select 1.1::double precision $fn$;
 create or replace function small_speed() returns double precision language sql immutable as $fn$ select 1.1::double precision $fn$;
+create or replace function aura_form_odds() returns double precision language sql immutable as $fn$ select 5000::double precision $fn$;
 create or replace function form_pass() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function work_items() returns double precision language sql immutable as $fn$ select 12::double precision $fn$;
 create or replace function cross_chance() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;

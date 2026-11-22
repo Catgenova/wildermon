@@ -129,7 +129,7 @@ import { CLASS_LEARN_BLOW, CLASS_LEARN_KILL, CLASS_LEVEL_START, CLASS_SPELLS, GU
 import { BLOCK_MOST } from '../src/game/fight';
 import { BRAZIER_BURN_AT_HUNDRED, BRAZIER_BURN_AT_ONE, BRAZIER_CAPACITY, LYE_USE } from '../src/game/placeables';
 import { FED_CARE, FED_FAVOURITE, FED_FOR, FED_LEARN, WILD_STAGE_CHANCE, WILD_STAGE_ODDS, WILD_STAGE_SPAN, WILD_STAGE_TAME, TAME_HARD, HAUL_LEARN, HAUL_LEARN_RISE, HAUL_LEARN_STEEP } from '../src/game/creatures';
-import { COLOUR_FORM_ODDS, FORM_PASS, LARGE_HEALTH, SIZE_FORM_ODDS, SMALL_SPEED } from '../src/game/wildforms';
+import { AURA_FORM_ODDS, COLOUR_FORM_ODDS, FORM_PASS, LARGE_HEALTH, SIZE_FORM_ODDS, SMALL_SPEED } from '../src/game/wildforms';
 import { WORK_ITEMS } from '../src/game/workstats';
 import { CARE_BONUS, CARE_HOURS, GRAZE_FILL, GRAZE_HUNGRY, PER_REGION, REGION as WILD_SQUARE, WILD_TARGET } from '../src/game/creatures';
 import { BRACE_MOST, BRACE_STEP, BRIDLE_PACE, COLLAR_CUT } from '../src/game/creatures';
@@ -1860,11 +1860,11 @@ for (const [fn, v] of [
   ['lamp_tier_odds', LAMP_TIER_ODDS],
   /* Breeding: how deep a line may run and what each generation past the first adds, and the odds of a mutation. */
   ['pedigree_most', PEDIGREE_MOST], ['pedigree_step', PEDIGREE_STEP], ['mutation_odds', MUTATION_ODDS],
-  /* Wild forms: one wild spawn in how many in its colour form and in a size form, what a large one's health and a
-     small one's speed are worth, and a young one's chance of a form for each parent that has it. And a worker's
-     lifetime at work: how many kinds of thing it counts. */
+  /* Wild forms: one wild spawn in how many in its colour form, in a size form and in its glow form (as many again in its
+     spirit form), what a large one's health and a small one's speed are worth, and a young one's chance of a form for
+     each parent that has it. And a worker's lifetime at work: how many kinds of thing it counts. */
   ['colour_form_odds', COLOUR_FORM_ODDS], ['size_form_odds', SIZE_FORM_ODDS], ['large_health', LARGE_HEALTH], ['small_speed', SMALL_SPEED],
-  ['form_pass', FORM_PASS], ['work_items', WORK_ITEMS],
+  ['aura_form_odds', AURA_FORM_ODDS], ['form_pass', FORM_PASS], ['work_items', WORK_ITEMS],
   /* Hybrids (`hybridlist.ts`): a listed cross's share of a pairing's chance, the husbandry and each parent's care it
      needs, and a hybrid's task speed in each of its trades and its health over its blood's (hybrid vigour). */
   ['cross_chance', CROSS_CHANCE], ['cross_skill', CROSS_SKILL], ['cross_care', CROSS_CARE], ['hybrid_work', HYBRID_WORK], ['hybrid_hardy', HYBRID_HARDY],

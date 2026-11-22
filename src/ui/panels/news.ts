@@ -9,7 +9,7 @@ import { NAME_PX } from '../../render/namelabels';
 import { KNEES_EASED, KNEES_OUT } from '../../sculpt/anim/clips/seated';
 import { BODY_BUDGET_MS } from '../../render/bodybudget';
 import { QUALITY } from '../../render/bodies';
-import { COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, SIZE_FORM_ODDS } from '../../game/wildforms';
+import { AURA_FORM_ODDS, COLOUR_FORM_ODDS, FORM_PASS, formGives, formName, SIZE_FORM_ODDS } from '../../game/wildforms';
 import { BUILD_COUNTS, MOST_GOES } from '../buildCounts';
 import { PLAN_AREA_MOST, PLAN_UNDO_SECONDS } from '../../game/planarea';
 import { UPDATE_CHECK_MS } from '../update';
@@ -444,6 +444,14 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Glow and spirit forms: two more wild forms, a tenth as common as the colour form.
+  {
+    n: 699,
+    day: '2026-11-22',
+    lines: () => [
+      `Added: wild forms: ${formName(SPECIES.rabba, 'glow').toLowerCase()} and ${formName(SPECIES.rabba, 'spirit').toLowerCase()}, 1 in ${AURA_FORM_ODDS} wild spawns each, never both, never on monsters: ${formGives('glow')}. Glow: lit through the night, a halo in its markings' colour. Spirit: see-through, pale, no shadow. Kept when tamed; young: ${percent(FORM_PASS)} per parent with one. On the card, the Field guide page (seen, tamed) and Sighted from Tracking ${SIGHT_FORM_AT.glow}.`,
+    ],
+  },
   // Restoration and enchanting: nothing open at a new body's level, and nothing else trained them.
   {
     n: 698,

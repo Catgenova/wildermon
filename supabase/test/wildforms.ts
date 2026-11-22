@@ -21,6 +21,18 @@
  *   * the island sends them with the creature, and the browser draws its colours and its size: a fifth palette per
  *     kind, none of its four.
  *
+ * And the glow and spirit forms. Asked for: "each stocked wild one (not a monster) rolls it: Glow under 1 in
+ * aura_form_odds(), Spirit under the next 1 in aura_form_odds(), aura_form_odds() = 5000 (a tenth as common as the colour
+ * form) ... the young gets a parent's aura at form_pass() for each parent that has it (if both differ, pick one)":
+ *
+ *   * the number is the one asked for, and the island's is the browser's;
+ *   * the roll, the same way on both sides either side of each line (`wildAuraRoll`, `wild_aura_roll`), never for a
+ *     monster, and over a large seeded draw as often as it says; the stocking puts them out (`wild_form_put`);
+ *   * a young one's, the same rule on both sides (`bredAura`, `bred_aura`), at the stated chance over many
+ *     coverings, and born with it;
+ *   * seen and tamed in the book under `species/glow` and `species/spirit`; sent with the creature and on a trade;
+ *     named on its card; a spirit form drawn paled.
+ *
  * The browser's half runs on its own; the island's against the database the suite leaves behind (Hoarding, and Dane
  * on it), in one transaction that is rolled back.
  */
@@ -32,8 +44,8 @@ import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { bloodMul, Creatures, GATHER_VERB, maxHealth, SPECIES, type IslandCreature } from '../../src/game/creatures';
 import { FieldGuide, formLines, guidePage } from '../../src/game/guide';
 import {
-  bredForm, coatOf, COLOUR_FORM_ODDS, FORM_PASS, formCoat, formKey, formLabels, formMul, formName, formScale, LARGE_HEALTH, LARGE_SIZE, paleKind,
-  SIZE_FORM_ODDS, SMALL_SIZE, SMALL_SPEED, wildFormRoll, type SizeForm,
+  AURA_FORM_ODDS, bredAura, bredForm, coatOf, COLOUR_FORM_ODDS, FORM_PASS, formCoat, formGives, formKey, formLabels, formMul, formName, formScale, LARGE_HEALTH, LARGE_SIZE, paleKind,
+  SIZE_FORM_ODDS, SMALL_SIZE, SMALL_SPEED, spiritCoat, wildAuraRoll, wildFormRoll, type AuraForm, type SizeForm,
 } from '../../src/game/wildforms';
 import { psql, check, finish } from './harness';
 
@@ -56,6 +68,8 @@ const fmt = (n: number, of: number, p: number): string => `${n} of ${of}, expect
 
 check(`colour form 1 in ${COLOUR_FORM_ODDS}, size form 1 in ${SIZE_FORM_ODDS}, large ×${LARGE_SIZE} size ×${LARGE_HEALTH} health, small ×${SMALL_SIZE} size ×${SMALL_SPEED} speed, ${FORM_PASS} a parent, as asked`,
   COLOUR_FORM_ODDS === 500 && SIZE_FORM_ODDS === 200 && LARGE_SIZE === 1.15 && LARGE_HEALTH === 1.1 && SMALL_SIZE === 0.85 && SMALL_SPEED === 1.1 && FORM_PASS === 0.25);
+check(`glow form 1 in ${AURA_FORM_ODDS} and spirit form 1 in ${AURA_FORM_ODDS}: a tenth as common as the colour form, as asked`,
+  AURA_FORM_ODDS === 5000 && AURA_FORM_ODDS === 10 * COLOUR_FORM_ODDS);
 
 /* ---- the rolls, the browser ------------------------------------------------------------------ */
 
@@ -72,7 +86,24 @@ check('one roll for the colour and one for the size, either side of each line ex
   browserRolls.slice(0, ROLLS.length).join() === 'true/large,true/-,false/-,false/large,false/small,false/small,false/-,true/small,false/-', browserRolls.join());
 check('and never for a monster', browserRolls.slice(ROLLS.length).every((r) => r === 'false/-'), browserRolls.slice(ROLLS.length).join());
 
+const AURA_ROLLS = [0, 1 / AURA_FORM_ODDS - 1e-9, 1 / AURA_FORM_ODDS, 2 / AURA_FORM_ODDS - 1e-9, 2 / AURA_FORM_ODDS, 0.5, 0.999];
+const browserAuras = AURA_ROLLS.map((r) => wildAuraRoll(SPECIES.rabba, r) ?? '-').concat(AURA_ROLLS.map((r) => wildAuraRoll(SPECIES.goblin, r) ?? '-'));
+check('one roll for glow or spirit: glow under the first line, spirit under the second, either side of each exactly',
+  browserAuras.slice(0, AURA_ROLLS.length).join() === 'glow,glow,spirit,spirit,-,-,-', browserAuras.join());
+check('and never for a monster', browserAuras.slice(AURA_ROLLS.length).every((r) => r === '-'), browserAuras.slice(AURA_ROLLS.length).join());
+
 const N = 400000;
+{
+  const r = seeded(5000);
+  let glow = 0, spirit = 0;
+  for (let i = 0; i < N; i++) {
+    const a = wildAuraRoll(SPECIES.rabba, r());
+    if (a === 'glow') glow++;
+    if (a === 'spirit') spirit++;
+  }
+  check(`browser, ${N} seeded rolls: glow ${fmt(glow, N, 1 / AURA_FORM_ODDS)}, spirit ${fmt(spirit, N, 1 / AURA_FORM_ODDS)}`,
+    about(glow, N, 1 / AURA_FORM_ODDS) && about(spirit, N, 1 / AURA_FORM_ODDS));
+}
 {
   const r = seeded(500200);
   let colour = 0, large = 0, small = 0, both = 0;
@@ -97,11 +128,13 @@ for (const c of [...game.creatures.list.values()]) game.creatures.remove(c.id);
 const { x: px, y: py } = game.player;
 {
   const SPAWNS = 40000;
-  let colour = 0, large = 0, small = 0, monsters = 0, healthy = true;
+  let colour = 0, large = 0, small = 0, glow = 0, spirit = 0, monsters = 0, healthy = true;
   for (let i = 0; i < SPAWNS; i++) {
     const kind = i % 10 === 9 ? 'goblin' : 'woola';
     const c = game.creatures.standWild(game, kind, px + 20, py + 20);
-    if (kind === 'goblin' && (c.formColour || c.formSize)) monsters++;
+    if (kind === 'goblin' && (c.formColour || c.formSize || c.formAura)) monsters++;
+    if (c.formAura === 'glow') glow++;
+    if (c.formAura === 'spirit') spirit++;
     if (c.formColour) colour++;
     if (c.formSize === 'large') {
       large++;
@@ -113,6 +146,8 @@ const { x: px, y: py } = game.player;
   const kept = SPAWNS * 0.9;
   check(`browser, ${SPAWNS} put out in the country: colour ${fmt(colour, kept, 1 / COLOUR_FORM_ODDS)}, large ${fmt(large, kept, 1 / (2 * SIZE_FORM_ODDS))}, small ${fmt(small, kept, 1 / (2 * SIZE_FORM_ODDS))}`,
     about(colour, kept, 1 / COLOUR_FORM_ODDS) && about(large, kept, 1 / (2 * SIZE_FORM_ODDS)) && about(small, kept, 1 / (2 * SIZE_FORM_ODDS)));
+  check(`browser, and glow ${fmt(glow, kept, 1 / AURA_FORM_ODDS)}, spirit ${fmt(spirit, kept, 1 / AURA_FORM_ODDS)}`,
+    about(glow, kept, 1 / AURA_FORM_ODDS) && about(spirit, kept, 1 / AURA_FORM_ODDS));
   check('none of them a monster in a form, and every large one at its larger health', monsters === 0 && healthy, `${monsters} monsters`);
 }
 {
@@ -135,30 +170,37 @@ game.log.length = 0;
 const pale = game.creatures.spawn('rabba', px + 0.6, py, 'wild', game.rand, 0);
 pale.formColour = true;
 pale.formSize = 'large';
+pale.formAura = 'glow';
 game.update(1.1);
 check('browser: one in its forms in view marks its kind and each form seen, and says so',
   game.guide.seen.has('rabba') && game.guide.seen.has(formKey('rabba', 'colour')) && game.guide.seen.has(formKey('rabba', 'large')) && !game.guide.seen.has(formKey('rabba', 'small'))
+    && game.guide.seen.has(formKey('rabba', 'glow')) && !game.guide.seen.has(formKey('rabba', 'spirit'))
     && game.log.some((l) => l.text.startsWith(`First ${formName(SPECIES.rabba, 'colour').toLowerCase()} ${SPECIES.rabba.name.toLowerCase()} seen.`)),
   `${[...game.guide.seen].join()} | ${game.log.map((l) => l.text).join(' | ')}`);
 game.inventory.add('blueberry', { count: 3 });
 ACTION_BY_ID.get('tame')?.perform({ kind: 'creature', id: pale.id } as Target, game);
 check('browser: tamed, it keeps its forms, and the book marks each tamed',
-  pale.mode !== 'wild' && pale.formColour === true && pale.formSize === 'large' && game.guide.tamed.has(formKey('rabba', 'colour'))
-    && game.guide.tamed.has(formKey('rabba', 'large')) && !game.guide.tamed.has(formKey('rabba', 'small')), `${pale.mode} ${[...game.guide.tamed].join()}`);
+  pale.mode !== 'wild' && pale.formColour === true && pale.formSize === 'large' && pale.formAura === 'glow' && game.guide.tamed.has(formKey('rabba', 'colour'))
+    && game.guide.tamed.has(formKey('rabba', 'large')) && !game.guide.tamed.has(formKey('rabba', 'small'))
+    && game.guide.tamed.has(formKey('rabba', 'glow')) && !game.guide.tamed.has(formKey('rabba', 'spirit')), `${pale.mode} ${[...game.guide.tamed].join()}`);
 {
   const page = guidePage(SPECIES.rabba, true, 0, game.guide).find((s) => s.head === 'Forms')?.lines ?? [];
   const want = formLines(SPECIES.rabba, game.guide);
-  check(`browser: the kind's page lists its forms with their marks: ${page.join(' / ')}`, page.length === 3 && page.join() === want.join()
+  check(`browser: the kind's page lists its forms with their marks: ${page.join(' / ')}`, page.length === 5 && page.join() === want.join()
     && page[0] === `${formName(SPECIES.rabba, 'colour')}: 1 in ${COLOUR_FORM_ODDS} wild, colours only · seen · tamed`
-    && page[2].endsWith('· not seen yet · not tamed yet') && !guidePage(SPECIES.goblin, true, 0, game.guide).some((s) => s.head === 'Forms'), page.join(' / '));
-  const book = FieldGuide.fromJSON({ seen: ['rabba/colour', 'rabba/nosuch', 'goblin/large', 'rabba:1/colour'], tamed: ['rabba/small'], bred: ['rabba/colour'] });
+    && page[2].endsWith('· not seen yet · not tamed yet')
+    && page[3] === `Glow form: 1 in ${AURA_FORM_ODDS} wild, looks only · seen · tamed`
+    && page[4] === `Spirit form: 1 in ${AURA_FORM_ODDS} wild, looks only · not seen yet · not tamed yet`
+    && !guidePage(SPECIES.goblin, true, 0, game.guide).some((s) => s.head === 'Forms'), page.join(' / '));
+  const book = FieldGuide.fromJSON({ seen: ['rabba/colour', 'rabba/nosuch', 'goblin/large', 'rabba:1/colour', 'rabba/spirit', 'goblin/glow'], tamed: ['rabba/small', 'rabba/glow'], bred: ['rabba/colour', 'rabba/glow'] });
   check('browser: the book takes a form\'s seen and tamed, and nothing for a form there is not, a monster\'s, or bred',
-    [...book.seen].sort().join() === 'rabba/colour,rabba/small' && [...book.tamed].join() === 'rabba/small' && !book.bred.size,
+    [...book.seen].sort().join() === 'rabba/colour,rabba/glow,rabba/small,rabba/spirit' && [...book.tamed].sort().join() === 'rabba/glow,rabba/small' && !book.bred.size,
     JSON.stringify(book.toJSON()));
 }
 check(`browser: its card names them: ${formLabels(pale, SPECIES.rabba).join(' / ')}`,
-  formLabels(pale, SPECIES.rabba).join(' / ') === `${formName(SPECIES.rabba, 'colour')}: colours only / Large form: size +15%, health +10%`
-    && formLabels({ formSize: 'small' }, SPECIES.rabba).join() === 'Small form: size −15%, speed +10%');
+  formLabels(pale, SPECIES.rabba).join(' / ') === `${formName(SPECIES.rabba, 'colour')}: colours only / Large form: size +15%, health +10% / Glow form: looks only`
+    && formLabels({ formSize: 'small' }, SPECIES.rabba).join() === 'Small form: size −15%, speed +10%'
+    && formLabels({ formAura: 'spirit' }, SPECIES.rabba).join() === 'Spirit form: looks only' && formGives('glow') === 'looks only');
 // Reported: a small form caught, and nothing said it was small but the Sighted line.
 {
   const small = game.creatures.spawn('rabba', px + 0.4, py + 0.4, 'wild', game.rand, 0);
@@ -196,29 +238,40 @@ const browserBred = GRID.map(([dc, ds, sc, ss, r1, r2]) => {
 });
 check(`browser: a young one's forms at ${FORM_PASS} for each parent with one, the dam's size first`,
   browserBred.join() === 'true/-,false/-,true/-,false/-,false/large,false/-,false/small,false/large,false/small,false/-,false/-', browserBred.join());
+const AURA_GRID: Array<[AuraForm | null, AuraForm | null, number]> = [
+  ['glow', null, 0.2499], ['glow', null, 0.25], [null, 'spirit', 0.1], [null, 'spirit', 0.25], ['glow', 'spirit', 0.1], ['glow', 'spirit', 0.3],
+  ['glow', 'spirit', 0.5], ['spirit', 'spirit', 0.4999], ['spirit', 'spirit', 0.5], [null, null, 0],
+];
+const browserAuraBred = AURA_GRID.map(([d, s, r]) => bredAura({ formAura: d }, { formAura: s }, r) ?? '-');
+check(`browser: a young one's glow or spirit form at ${FORM_PASS} for each parent with one, the dam's first`,
+  browserAuraBred.join() === 'glow,-,spirit,-,glow,spirit,-,spirit,-,-', browserAuraBred.join());
 const COVERINGS = 4000;
 {
   game.rand = seeded(4040);
   const dam = game.creatures.spawn('rabba', px + 0.3, py, 'deed', game.rand, 0);
   const sire = game.creatures.spawn('rabba', px - 0.3, py, 'deed', game.rand, 0);
-  Object.assign(dam, { sex: 'female', formColour: true, formSize: 'large' });
-  Object.assign(sire, { sex: 'male', formColour: true, formSize: null });
-  let colour = 0, large = 0, small = 0;
+  Object.assign(dam, { sex: 'female', formColour: true, formSize: 'large', formAura: 'glow' });
+  Object.assign(sire, { sex: 'male', formColour: true, formSize: null, formAura: 'spirit' });
+  let colour = 0, large = 0, small = 0, glow = 0, spirit = 0;
   for (let i = 0; i < COVERINGS; i++) {
     game.creatures.pair(game, dam, sire, 50);
     if (dam.unborn?.formColour) colour++;
     if (dam.unborn?.formSize === 'large') large++;
     if (dam.unborn?.formSize === 'small') small++;
+    if (dam.unborn?.formAura === 'glow') glow++;
+    if (dam.unborn?.formAura === 'spirit') spirit++;
     dam.unborn = null;
   }
   check(`browser, ${COVERINGS} coverings of a pale large dam and a pale sire: pale ${fmt(colour, COVERINGS, 2 * FORM_PASS)}, large ${fmt(large, COVERINGS, FORM_PASS)}, never small`,
     about(colour, COVERINGS, 2 * FORM_PASS) && about(large, COVERINGS, FORM_PASS) && small === 0);
+  check(`browser: and a glow dam and a spirit sire: glow ${fmt(glow, COVERINGS, FORM_PASS)}, spirit ${fmt(spirit, COVERINGS, FORM_PASS)}`,
+    about(glow, COVERINGS, FORM_PASS) && about(spirit, COVERINGS, FORM_PASS));
   game.creatures.pair(game, dam, sire, 50);
-  dam.unborn = { ...dam.unborn!, formColour: true, formSize: 'small' };
+  dam.unborn = { ...dam.unborn!, formColour: true, formSize: 'small', formAura: 'spirit' };
   dam.due = game.time;
   const young = game.creatures.giveBirth(game, dam);
-  check('browser: and born with them', !!young && young.formColour === true && young.formSize === 'small' && young.health === maxHealth(young, SPECIES.rabba),
-    JSON.stringify({ c: young?.formColour, s: young?.formSize }));
+  check('browser: and born with them', !!young && young.formColour === true && young.formSize === 'small' && young.formAura === 'spirit' && young.health === maxHealth(young, SPECIES.rabba),
+    JSON.stringify({ c: young?.formColour, s: young?.formSize, a: young?.formAura }));
 }
 
 /* ---- drawn, the browser ---------------------------------------------------------------------- */
@@ -244,9 +297,16 @@ const COVERINGS = 4000;
       && coatOf({ formColour: true, variant: 2 }, SPECIES.rabba).join() === formCoat(SPECIES.rabba).join()
       && coatOf({ formColour: false, variant: 2 }, SPECIES.rabba).join() === SPECIES.rabba.variants[2].join());
   const herd = new Creatures();
-  const row: IslandCreature = { id: 9, species: 'rabba', name: 'Pale', variant: 1, mode: 'wild', stance: 'defensive', x: 5, y: 5, health: 10, formColour: true, formSize: 'small' };
+  {
+    const plain = SPECIES.rabba.variants[2], ghost = coatOf({ formAura: 'spirit', variant: 2 }, SPECIES.rabba);
+    const light = (hex: string): number => hsl(hex);
+    check(`drawn: a spirit form in its colours paled toward white-blue (${plain.join()} to ${ghost.join()}), a glow form in its own`,
+      ghost.join() === spiritCoat(plain).join() && light(ghost[0]) > light(plain[0]) && light(ghost[1]) > light(plain[1])
+        && coatOf({ formAura: 'glow', variant: 2 }, SPECIES.rabba).join() === plain.join(), ghost.join());
+  }
+  const row: IslandCreature = { id: 9, species: 'rabba', name: 'Pale', variant: 1, mode: 'wild', stance: 'defensive', x: 5, y: 5, health: 10, formColour: true, formSize: 'small', formAura: 'glow' };
   herd.sawAll([row]);
-  check('the browser takes them as the island sends them', herd.get(9)?.formColour === true && herd.get(9)?.formSize === 'small');
+  check('the browser takes them as the island sends them', herd.get(9)?.formColour === true && herd.get(9)?.formSize === 'small' && herd.get(9)?.formAura === 'glow');
 }
 
 /* ---- the island ------------------------------------------------------------------------------ */
@@ -254,6 +314,9 @@ const COVERINGS = 4000;
 const ISLE_N = 200000;
 const sqlRolls = ROLLS.map(([c, s]) => `(select f.form_colour || '/' || coalesce(f.form_size, '-') from wild_form_roll('rabba', ${c}, ${s}) f)`).join(" || ',' || ")
   + " || ',' || " + ROLLS.map(([c, s]) => `(select coalesce(f.form_colour, false) || '/' || coalesce(f.form_size, '-') from wild_form_roll('goblin', ${c}, ${s}) f)`).join(" || ',' || ");
+const sqlAuras = AURA_ROLLS.map((r) => `coalesce(wild_aura_roll('rabba', ${r}), '-')`).join(" || ',' || ")
+  + " || ',' || " + AURA_ROLLS.map((r) => `coalesce(wild_aura_roll('goblin', ${r}), '-')`).join(" || ',' || ");
+const sqlAuraBred = AURA_GRID.map(([d, s, r]) => `coalesce(bred_aura(${d ? `'${d}'` : 'null'}, ${s ? `'${s}'` : 'null'}, ${r}), '-')`).join(" || ',' || ");
 const sqlBred = GRID.map(([dc, ds, sc, ss, r1, r2]) => `(select f.form_colour || '/' || coalesce(f.form_size, '-') from bred_form(${dc}, ${ds ? `'${ds}'` : 'null'}, ${sc}, ${ss ? `'${ss}'` : 'null'}, ${r1}, ${r2}) f)`).join(" || ',' || ");
 const out = psql(`
 begin;
@@ -266,6 +329,11 @@ begin
   insert into said values ('NUMBERS', colour_form_odds() || '|' || size_form_odds() || '|' || large_health() || '|' || small_speed() || '|' || form_pass());
   insert into said values ('ROLLS', ${sqlRolls});
   insert into said values ('BRED', ${sqlBred});
+  insert into said values ('AURA_NUMBER', aura_form_odds()::text);
+  insert into said values ('AURAS', ${sqlAuras});
+  insert into said values ('AURA_BRED', ${sqlAuraBred});
+  insert into said select 'AURA_DRAW', count(*) filter (where a = 'glow') || '|' || count(*) filter (where a = 'spirit')
+    from generate_series(1, ${ISLE_N}) g, lateral wild_aura_roll('rabba', random() + 0 * g) a;
   insert into said select 'DRAW', count(*) filter (where f.form_colour) || '|' || count(*) filter (where f.form_size = 'large')
       || '|' || count(*) filter (where f.form_size = 'small') || '|' || count(*) filter (where f.form_colour and f.form_size is not null)
     -- Each row its own two rolls: \`g\` named in them, or the planner rolls once for the lot.
@@ -291,14 +359,19 @@ begin
   v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '10 days'), 0.5, 0.004);
   select * into c from creature where world_id = w and id = v_id;
   insert into said values ('PUT2', c.form_colour || '/' || coalesce(c.form_size, '-'));
-  v_id := wild_form_put(w, creature_spawn(w, 'goblin', v_x + 30, v_y + 30, 'wild', now() - interval '10 days'), 0, 0);
-  insert into said select 'MONSTER', form_colour || '/' || coalesce(form_size, '-') from creature where world_id = w and id = v_id;
+  v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '10 days'), 0.5, 0.5, 0.0001);
+  insert into said select 'PUTGLOW', form_colour || '/' || coalesce(form_size, '-') || '/' || coalesce(form_aura, '-') from creature where world_id = w and id = v_id;
+  v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '10 days'), 0.5, 0.5, 1.5 / aura_form_odds());
+  insert into said select 'PUTSPIRIT', form_colour || '/' || coalesce(form_size, '-') || '/' || coalesce(form_aura, '-') from creature where world_id = w and id = v_id;
+  v_id := wild_form_put(w, creature_spawn(w, 'goblin', v_x + 30, v_y + 30, 'wild', now() - interval '10 days'), 0, 0, 0);
+  insert into said select 'MONSTER', form_colour || '/' || coalesce(form_size, '-') || coalesce('/' || form_aura, '') from creature where world_id = w and id = v_id;
   -- And at the island's own dice, many times.
   v_n := 0;
   for v_i in 1..20000 loop
     v_id := wild_form_put(w, creature_spawn(w, 'woola', v_x + 30, v_y + 30, 'wild', now() - interval '10 days'));
     select * into c from creature where world_id = w and id = v_id;
     insert into said select 'STOCKED', c.form_colour || '/' || coalesce(c.form_size, '-') where c.form_colour or c.form_size is not null;
+    insert into said select 'STOCKAURA', c.form_aura where c.form_aura is not null;
     delete from creature where world_id = w and id = v_id;
   end loop;
   -- The stocking itself goes through it.
@@ -316,9 +389,9 @@ begin
 
   -- Seen: one in its forms near, and a form nothing near is in.
   v_id := creature_spawn(w, 'rabba', v_x + 0.6, v_y, 'wild', now() - interval '10 days');
-  update creature set form_colour = true, form_size = 'large' where world_id = w and id = v_id;
-  insert into said values ('SEEN', rpc_guide_seen(w, array['rabba', 'rabba/colour', 'rabba/large', 'rabba/small', 'rabba/nosuch'])::text);
-  insert into said select 'SENT', (e->>'formColour') || '/' || coalesce(e->>'formSize', '-')
+  update creature set form_colour = true, form_size = 'large', form_aura = 'glow' where world_id = w and id = v_id;
+  insert into said values ('SEEN', rpc_guide_seen(w, array['rabba', 'rabba/colour', 'rabba/large', 'rabba/small', 'rabba/nosuch', 'rabba/glow', 'rabba/spirit'])::text);
+  insert into said select 'SENT', (e->>'formColour') || '/' || coalesce(e->>'formSize', '-') || '/' || coalesce(e->>'formAura', '-')
     from jsonb_array_elements(rpc_creatures(w, 10)) e where (e->>'id')::int = v_id;
 
   -- Tamed by an offering: kept, and marked.
@@ -327,7 +400,9 @@ begin
     exit when (select mode from creature where world_id = w and id = v_id) <> 'wild';
     perform act_perform(w, dane, 'tame', jsonb_build_object('kind', 'creature', 'id', v_id));
   end loop;
-  insert into said select 'TAMED', mode || '|' || form_colour || '|' || coalesce(form_size, '-') from creature where world_id = w and id = v_id;
+  insert into said select 'TAMED', mode || '|' || form_colour || '|' || coalesce(form_size, '-') || '|' || coalesce(form_aura, '-') from creature where world_id = w and id = v_id;
+  -- And on a trade's side: its glow or spirit form, and no key at all for one in neither.
+  insert into said values ('BARTER', (barter_beast(w, v_id)->>'formAura') || '|' || (barter_beast(w, v_id) ? 'formColour')::text);
   update creature set mode = 'wild', keeper = null where world_id = w and keeper = dane and mode in ('active', 'stored');
 
   -- Out of a trap: kept, and marked.
@@ -343,6 +418,7 @@ begin
     perform act_perform(w, dane, 'take_catch', jsonb_build_object('kind', 'trap', 'id', v_trap));
   end loop;
   insert into said select 'TRAPPED', mode || '|' || coalesce(form_size, '-') from creature where world_id = w and id = v_id;
+  insert into said values ('BARTER0', (barter_beast(w, v_id) ? 'formAura')::text);
   update creature set mode = 'wild', keeper = null where world_id = w and keeper = dane and mode in ('active', 'stored');
   delete from placed where id = v_trap;
   insert into said values ('BOOK', rpc_guide(w)::text);
@@ -351,18 +427,19 @@ begin
   insert into skill (world_id, uid, id, value) values (w, dane, 'animal_husbandry', 50) on conflict (world_id, uid, id) do update set value = 50;
   v_dam := creature_spawn(w, 'rabba', v_x + 0.3, v_y, 'deed', now() - interval '10 days', dane);
   v_sire := creature_spawn(w, 'rabba', v_x - 0.3, v_y, 'deed', now() - interval '10 days', dane);
-  update creature set sex = 'female', form_colour = true, form_size = 'large', hunger = 1 where world_id = w and id = v_dam;
-  update creature set sex = 'male', form_colour = true, form_size = null, hunger = 1 where world_id = w and id = v_sire;
+  update creature set sex = 'female', form_colour = true, form_size = 'large', form_aura = 'glow', hunger = 1 where world_id = w and id = v_dam;
+  update creature set sex = 'male', form_colour = true, form_size = null, form_aura = 'spirit', hunger = 1 where world_id = w and id = v_sire;
   for v_i in 1..${COVERINGS} loop
     perform pair_them(w, v_dam, v_sire, 50);
     insert into said select 'U', coalesce(unborn->>'formColour', 'false') || '/' || coalesce(unborn->>'formSize', '-') from creature where world_id = w and id = v_dam;
+    insert into said select 'UA', coalesce(unborn->>'formAura', '-') from creature where world_id = w and id = v_dam;
     update creature set unborn = null, due = null where world_id = w and id = v_dam;
   end loop;
   perform pair_them(w, v_dam, v_sire, 50);
-  update creature set unborn = unborn || '{"formColour": true, "formSize": "small"}'::jsonb, due = now() - interval '1 second' where world_id = w and id = v_dam;
+  update creature set unborn = unborn || '{"formColour": true, "formSize": "small", "formAura": "spirit"}'::jsonb, due = now() - interval '1 second' where world_id = w and id = v_dam;
   v_young := give_birth(w, v_dam);
   select * into c from creature where world_id = w and id = v_young;
-  insert into said values ('BORN', c.form_colour || '/' || coalesce(c.form_size, '-') || '/' || (c.health = max_health(c)));
+  insert into said values ('BORN', c.form_colour || '/' || coalesce(c.form_size, '-') || '/' || (c.health = max_health(c)) || '/' || coalesce(c.form_aura, '-'));
 end $t$;
 select k || '|' || coalesce(v, 'NULL') from said;
 rollback;
@@ -373,6 +450,14 @@ const answer = (key: string): string => lines.find((l) => l.startsWith(`${key}|`
 check('the island\'s numbers are the browser\'s', answer('NUMBERS') === `${COLOUR_FORM_ODDS}|${SIZE_FORM_ODDS}|${LARGE_HEALTH}|${SMALL_SPEED}|${FORM_PASS}`, answer('NUMBERS'));
 check('the island rolls the same way at every roll, and never for a monster', answer('ROLLS') === browserRolls.join(), answer('ROLLS'));
 check('and settles a young one\'s forms the same way', answer('BRED') === browserBred.join(), answer('BRED'));
+check('the island\'s glow and spirit number is the browser\'s', answer('AURA_NUMBER') === String(AURA_FORM_ODDS), answer('AURA_NUMBER'));
+check('the island rolls glow and spirit the same way at every roll, and never for a monster', answer('AURAS') === browserAuras.join(), answer('AURAS'));
+check('and settles a young one\'s glow or spirit form the same way', answer('AURA_BRED') === browserAuraBred.join(), answer('AURA_BRED'));
+{
+  const [glow, spirit] = answer('AURA_DRAW').split('|').map(Number);
+  check(`island, ${ISLE_N} seeded rolls: glow ${fmt(glow, ISLE_N, 1 / AURA_FORM_ODDS)}, spirit ${fmt(spirit, ISLE_N, 1 / AURA_FORM_ODDS)}`,
+    about(glow, ISLE_N, 1 / AURA_FORM_ODDS) && about(spirit, ISLE_N, 1 / AURA_FORM_ODDS), answer('AURA_DRAW'));
+}
 {
   const [colour, large, small, both] = answer('DRAW').split('|').map(Number);
   check(`island, ${ISLE_N} seeded rolls: colour ${fmt(colour, ISLE_N, 1 / COLOUR_FORM_ODDS)}, large ${fmt(large, ISLE_N, 1 / (2 * SIZE_FORM_ODDS))}, small ${fmt(small, ISLE_N, 1 / (2 * SIZE_FORM_ODDS))}, both ${both}`,
@@ -383,6 +468,8 @@ check('island: put out with its rolls under the lines, it is in its colour form 
   `${answer('PUTF')} ${answer('PUT')}`);
 check('island: over the colour line and between the size lines, small and nothing more; a monster never', answer('PUT2') === 'false/small' && answer('MONSTER') === 'false/-',
   `${answer('PUT2')} ${answer('MONSTER')}`);
+check('island: put out with its third roll under the first aura line in the glow form, under the second in the spirit form, and nothing else',
+  answer('PUTGLOW') === 'false/-/glow' && answer('PUTSPIRIT') === 'false/-/spirit', `${answer('PUTGLOW')} ${answer('PUTSPIRIT')}`);
 {
   const stocked = lines.filter((l) => l.startsWith('STOCKED|')).map((l) => l.slice(8));
   const n = 20000;
@@ -392,20 +479,29 @@ check('island: over the colour line and between the size lines, small and nothin
 }
 check('island: the stocking puts them out through it', answer('STOCK') === 'creature_stock,creature_stock_block', answer('STOCK'));
 {
+  const auras = lines.filter((l) => l.startsWith('STOCKAURA|')).map((l) => l.slice(10));
+  const n = 20000, glow = auras.filter((a) => a === 'glow').length, spirit = auras.filter((a) => a === 'spirit').length;
+  check(`island: ${n} put out at its own dice: glow ${fmt(glow, n, 1 / AURA_FORM_ODDS)}, spirit ${fmt(spirit, n, 1 / AURA_FORM_ODDS)}`,
+    about(glow, n, 1 / AURA_FORM_ODDS) && about(spirit, n, 1 / AURA_FORM_ODDS) && glow + spirit === auras.length, auras.join());
+}
+{
   const [lh, ls] = answer('LARGE').split('|').map(Number);
   const [sh, ss] = answer('SMALL').split('|').map(Number);
   check(`island: a large one ×${LARGE_HEALTH} health, a small one ×${SMALL_SPEED} speed, in its blood`,
     Math.abs(lh - LARGE_HEALTH) < 1e-9 && Math.abs(ls - 1) < 1e-9 && Math.abs(sh - 1) < 1e-9 && Math.abs(ss - SMALL_SPEED) < 1e-9, `${answer('LARGE')} ${answer('SMALL')}`);
 }
 check('island: a form is taken seen while one in it stands near; a form nothing near is in, or none there is, is absent',
-  answer('SEEN') === '{"had": [], "added": ["rabba", "rabba/colour", "rabba/large"], "absent": ["rabba/nosuch", "rabba/small"]}', answer('SEEN'));
-check('island: it sends them with the creature', answer('SENT') === 'true/large', answer('SENT'));
-check('island: tamed by an offering, it keeps its forms', answer('TAMED') === 'active|true|large', answer('TAMED'));
+  answer('SEEN') === '{"had": [], "added": ["rabba", "rabba/colour", "rabba/glow", "rabba/large"], "absent": ["rabba/nosuch", "rabba/small", "rabba/spirit"]}', answer('SEEN'));
+check('island: it sends them with the creature', answer('SENT') === 'true/large/glow', answer('SENT'));
+check('island: tamed by an offering, it keeps its forms', answer('TAMED') === 'active|true|large|glow', answer('TAMED'));
+check('island: a trade\'s side says its glow form, and says nothing of one in neither', answer('BARTER') === 'glow|true' && answer('BARTER0') === 'false',
+  `${answer('BARTER')} ${answer('BARTER0')}`);
 check('island: and out of a trap', answer('TRAPPED') === 'active|small', answer('TRAPPED'));
 {
   const book = JSON.parse(answer('BOOK')) as { seen: string[]; tamed: string[]; bred: string[] };
   check('island: and the book marks each form tamed with its kind',
-    book.tamed?.join() === 'rabba,rabba/colour,rabba/large,vola,vola/small' && book.seen?.includes('vola/small') && book.seen.includes('rabba/large'), answer('BOOK'));
+    book.tamed?.join() === 'rabba,rabba/colour,rabba/glow,rabba/large,vola,vola/small' && book.seen?.includes('vola/small') && book.seen.includes('rabba/large')
+      && book.seen.includes('rabba/glow'), answer('BOOK'));
   const read = FieldGuide.fromJSON(book);
   check('and the browser takes it as it comes', read.has('vola/small', 'tamed') && read.has('rabba/colour', 'seen') && read.has('rabba', 'tamed'));
 }
@@ -414,8 +510,12 @@ check('island: and out of a trap', answer('TRAPPED') === 'active|small', answer(
   const colour = u.filter((s) => s.startsWith('true')).length, large = u.filter((s) => s.endsWith('/large')).length, small = u.filter((s) => s.endsWith('/small')).length;
   check(`island, ${COVERINGS} coverings of a pale large dam and a pale sire: pale ${fmt(colour, COVERINGS, 2 * FORM_PASS)}, large ${fmt(large, COVERINGS, FORM_PASS)}, never small`,
     u.length === COVERINGS && about(colour, COVERINGS, 2 * FORM_PASS) && about(large, COVERINGS, FORM_PASS) && small === 0);
+  const ua = lines.filter((l) => l.startsWith('UA|')).map((l) => l.slice(3));
+  const glow = ua.filter((s) => s === 'glow').length, spirit = ua.filter((s) => s === 'spirit').length;
+  check(`island: and a glow dam and a spirit sire: glow ${fmt(glow, COVERINGS, FORM_PASS)}, spirit ${fmt(spirit, COVERINGS, FORM_PASS)}`,
+    ua.length === COVERINGS && about(glow, COVERINGS, FORM_PASS) && about(spirit, COVERINGS, FORM_PASS));
 }
-check('island: and born with them, at its health', answer('BORN') === 'true/small/true', answer('BORN'));
+check('island: and born with them, at its health', answer('BORN') === 'true/small/true/spirit', answer('BORN'));
 
 // "Add a text line when the player comes into view of a rare or variant wild wildermon": what the log says of one.
 // And "dependent on tracking skill levels, tiered for rarity, variations": only what your Tracking notices, as finely as its band reads.
@@ -435,8 +535,12 @@ check('island: and born with them, at its health', answer('BORN') === 'true/smal
   const fant = { ...one, rare: 3, formColour: false, formSize: null };
   check(`a fantastic one only from ${SIGHT_RARITY_AT[3]}`, sightedLine(fant, 10, 10, SIGHT_RARITY_AT[3] - 1) === null && !!sightedLine(fant, 10, 10, SIGHT_RARITY_AT[3]));
   check('each step of rarity and each form noticed later the rarer it is',
-    SIGHT_RARITY_AT[1] < SIGHT_FORM_AT.large && SIGHT_FORM_AT.large < SIGHT_FORM_AT.colour && SIGHT_FORM_AT.colour < SIGHT_RARITY_AT[2] && SIGHT_RARITY_AT[2] < SIGHT_RARITY_AT[3]);
-  check(`the Skills window: ${sightedAt(0)} at nought, ${sightedAt(100)} at 100`, sightedAt(0) === 'nothing' && sightedAt(100) === 'rare, supreme, fantastic, large and small forms, pale and dark forms');
+    SIGHT_RARITY_AT[1] < SIGHT_FORM_AT.large && SIGHT_FORM_AT.large < SIGHT_FORM_AT.colour && SIGHT_FORM_AT.colour < SIGHT_RARITY_AT[2] && SIGHT_RARITY_AT[2] < SIGHT_FORM_AT.glow
+      && SIGHT_FORM_AT.glow === SIGHT_FORM_AT.spirit && SIGHT_FORM_AT.glow < SIGHT_RARITY_AT[3]);
+  check(`the Skills window: ${sightedAt(0)} at nought, ${sightedAt(100)} at 100`, sightedAt(0) === 'nothing' && sightedAt(100) === 'rare, supreme, fantastic, large and small forms, pale and dark forms, glow and spirit forms');
+  const ghost = sightedLine({ ...one, rare: 0, formColour: false, formSize: null, formAura: 'spirit' as const }, 10, 10, SIGHT_FORM_AT.spirit);
+  check(`a spirit form from ${SIGHT_FORM_AT.spirit}: ${ghost}`, ghost === `Sighted: ${def.name} (spirit form), 14 tiles north-east.`
+    && sightedLine({ ...one, rare: 0, formColour: false, formSize: null, formAura: 'glow' as const }, 10, 10, SIGHT_FORM_AT.glow - 1) === null);
 }
 
 finish('wild forms');

@@ -18,13 +18,16 @@ import { formName, formsOf, type FormId } from './wildforms';
 
 /** The Tracking level each step of rarity (`RARITIES`) is noticed in view at: rare one in a hundred, supreme in a thousand, fantastic in ten thousand. */
 export const SIGHT_RARITY_AT: readonly number[] = [0, 5, 40, 70];
-/** And each wild form's: a size form one in `2 × SIZE_FORM_ODDS`, the colour form one in `COLOUR_FORM_ODDS`. */
-export const SIGHT_FORM_AT: Readonly<Record<FormId, number>> = { large: 15, small: 15, colour: 25 };
+/**
+ * And each wild form's: a size form one in `2 × SIZE_FORM_ODDS`, the colour form one in `COLOUR_FORM_ODDS`, the glow and
+ * spirit forms one in `AURA_FORM_ODDS` each.
+ */
+export const SIGHT_FORM_AT: Readonly<Record<FormId, number>> = { large: 15, small: 15, colour: 25, glow: 55, spirit: 55 };
 
-type Sightable = Pick<Creature, 'species' | 'skills' | 'rare' | 'formColour' | 'formSize' | 'x' | 'y'>;
+type Sightable = Pick<Creature, 'species' | 'skills' | 'rare' | 'formColour' | 'formSize' | 'formAura' | 'x' | 'y'>;
 
 /** What of a wild one Tracking at `level` notices: its rarity's step (nought for none or not noticed) and its forms. */
-export function noticed(c: Pick<Creature, 'rare' | 'formColour' | 'formSize'>, level: number): { rare: number; forms: FormId[] } {
+export function noticed(c: Pick<Creature, 'rare' | 'formColour' | 'formSize' | 'formAura'>, level: number): { rare: number; forms: FormId[] } {
   const rare = c.rare && level >= SIGHT_RARITY_AT[c.rare] ? c.rare : 0;
   return { rare, forms: formsOf(c).filter((f) => level >= SIGHT_FORM_AT[f]) };
 }
@@ -34,7 +37,8 @@ export function sightedAt(level: number): string {
   const rare = RARITIES.flatMap((r, step) => (step && level >= SIGHT_RARITY_AT[step] ? [r.name] : []));
   const size = level >= SIGHT_FORM_AT.large ? ['large and small forms'] : [];
   const colour = level >= SIGHT_FORM_AT.colour ? ['pale and dark forms'] : [];
-  const all = [...rare, ...size, ...colour];
+  const aura = level >= SIGHT_FORM_AT.glow ? ['glow and spirit forms'] : [];
+  const all = [...rare, ...size, ...colour, ...aura];
   return all.length ? all.join(', ') : 'nothing';
 }
 

@@ -12,7 +12,7 @@ import type { Game } from './game';
 import type { Goal } from './journal';
 import type { Creature, GatherKind, SpeciesDef } from './creatures';
 import { MUTATION_ODDS, PEDIGREE_MOST, stageSlots, TRAIT_SLOTS } from './traits';
-import { COLOUR_FORM_ODDS, FORM_PASS, SIZE_FORM_ODDS } from './wildforms';
+import { AURA_FORM_ODDS, COLOUR_FORM_ODDS, FORM_PASS, SIZE_FORM_ODDS } from './wildforms';
 import { GEAR_SLOTS, gearA } from './wildgear';
 import { furnitureDef, FURNITURE_BY_ID } from './furniture';
 import { OUTSIDE_STAIR_LEVEL, WALL_TYPES } from './building';
@@ -170,8 +170,8 @@ export const WILDERMON_A: Goal[] = [
   {
     id: 'formtame',
     text: 'Tame a wildermon in a wild form',
-    get hint() { return late(() => `Colour form 1 in ${COLOUR_FORM_ODDS}, size form 1 in ${SIZE_FORM_ODDS} wild`); },
-    get how() { return late(() => `A wild wildermon in a colour form, or a large or small one, is named so on its card and in the Field guide. Tame it with a food it eats ("Tame"), or take it live out of a trap.`); },
+    get hint() { return late(() => `Colour form 1 in ${COLOUR_FORM_ODDS}, size form 1 in ${SIZE_FORM_ODDS}, glow and spirit form 1 in ${AURA_FORM_ODDS} each, wild`); },
+    get how() { return late(() => `A wild wildermon in a colour form, a large or small one, or a glow or spirit one, is named so on its card and in the Field guide. Tame it with a food it eats ("Tame"), or take it live out of a trap.`); },
     met: did('tamed:form'),
   },
   {
