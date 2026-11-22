@@ -272,6 +272,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_boards(uuid)",
     "rpc_bred_records(uuid)",
     "rpc_build_check(text,integer)",
+    "rpc_built_window(uuid,integer,integer,integer,integer)",
     "rpc_buy(uuid,bigint)",
     "rpc_cancel(uuid)",
     "rpc_cast_spell(uuid,integer,jsonb)",
