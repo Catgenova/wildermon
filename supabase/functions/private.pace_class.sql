@@ -7,7 +7,7 @@ CREATE OR REPLACE FUNCTION private.pace_class(p_door text)
 AS $function$
   select case
     when p_door = 'rpc_move' then 'move'
-    when p_door in ('rpc_barter', 'rpc_boards', 'rpc_chat', 'rpc_classes', 'rpc_clock', 'rpc_creatures', 'rpc_deals',
+    when p_door in ('rpc_barter', 'rpc_boards', 'rpc_built_window', 'rpc_chat', 'rpc_classes', 'rpc_clock', 'rpc_creatures', 'rpc_deals',
                     'rpc_faith', 'rpc_fog', 'rpc_ground', 'rpc_guide', 'rpc_guide_seen', 'rpc_join', 'rpc_land_window',
                     'rpc_letters', 'rpc_market', 'rpc_my_look', 'rpc_my_name', 'rpc_name_free', 'rpc_notices_ashore',
                     'rpc_orders', 'rpc_owner_am_i', 'rpc_owner_online', 'rpc_parcels', 'rpc_prices', 'rpc_sales',
