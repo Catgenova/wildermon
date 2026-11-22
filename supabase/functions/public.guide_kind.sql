@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.guide_kind(p_key text)
  STABLE
 AS $function$
   select case when position('/' in p_key) > 0 then
-           split_part(p_key, '/', 2) in ('colour', 'large', 'small') and split_part(p_key, '/', 3) = ''
+           split_part(p_key, '/', 2) in ('colour', 'large', 'small', 'glow', 'spirit') and split_part(p_key, '/', 3) = ''
            and exists (select 1 from species_def d where d.id = split_part(p_key, '/', 1) and not d.monster)
          else exists (select 1 from species_def d
                   where d.id = split_part(p_key, ':', 1)

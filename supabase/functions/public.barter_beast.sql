@@ -12,5 +12,6 @@ AS $function$
       'pedigree', case when c.pedigree is null or p_me is null or c.keeper = p_me then c.pedigree
                        else pedigree_seen(p_world, p_me, c.pedigree) end,
       'due', c.due is not null)
+    || case when c.form_aura is null then '{}'::jsonb else jsonb_build_object('formAura', c.form_aura) end
     from creature c where c.world_id = p_world and c.id = p_creature
 $function$

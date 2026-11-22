@@ -54,10 +54,10 @@ begin
         || coalesce((select jsonb_build_object('species', x.id, 'stage', least(stage_of(dam), stage_of(sire)))
                        from species_def x where x.id = cross_of(dam.species, sire.species)), '{}'::jsonb)
         -- And its parents' forms, at `form_pass` for each that has one (`bred_form`).
-        || (select jsonb_strip_nulls(jsonb_build_object('formColour', case when f.form_colour then true end, 'formSize', f.form_size))
+        || (select jsonb_strip_nulls(jsonb_build_object('formColour', case when f.form_colour then true end, 'formSize', f.form_size, 'formAura', bred_aura(dam.form_aura, sire.form_aura, random())))
               from bred_form(dam.form_colour, dam.form_size, sire.form_colour, sire.form_size, random(), random()) f)
         || case when v_twin is null then '{}'::jsonb else jsonb_build_object('twin', v_twin
-             || (select jsonb_strip_nulls(jsonb_build_object('formColour', case when f.form_colour then true end, 'formSize', f.form_size))
+             || (select jsonb_strip_nulls(jsonb_build_object('formColour', case when f.form_colour then true end, 'formSize', f.form_size, 'formAura', bred_aura(dam.form_aura, sire.form_aura, random())))
                    from bred_form(dam.form_colour, dam.form_size, sire.form_colour, sire.form_size, random(), random()) f)) end,
       due = now() + make_interval(secs => gestation_of(pk(p_world, p_uid, 'breed:gestation', 1), dam)),
       bred_at = now() - make_interval(secs => v_rest)

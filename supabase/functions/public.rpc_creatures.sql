@@ -168,6 +168,8 @@ begin
       -- And its wild forms (`formColour`, `formSize`), which the browser draws and its card names.
       || case when c.form_colour or c.form_size is not null
               then jsonb_build_object('formColour', c.form_colour, 'formSize', c.form_size) else '{}'::jsonb end
+      -- And its glow or spirit form (`formAura`), which the browser draws and its card names.
+      || case when c.form_aura is null then '{}'::jsonb else jsonb_build_object('formAura', c.form_aura) end
       -- And its lifetime at work, for its keeper, without the island's own clock (`work_stats`).
       || case when c.keeper = me and c.work_stats is not null then jsonb_build_object('work', c.work_stats - 'at') else '{}'::jsonb end
       /*

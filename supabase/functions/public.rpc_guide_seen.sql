@@ -26,7 +26,7 @@ begin
                   where c.world_id = p_world and c.species = split_part(split_part(s, ':', 1), '/', 1) and c.mode <> 'stored'
                     and (position(':' in s) = 0 or stage_of(c) = split_part(s, ':', 2)::int)
                     and (position('/' in s) = 0 or (split_part(s, '/', 2) = 'colour' and c.form_colour)
-                         or c.form_size = split_part(s, '/', 2))
+                         or c.form_size = split_part(s, '/', 2) or c.form_aura = split_part(s, '/', 2))
                     and c.to_x between p.x - (v_reach + leg_slack()) and p.x + (v_reach + leg_slack())
                     and c.to_y between p.y - (v_reach + leg_slack()) and p.y + (v_reach + leg_slack())
                     and greatest(abs(creature_x(c) - p.x), abs(creature_y(c) - p.y)) <= v_reach);

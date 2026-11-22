@@ -7,5 +7,5 @@ AS $function$
   select guide_mark(p_world, p_uid, k, p_what)
     from unnest(array[c.species]
                 || case when p_what = 'tamed' and stage_of(c) > 0 then array[c.species || ':' || stage_of(c)] else '{}'::text[] end
-                || form_keys(c.species, c.form_colour, c.form_size)) k
+                || form_keys(c.species, c.form_colour, c.form_size, c.form_aura)) k
 $function$

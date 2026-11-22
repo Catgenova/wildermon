@@ -57,7 +57,7 @@ begin
   update creature set traits = coalesce(v_traits, '{}'), sex = v_coming->>'sex',
       hunger = 0.9, care = 0.5,
       -- Its forms, as the covering settled them (`bred_form`).
-      form_colour = coalesce((v_coming->>'formColour')::boolean, false), form_size = v_coming->>'formSize',
+      form_colour = coalesce((v_coming->>'formColour')::boolean, false), form_size = v_coming->>'formSize', form_aura = v_coming->>'formAura',
       pedigree = case when v_coming ? 'sire' then jsonb_build_object(
         'dam', jsonb_build_object('id', v_dam.id, 'name', v_dam.name),
         'sire', v_coming->'sire',
@@ -96,7 +96,7 @@ begin
       perform journal_note(p_world, v_dam.keeper, 'line:' || l.depth)
         from (select max(e.value::int) as depth from jsonb_each_text(coalesce(v_coming->'line', '{}'::jsonb)) e) l
        where l.depth > 1;
-      if coalesce((v_coming->>'formColour')::boolean, false) or v_coming->>'formSize' is not null then
+      if coalesce((v_coming->>'formColour')::boolean, false) or v_coming->>'formSize' is not null or v_coming->>'formAura' is not null then
         perform journal_note(p_world, v_dam.keeper, 'bred:form');
       end if;
     end if;
