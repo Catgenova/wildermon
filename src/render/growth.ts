@@ -71,6 +71,8 @@ export interface GrowthFace {
   world?: (u: number, v: number) => readonly number[];
   /** The carpets' cover at its corners, (0,0), (w,0), (w,h), (0,h): blended across it, so paving shares its neighbours'. */
   coverAt?: readonly [number, number, number, number];
+  /** The most the carpets ever cover of it (a bridge's sides: half, so it is never shut in green). */
+  coverMost?: number;
 }
 
 /* ---- the stages --------------------------------------------------------------------------------------- */
@@ -188,11 +190,55 @@ function suitHere(k: Kind, f: GrowthFace, u: number, v: number, season: GrowthSe
   }
 }
 
+/** A box's signed distance (metres) from its middle (px, py), half hx by hy: below nought inside. */
+function sdBox(px: number, py: number, hx: number, hy: number): number {
+  const dx = Math.abs(px) - hx, dy = Math.abs(py) - hy;
+  return Math.hypot(Math.max(dx, 0), Math.max(dy, 0)) + Math.min(Math.max(dx, dy), 0);
+}
+
+/** How far a point of a face is from an opening, in metres: below nought in it. An archway's head a half circle (as Unity's `Growth.KeepDist`). */
+function keepDist(f: GrowthFace, k: Keep, u: number, v: number): number {
+  const x0 = k.t0 * f.width, x1 = k.t1 * f.width, y0 = k.k0 * f.height, y1 = k.k1 * f.height;
+  const cx = (x0 + x1) / 2, hx = (x1 - x0) / 2;
+  if (!k.round) return sdBox(u - cx, v - (y0 + y1) / 2, hx, (y1 - y0) / 2);
+  const spring = Math.max(y0, y1 - hx);
+  const body = sdBox(u - cx, v - (y0 + spring) / 2, hx, Math.max(0.001, (spring - y0) / 2));
+  const head = Math.hypot(u - cx, v - spring) - hx;
+  return Math.min(body, v >= spring ? head : Math.max(head, body));
+}
+
+/** How far a point is inside a face's outline, in metres: below nought outside it. */
+function outlineDist(o: ReadonlyArray<readonly [number, number]>, u: number, v: number): number {
+  let best = Infinity, inside = false;
+  for (let i = 0, j = o.length - 1; i < o.length; j = i++) {
+    const [ax, ay] = o[i], [bx, by] = o[j];
+    if ((ay > v) !== (by > v) && u < ((bx - ax) * (v - ay)) / (by - ay) + ax) inside = !inside;
+    const ex = bx - ax, ey = by - ay;
+    const t = clamp01(((u - ax) * ex + (v - ay) * ey) / Math.max(1e-8, ex * ex + ey * ey));
+    best = Math.min(best, Math.hypot(u - (ax + ex * t), v - (ay + ey * t)));
+  }
+  return inside ? best : -best;
+}
+
+/**
+ * How far a point of a face is into its stone, in metres, for the carpets:
+ * from its openings (by a margin that wanders with the place, four to
+ * twenty-six centimetres, so a window's or an arch's dressed stones show here
+ * and there round it) and its outline. Below nought where no carpet runs.
+ */
+function stoneDist(f: GrowthFace, u: number, v: number, w: readonly number[]): number {
+  let d = 9;
+  if (f.keep?.length) {
+    const margin = 0.04 + 0.22 * noise3(w[0] / 0.7, w[1] / 0.7, w[2] / 0.7, 877);
+    for (const k of f.keep) d = Math.min(d, keepDist(f, k, u, v) - margin);
+  }
+  if (f.outline && f.outline.length >= 3) d = Math.min(d, outlineDist(f.outline, u, v) - 0.02);
+  return d;
+}
+
 function onStone(f: GrowthFace, u: number, v: number): boolean {
   if (u < 0 || u > f.width || v < 0 || v > f.height) return false;
-  for (const k of f.keep ?? []) {
-    if (u > k.t0 * f.width - 0.03 && u < k.t1 * f.width + 0.03 && v > k.k0 * f.height - 0.03 && v < k.k1 * f.height + 0.03) return false;
-  }
+  for (const k of f.keep ?? []) if (keepDist(f, k, u, v) < 0.03) return false;
   const o = f.outline;
   if (o && o.length >= 3) {
     let inside = false;
@@ -292,7 +338,7 @@ function taken(k: Kind, f: GrowthFace, season: GrowthSeason): Taken[] {
 /* ---- ivy ----------------------------------------------------------------------------------------------- */
 
 /** A strand of ivy on a face: its points (u, v in metres) from its root, the main stem or a branch. */
-export interface IvyStem { pts: Array<[number, number]>; branch: boolean }
+export interface IvyStem { pts: Array<[number, number]>; branch: boolean; thick?: number }
 const IVY_STEP = 0.08;
 
 /**
@@ -332,7 +378,42 @@ export function ivyOn(f: GrowthFace): IvyStem[] {
     len = Math.min(len, room);
     walk(o, f, i, t * f.width, hang ? f.height - 0.02 : 0.02, hang ? -1 : 1, 0, len, false);
   }
+  seams(o, f);
   return o;
+}
+
+/**
+ * Thick old vines up the seams where a face meets the wall round its corner
+ * (either end, inside or out), climbing from the foot or hanging from an open
+ * head, keeping close to the seam, branching in across the face. As Unity's
+ * `Growth.Seams`.
+ */
+function seams(o: IvyStem[], f: GrowthFace): void {
+  if (!f.climb && !f.hang) return;
+  for (let end = 0; end < 2; end++) {
+    if ((end === 0 ? f.cornerA : f.cornerB) <= 0) continue;
+    const hang = !f.climb;
+    const birth = 3 + 4 * H(f.seed, end, 11, 601);
+    const len = Math.min((f.days - birth) * 0.16 * (0.7 + 0.6 * (f.vigour ?? 0.5)), (hang ? 0.9 : 0.98) * f.height);
+    if (len < 0.2) continue;
+    const inward = end === 0 ? 1 : -1;
+    const edge = end === 0 ? 0.035 : f.width - 0.035;
+    const s: IvyStem = { pts: [], branch: false, thick: 3.5 };
+    const steps = Math.floor(len / IVY_STEP);
+    const v0 = hang ? f.height - 0.02 : 0.02;
+    for (let k = 0; k <= steps; k++) {
+      const v = v0 + (hang ? -k : k) * IVY_STEP;
+      const u = edge + inward * 0.045 * (0.5 + 0.5 * Math.sin(k * 0.7 + (f.seed % 7)));
+      if (!onStone(f, u, v)) break;
+      s.pts.push([u, v]);
+      if (k > 1 && k % 3 === 0 && H(wrap(Math.imul(f.seed, 7) + end), k, 12, 601) < 0.6) {
+        const had = o.length;
+        walk(o, f, 900 + end * 100 + k, u, v, hang ? -1 : 1, inward * (0.7 + 0.4 * H(f.seed, end * 100 + k, 13, 601)), (steps - k) * IVY_STEP * 0.35 + 0.2, true);
+        if (o.length > had) o[o.length - 1].thick = 1.6;
+      }
+    }
+    if (s.pts.length > 1) o.push(s);
+  }
 }
 
 function walk(into: IvyStem[], f: GrowthFace, no: number, u: number, v: number, way: number, lean: number, len: number, branch: boolean): void {
@@ -344,6 +425,8 @@ function walk(into: IvyStem[], f: GrowthFace, no: number, u: number, v: number, 
     u = Math.max(0.02, Math.min(f.width - 0.02, u + Math.sin(ang) * IVY_STEP));
     v += way * Math.cos(ang) * IVY_STEP;
     if (v < 0.01 || v > f.height - 0.01) break;
+    // short of an outline's edge (a bridge's arch) or an opening
+    if (!onStone(f, u, v) || !onStone(f, u, v + way * 0.12)) break;
     s.pts.push([u, v]);
     if (!branch && k > 2 && k % 4 === 0 && H(f.seed, wrap(Math.imul(no, 97) + k), 8, 601) < 0.5) {
       const side = H(f.seed, wrap(Math.imul(no, 97) + k), 9, 601) < 0.5 ? -1 : 1;
@@ -370,13 +453,15 @@ function ivyLeafColour(age: number, id: number, season: GrowthSeason): number[] 
 function paintIvy(g: Ctx, f: GrowthFace, season: GrowthSeason): number {
   const rp = ripe(f);
   // more leaves to a step, and bigger, the further on it is, till the stems are lost under them
-  const leaves = 1 + (rp > 0.45 ? 1 : 0);
   const stems = ivyOn(f);
   let si = 0;
   for (const s of stems) {
     si++;
+    const thick = s.thick ?? 1;
+    // a seam's old vine: more leaves to a step and bigger, either side of it
+    const leaves = 1 + (rp > 0.45 ? 1 : 0) + (thick > 2 ? 2 : thick > 1 ? 1 : 0);
     g.strokeStyle = css(IVY_STEM);
-    g.lineWidth = s.branch ? 0.006 : 0.009;
+    g.lineWidth = (s.branch ? 0.006 : 0.009) * thick;
     g.lineCap = 'round';
     g.beginPath();
     s.pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
@@ -392,20 +477,23 @@ function paintIvy(g: Ctx, f: GrowthFace, season: GrowthSeason): number {
       const side = (k + lf) % 2 === 0 ? 1 : -1;
       const turn = side * (0.8 + 0.4 * H(id, 3, 0, 611)) * (lf === 0 ? 1 : 0.5 + 0.9 * H(id, 5, 0, 611));
       const lx = dx * Math.cos(turn) - dy * Math.sin(turn), ly = dx * Math.sin(turn) + dy * Math.cos(turn);
-      const size = (0.08 + 0.05 * H(id, 4, 0, 611)) * (0.6 + 0.4 * age) * (s.branch ? 0.85 : 1) * (1 + 0.5 * rp);
+      const size = (0.08 + 0.05 * H(id, 4, 0, 611)) * (0.6 + 0.4 * age) * (s.branch ? 0.85 : 1) * (1 + 0.5 * rp) * (thick > 2 ? 1.25 : 1);
       const col = ivyLeafColour(age, id, season);
+      // a thick vine's leaves stand either side of it, off its line
+      const off = thick > 2 ? (lf % 2 === 0 ? 0.03 : -0.03) : 0;
+      const bx = x - dy * off, by = y + dx * off;
       // the leaf: a point and two side lobes round its middle, turned along (lx, ly)
-      const cx = x + lx * size * 0.55, cy = y + ly * size * 0.55;
+      const cx = bx + lx * size * 0.55, cy = by + ly * size * 0.55;
       const px = -ly, py = lx;
       g.fillStyle = css(col);
       g.beginPath();
-      g.moveTo(x, y);
-      g.quadraticCurveTo(cx + px * size * 0.7, cy + py * size * 0.7, x + lx * size * 1.1, y + ly * size * 1.1);
-      g.quadraticCurveTo(cx - px * size * 0.7, cy - py * size * 0.7, x, y);
+      g.moveTo(bx, by);
+      g.quadraticCurveTo(cx + px * size * 0.7, cy + py * size * 0.7, bx + lx * size * 1.1, by + ly * size * 1.1);
+      g.quadraticCurveTo(cx - px * size * 0.7, cy - py * size * 0.7, bx, by);
       g.fill();
       g.strokeStyle = css(col.map((v) => v * 0.75));
       g.lineWidth = size * 0.08;
-      g.beginPath(); g.moveTo(x, y); g.lineTo(x + lx * size * 0.9, y + ly * size * 0.9); g.stroke();
+      g.beginPath(); g.moveTo(bx, by); g.lineTo(bx + lx * size * 0.9, by + ly * size * 0.9); g.stroke();
       }
     });
   }
@@ -435,9 +523,10 @@ const worldOf = (f: GrowthFace, u: number, v: number): readonly number[] => (f.w
 /** A carpet's cover at a point of a face: the face's own, or blended from its corners' (paving: its neighbours' share). */
 function coverHere(f: GrowthFace, u: number, v: number): number {
   const c = f.coverAt;
-  if (!c) return cover(f);
+  const most = f.coverMost ?? 1;
+  if (!c) return Math.min(cover(f), most);
   const s = clamp01(u / f.width), t = clamp01(v / f.height);
-  return (c[0] + (c[1] - c[0]) * s) * (1 - t) + (c[3] + (c[2] - c[3]) * s) * t;
+  return Math.min(most, (c[0] + (c[1] - c[0]) * s) * (1 - t) + (c[3] + (c[2] - c[3]) * s) * t);
 }
 
 /**
@@ -448,9 +537,13 @@ function coverHere(f: GrowthFace, u: number, v: number): number {
  * sward comes after the moss). As Unity's `Growth.Field`.
  */
 function field(f: GrowthFace, u: number, v: number, salt: number, late: number): number {
-  if (!onStone(f, Math.max(0.001, Math.min(f.width - 0.001, u)), Math.max(0.001, Math.min(f.height - 0.001, v)))) return -1;
+  u = Math.max(0.001, Math.min(f.width - 0.001, u)); v = Math.max(0.001, Math.min(f.height - 0.001, v));
+  const w = worldOf(f, u, v);
+  // its openings and outline as a distance, so the edge follows a window's square or an arch's curve
+  const d = stoneDist(f, u, v, w);
+  if (d < -0.3) return -1;
   const c = coverHere(f, u, v) - late;
-  return c * 1.3 - 0.15 + 0.55 * (patchy(worldOf(f, u, v), salt) - 0.5) + 0.35 * (damp(f, u, v) - 0.45);
+  return Math.min(c * 1.3 - 0.15 + 0.55 * (patchy(w, salt) - 0.5) + 0.35 * (damp(f, u, v) - 0.45), EDGE + d * 6);
 }
 const EDGE = 0.5;
 /** Samples a metre the field is painted at, smoothed up to the picture: soft edges, and cheap. */
@@ -473,7 +566,9 @@ function newCanvas(w: number, h: number): HTMLCanvasElement {
  * moss at its foot). Returns whether any of it showed.
  */
 function fieldCarpet(g: Ctx, f: GrowthFace, salt: number, late: number, palette: (u: number, v: number) => [number[], number[]]): boolean {
-  const cols = Math.max(2, Math.ceil(f.width * FIELD_PER_M)), rows = Math.max(2, Math.ceil(f.height * FIELD_PER_M));
+  // finer round an opening or an outline, so the edge cut round it is clean
+  const per = f.keep?.length || f.outline ? FIELD_PER_M * 2 : FIELD_PER_M;
+  const cols = Math.max(2, Math.ceil(f.width * per)), rows = Math.max(2, Math.ceil(f.height * per));
   const cv = newCanvas(cols, rows);
   const cg = cv.getContext('2d') as Ctx;
   const img = cg.createImageData(cols, rows);

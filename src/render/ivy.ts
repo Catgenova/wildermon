@@ -367,8 +367,8 @@ export function strandPic(kind: StrandKind, v: number, stage: number, bloom: boo
 
 /* ---- where the strands go on a face -------------------------------------------- */
 
-/** A hole in a face that ivy keeps out of, in the face's own shares: along it `t0` to `t1`, up it `k0` to `k1`. */
-export interface Keep { t0: number; t1: number; k0: number; k1: number }
+/** A hole in a face that ivy keeps out of, in the face's own shares: along it `t0` to `t1`, up it `k0` to `k1`; `round`, its head a half circle (an archway's), `k1` its crown. */
+export interface Keep { t0: number; t1: number; k0: number; k1: number; round?: boolean }
 
 /** What a face is, for laying ivy on it. */
 export interface IvyFace {

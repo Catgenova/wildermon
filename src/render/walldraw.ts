@@ -2094,14 +2094,15 @@ export class WallPainter {
     const ty = wall.dir === 'h' ? wall.y - (oy < 0 ? 1 : 0) : wall.y;
     const keep: Keep[] = [];
     switch (wall.type) {
-      case 'arch': keep.push({ t0: ARCH.t0, t1: ARCH.t1, k0: 0, k1: 0.8 }); break;
+      // the openings as cut (masonry/openings.ts): an archway's head a half circle off its spring, crowned at the half span over it
+      case 'arch': keep.push({ t0: ARCH.t0, t1: ARCH.t1, k0: 0, k1: ARCH.spring + (((ARCH.t1 - ARCH.t0) / 2) * 4) / (WALL_HEIGHT / 10), round: true }); break;
       case 'portcullis': keep.push({ t0: GATEWAY.t0 - 0.06, t1: GATEWAY.t1 + 0.06, k0: 0, k1: GATEWAY.crown + 0.16 }); break;
-      case 'window': keep.push({ t0: WINDOW.t0, t1: WINDOW.t1, k0: WINDOW.k0 - 0.05, k1: WINDOW.k1 + 0.1 }); break;
-      case 'bay': keep.push({ t0: BAY.t0, t1: BAY.t1, k0: BAY.k0 - 0.05, k1: BAY.k1 + 0.08 }); break;
+      case 'window': keep.push({ t0: WINDOW.t0, t1: WINDOW.t1, k0: WINDOW.k0, k1: WINDOW.k1 }); break;
+      case 'bay': keep.push({ t0: BAY.t0, t1: BAY.t1, k0: BAY.k0, k1: BAY.k1 }); break;
       // A counter's opening, its board and the awning over it (`counter.ts`).
       case 'counter': keep.push(COUNTER_KEEP); break;
-      case 'door': keep.push({ t0: DOOR.t0, t1: DOOR.t1, k0: 0, k1: DOOR.k1 + 0.08 }); break;
-      case 'double_door': keep.push({ t0: DOUBLE.t0, t1: DOUBLE.t1, k0: 0, k1: DOUBLE.k1 + 0.08 }); break;
+      case 'door': keep.push({ t0: DOOR.t0, t1: DOOR.t1, k0: 0, k1: DOOR.k1 }); break;
+      case 'double_door': keep.push({ t0: DOUBLE.t0, t1: DOUBLE.t1, k0: 0, k1: DOUBLE.k1 }); break;
       case 'fence_gate': case 'iron_gate': keep.push({ t0: FENCE_GAP.t0, t1: FENCE_GAP.t1, k0: 0, k1: 1 }); break;
     }
     const low = !!kind?.low;

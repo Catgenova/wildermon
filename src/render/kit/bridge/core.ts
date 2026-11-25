@@ -1516,6 +1516,8 @@ const GROW_TOP = new Set<Role>(['cap', 'plinth']);
 // its deck too, walked as paving is: half trodden, greening at its edges first
 const GROW_DECK = new Set<Role>(['deck']);
 const GROWS_ON = new Set<Role>([...GROW_FOOT, ...GROW_LIP, ...GROW_TOP, ...GROW_DECK]);
+/** The sides vines grow down (or a pier's, up). */
+const GROW_SIDE = new Set<Role>(['pier', 'wall', 'parapet']);
 
 /**
  * What has grown on a face of a stone bridge (`growth.ts`), in the face's
@@ -1534,6 +1536,11 @@ export function growthPaint(g: Ctx, f: FaceInfo, growth: BridgeGrowth, frame?: {
     foot: f.role === 'pier' || f.role === 'wall', top: GROW_TOP.has(f.role) || GROW_DECK.has(f.role), drip: GROW_LIP.has(f.role), cornerA: 0, cornerB: 0,
     paving: GROW_DECK.has(f.role), joint: 1, trodden: GROW_DECK.has(f.role) ? 0.5 : 0,
     seed: Math.floor(hashI(f.seed, ROLE_NO[f.role] ?? 29, 0, 79) * 2147483647),
+    // its sides never shut in green: the carpets cover half at most (an arch's underside less, the way under it kept
+    // open), and vines hang down them from the parapet and the wall's head (clipped to the face, so short of the arch);
+    // a pier's climb from the water
+    coverMost: GROW_DECK.has(f.role) ? 1 : GROW_LIP.has(f.role) ? 0.3 : 0.5,
+    ivy: GROW_SIDE.has(f.role), hang: GROW_SIDE.has(f.role) && f.role !== 'pier', climb: f.role === 'pier', vigour: 0.55,
     // where it is on the bridge, in metres (tiles along and across, height units up), for the carpets' field
     world: frame ? (u, v) => {
       const x = x0 + u * 10, y = y0 + v * 10;

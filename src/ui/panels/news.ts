@@ -445,6 +445,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Overgrowth round openings, up corner seams and on bridges.
+  {
+    n: 703,
+    day: '2026-11-25',
+    lines: () => [
+      'Changed: carpets cut to the true shape of windows, doors and archways (round heads round), with an irregular margin showing their frame stones.',
+      'Added: thick old vines up corner seams, branching across the face.',
+      'Changed: bridge sides at most half covered, arch undersides less. Vines hang down bridge walls and parapets, stopping short of the arches.',
+    ],
+  },
   // Overgrowth's carpets from one field over the world, so they run on across the edges of tiles and walls.
   {
     n: 702,
