@@ -226,15 +226,15 @@ function outlineDist(o: ReadonlyArray<readonly [number, number]>, u: number, v: 
  * twenty-six centimetres, so a window's or an arch's dressed stones show here
  * and there round it) and its outline. Below nought where no carpet runs.
  */
-function stoneDist(f: GrowthFace, u: number, v: number, w: readonly number[]): number {
-  let d = 9;
+function stoneDists(f: GrowthFace, u: number, v: number, w: readonly number[]): [number, number] {
+  let d = 9, o = 9;
   if (f.keep?.length) {
     const margin = 0.04 + 0.22 * noise3(w[0] / 0.7, w[1] / 0.7, w[2] / 0.7, 877);
     for (const k of f.keep) d = Math.min(d, keepDist(f, k, u, v) - margin);
   }
   // a hair past its outline, so neighbouring faces' carpets meet
-  if (f.outline && f.outline.length >= 3) d = Math.min(d, outlineDist(f.outline, u, v) + 0.02);
-  return d;
+  if (f.outline && f.outline.length >= 3) o = outlineDist(f.outline, u, v) + 0.02;
+  return [d, o];
 }
 
 function onStone(f: GrowthFace, u: number, v: number): boolean {
@@ -546,11 +546,15 @@ function field(f: GrowthFace, u: number, v: number, salt: number, late: number):
   u = Math.max(0.001, Math.min(f.width - 0.001, u)); v = Math.max(0.001, Math.min(f.height - 0.001, v));
   const w = worldOf(f, u, v);
   // its openings and outline as a distance, so the edge follows a window's square or an arch's curve
-  const d = stoneDist(f, u, v, w);
-  if (d < -0.3) return -1;
+  const [dk, dout] = stoneDists(f, u, v, w);
+  if (Math.min(dk, dout) < -0.3) { lastShade = -1; return -1; }
   const c = coverHere(f, u, v) - late;
-  return Math.min(c * 1.3 - 0.15 + 0.55 * (patchy(w, salt) - 0.5) + 0.35 * (damp(f, u, v) - 0.45), EDGE + d * 6);
+  // its colour from the field and its openings, not its outline (where two faces' carpets overlap, neither is at its edge)
+  lastShade = Math.min(c * 1.3 - 0.15 + 0.55 * (patchy(w, salt) - 0.5) + 0.35 * (damp(f, u, v) - 0.45), EDGE + dk * 6);
+  return Math.min(lastShade, EDGE + dout * 6);
 }
+/** What the last `field` reckoned its colour from (as Unity's `shade`). */
+let lastShade = 0;
 const EDGE = 0.5;
 /** Samples a metre the field is painted at, smoothed up to the picture: soft edges, and cheap. */
 const FIELD_PER_M = 12;
@@ -588,7 +592,7 @@ function fieldCarpet(g: Ctx, f: GrowthFace, salt: number, late: number, palette:
     const [lo, hi] = palette(u, v);
     const w = worldOf(f, u, v);
     const mott = 0.9 + 0.2 * noise3(w[0] * 3.1, w[1] * 3.1, w[2] * 3.1, salt + 5);
-    const col = mix(lo, hi, clamp01((val - EDGE) * 2.5)).map((x) => Math.min(1, x * mott));
+    const col = mix(lo, hi, clamp01((lastShade - EDGE) * 2.5)).map((x) => Math.min(1, x * mott));
     const i = (r * cols + c) * 4;
     img.data[i] = col[0] * 255; img.data[i + 1] = col[1] * 255; img.data[i + 2] = col[2] * 255; img.data[i + 3] = a * 255;
   }

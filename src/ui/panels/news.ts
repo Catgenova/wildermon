@@ -447,6 +447,14 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Carpets shaded by their own spread, not by where their face ends.
+  {
+    n: 706,
+    day: '2026-11-25',
+    lines: () => [
+      'Fixed: moss and ivy carpets where two faces meet no longer show a darker line along the join.',
+    ],
+  },
   // Every action that took thirty seconds at its base takes fifteen.
   {
     n: 705,
