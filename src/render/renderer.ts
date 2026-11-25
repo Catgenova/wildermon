@@ -3847,10 +3847,10 @@ export class Renderer {
    * ivied wall on its ground floor (what creeps from their foot onto the
    * paving round, however freshly kept), or `fallback` with none.
    */
-  private wallsCover(x: number, y: number, fallback: number): number {
+  private wallsCover(x: number, y: number, fallback: number, level = 0): number {
     let best = -1;
     for (const side of ['n', 'e', 's', 'w'] as const) {
-      const w = this.game.buildings.wall(0, x, y, side);
+      const w = this.game.buildings.wall(level, x, y, side);
       if (w && ivied(w)) best = Math.max(best, Math.floor((this.greenAt - greenStart(w.greenSince, this.game.greenFrom)) / GREEN_DAY));
     }
     return best < 0 ? fallback : coverOf(Math.max(0, best), 0);
@@ -10359,7 +10359,7 @@ export class Renderer {
     }
     // and what has grown on it out under the sky, as its days and the season turn (`floorGrowth`)
     const fg = this.floorGrowth(floor, x, y);
-    const key = fg ? `${fk[4]}|${fg.days}${fg.season}` : fk[4];
+    const key = fg ? `${fk[4]}|${fg.days}${fg.season}|${fg.face.coverAt!.map((c) => c.toFixed(2)).join(',')}` : fk[4];
     this.baked(key, cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h), [x0, y0, x1, y1], () => this.drawFloorNow(floor, x, y, base, alpha),
       this.structs.version(x, y, x, y), FLOOR_BAKE);
   }
@@ -10376,8 +10376,7 @@ export class Renderer {
     const bld = this.game.buildings;
     const lv = floor.level;
     if (bld.floor(lv + 1, x, y)) return null;
-    const days = Math.floor((this.greenAt - this.game.greenFrom) / GREEN_DAY);
-    if (days <= 0) return null;
+    const days = Math.max(0, Math.floor((this.greenAt - this.game.greenFrom) / GREEN_DAY));
     const open = (px: number, py: number): boolean => { const o = bld.floor(lv, px, py); return !!o && (!o.kind || o.kind === 'floor') && !bld.floor(lv + 1, px, py); };
     const troddenAt = (tx: number, ty: number): number => {
       let edge = false;
@@ -10387,12 +10386,22 @@ export class Renderer {
       return 1;
     };
     const trodden = troddenAt(x, y);
-    // its carpets' cover at a corner: the share of the open floors round it, what is not one as overgrown as the stage nearly allows
+    // its carpets' cover at a corner: the share of the open floors round it; a walled tile as overgrown as its walls,
+    // weighed double (their growth creeps out from their foot, however freshly kept the floor); what is neither as
+    // overgrown as the stage nearly allows
     const cornerOf = (cx: number, cy: number): number => {
-      let sum = 0;
-      for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) sum += open(cx + dx, cy + dy) ? coverOf(days, troddenAt(cx + dx, cy + dy)) : 0.85 * ripeOf(days);
-      return sum / 4;
+      let sum = 0, weight = 4;
+      for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) {
+        const tx = cx + dx, ty = cy + dy;
+        if (open(tx, ty)) { sum += coverOf(days, troddenAt(tx, ty)); continue; }
+        const walls = this.wallsCover(tx, ty, -1, lv);
+        if (walls >= 0) { sum += 2 * walls; weight++; } else sum += 0.85 * ripeOf(days);
+      }
+      return sum / weight;
     };
+    const coverAt: [number, number, number, number] = [cornerOf(x, y + 1), cornerOf(x + 1, y + 1), cornerOf(x + 1, y), cornerOf(x, y)];
+    // kept clear itself: only what creeps in from the walls round it, if anything does
+    if (days <= 0 && Math.max(...coverAt) < 0.05) return null;
     // a wall on its east or south border keeps the sun off it
     const shut = !!(bld.wallOnBorder(lv, { x: x + 1, y, dir: 'v' }) || bld.wallOnBorder(lv, { x, y: y + 1, dir: 'h' }));
     const season = seasonAt(this.greenAt).season as GrowthSeason;
@@ -10402,7 +10411,7 @@ export class Renderer {
         width: 4, height: 4, days, sun: shut ? 0.45 : 0.9, wet: this.walls.wetness(x, y), foot: false, top: true, drip: false, cornerA: 0, cornerB: 0,
         paving: true, joint: 1, trodden, seed: seedOf(x, y, lv, 113),
         // corners (0,0), (w,0), (w,h), (0,h) of its picture: the tile's (x, y+1), (x+1, y+1), (x+1, y), (x, y)
-        coverAt: [cornerOf(x, y + 1), cornerOf(x + 1, y + 1), cornerOf(x + 1, y), cornerOf(x, y)],
+        coverAt,
       },
     };
   }

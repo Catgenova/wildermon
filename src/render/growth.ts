@@ -350,12 +350,19 @@ const IVY_STEP = 0.08;
  */
 export function ivyOn(f: GrowthFace): IvyStem[] {
   const o: IvyStem[] = [];
-  if (!f.ivy || f.days <= 0 || (!f.climb && !f.hang)) return o;
+  if (!f.ivy || f.days <= 0) return o;
+  stems(o, f);
+  seams(o, f);
+  return o;
+}
+
+function stems(o: IvyStem[], f: GrowthFace): void {
+  if (!f.climb && !f.hang) return;
   const rp = ripe(f);
   const density = clamp01(-0.3 + 2.1 * (f.vigour ?? 0.5) + 0.3 * (1 - f.sun) + 0.25 * f.wet + 0.6 * rp);
   const low = f.height < 2.2;
   const n = Math.round(density * (low ? 5 : 7) * (1 + 0.5 * rp) + (H(f.seed, 0, 1, 601) - 0.5) * 1.2);
-  if (n <= 0) return o;
+  if (n <= 0) return;
   const spread = ((low ? 0.15 : 0.13) + H(f.seed, 0, 2, 601) * 0.05) * (0.7 + 0.9 * density);
   const centre = 0.18 + H(f.seed, 0, 3, 601) * 0.64;
   for (let i = 0; i < n; i++) {
@@ -378,8 +385,6 @@ export function ivyOn(f: GrowthFace): IvyStem[] {
     len = Math.min(len, room);
     walk(o, f, i, t * f.width, hang ? f.height - 0.02 : 0.02, hang ? -1 : 1, 0, len, false);
   }
-  seams(o, f);
-  return o;
 }
 
 /**
@@ -389,10 +394,10 @@ export function ivyOn(f: GrowthFace): IvyStem[] {
  * `Growth.Seams`.
  */
 function seams(o: IvyStem[], f: GrowthFace): void {
-  if (!f.climb && !f.hang) return;
   for (let end = 0; end < 2; end++) {
     if ((end === 0 ? f.cornerA : f.cornerB) <= 0) continue;
-    const hang = !f.climb;
+    // from the foot on the ground, down from an open head, or on up from the storey below (its whole height)
+    const hang = !f.climb && !!f.hang;
     const birth = 3 + 4 * H(f.seed, end, 11, 601);
     const len = Math.min((f.days - birth) * 0.16 * (0.7 + 0.6 * (f.vigour ?? 0.5)), (hang ? 0.9 : 0.98) * f.height);
     if (len < 0.2) continue;
