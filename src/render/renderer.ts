@@ -10294,9 +10294,45 @@ export class Renderer {
       fk = [rev, base, x, y, `f|${floor.level}|${x},${y}|${floor.material}|${floor.kind ?? ''}|${floor.dye ?? ''}|${isDone(floor) ? 1 : 0}|${base}`];
       this.floorKeys.set(floor, fk);
     }
-    const key = fk[4];
+    // and what has grown on it out under the sky, as its days and the season turn (`floorGrowth`)
+    const fg = this.floorGrowth(floor, x, y);
+    const key = fg ? `${fk[4]}|${fg.days}${fg.season}` : fk[4];
     this.baked(key, cam.worldToScreenX(x, y), cam.worldToScreenY(x, y, h), [x0, y0, x1, y1], () => this.drawFloorNow(floor, x, y, base, alpha),
       this.structs.version(x, y, x, y), FLOOR_BAKE);
+  }
+
+  /**
+   * What has grown on a floor out under the sky (growth.ts): a finished one of
+   * stone, nothing laid over it, as paving grows -- in its joints, the more by
+   * a wall on its south or east, at the floor's edge and by water, the less in
+   * the middle of an open terrace; from when greening came in. Null for any
+   * other floor.
+   */
+  private floorGrowth(floor: FloorTile, x: number, y: number): { days: number; season: GrowthSeason; face: GrowthFace } | null {
+    if (!isDone(floor) || (floor.kind && floor.kind !== 'floor') || MATERIAL_BY_ID.get(floor.material)?.kind !== 'stone') return null;
+    const bld = this.game.buildings;
+    const lv = floor.level;
+    if (bld.floor(lv + 1, x, y)) return null;
+    const days = Math.floor((this.greenAt - this.game.greenFrom) / GREEN_DAY);
+    if (days <= 0) return null;
+    const open = (px: number, py: number): boolean => { const o = bld.floor(lv, px, py); return !!o && (!o.kind || o.kind === 'floor') && !bld.floor(lv + 1, px, py); };
+    let edge = false;
+    for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !open(x + dx, y + dy)) { edge = true; break; }
+    let trodden = 0;
+    if (!edge) {
+      trodden = 1;
+      for (let dy = -2; dy <= 2 && trodden > 0.5; dy++) for (let dx = -2; dx <= 2; dx++) if ((Math.abs(dx) === 2 || Math.abs(dy) === 2) && !open(x + dx, y + dy)) { trodden = 0.5; break; }
+    }
+    // a wall on its east or south border keeps the sun off it
+    const shut = !!(bld.wallOnBorder(lv, { x: x + 1, y, dir: 'v' }) || bld.wallOnBorder(lv, { x, y: y + 1, dir: 'h' }));
+    const season = seasonAt(this.greenAt).season as GrowthSeason;
+    return {
+      days, season,
+      face: {
+        width: 4, height: 4, days, sun: shut ? 0.45 : 0.9, wet: this.walls.wetness(x, y), foot: false, top: true, drip: false, cornerA: 0, cornerB: 0,
+        paving: true, joint: 1, trodden, seed: seedOf(x, y, lv, 113),
+      },
+    };
   }
 
   private drawFloorNow(floor: FloorTile, x: number, y: number, base: number, alpha: number): void {
@@ -10353,6 +10389,18 @@ export class Renderer {
         ctx.fillStyle = rgb(fl.mean, 1);
       }
       ctx.fill();
+      // What has grown on it, a stone floor out under the sky (growth.ts), as paving grows.
+      const fg = alpha >= 1 ? this.floorGrowth(floor, x, y) : null;
+      if (fg) {
+        const pic = growthPicture(`floor|${x},${y},${floor.level}|${fg.days}|${fg.season}|${fg.face.trodden}|${fg.face.sun}|${fg.face.wet.toFixed(2)}`, fg.face, fg.season);
+        if (pic) {
+          const ox = fx(0, 0), oy = fy(0, 0);
+          ctx.save();
+          ctx.transform((fx(1, 0) - ox) / pic.width, (fy(1, 0) - oy) / pic.width, (fx(0, 1) - ox) / pic.height, (fy(0, 1) - oy) / pic.height, ox, oy);
+          ctx.drawImage(pic, 0, 0);
+          ctx.restore();
+        }
+      }
     } else {
       ctx.beginPath();
       for (const [u, v] of corners) ctx.lineTo(fx(u, v), fy(u, v));

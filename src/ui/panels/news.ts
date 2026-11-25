@@ -450,7 +450,7 @@ export const NEWS: News[] = [
     n: 700,
     day: '2026-11-25',
     lines: () => [
-      'Added: growth on old stone: ivy, moss, lichen, ferns, grass, wildflowers. On stone walls (faces, open tops), stone bridges, paving joints, garden steps, stone stairs out of doors, slab tops and sides.',
+      'Added: growth on old stone: ivy, moss, lichen, ferns, grass, wildflowers. On stone walls (faces, open tops), stone bridges, paving joints, garden steps, stone stairs out of doors, stone floors under the sky, slab tops and sides.',
       `Changed: replaces wall ivy strands, coping moss, paving joint moss, slab moss and stone bridge moss. Days since built, laid or scrubbed no longer stop at ${GREEN_DAYS}: it keeps growing.`,
       `Added: more where damp or shaded: water within ${GREEN_WET_REACH} tiles, faces turned from the south-east, alleys, a wall's foot, drips under a covered head or a sill, inside corners. Little in the middle of open paving.`,
       `Added: roots at up to 4 places a face, ${ROOTS_APART} m apart; moss spreads ${MOSS_SPREAD} m a day from them. Ivy climbs ${IVY_CLIMB} m a day from a foot on the ground, hangs ${IVY_HANG} m a day from an open head, branches, stops at openings; an ivy wall panel's wall at full vigour.`,
