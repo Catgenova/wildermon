@@ -91,7 +91,7 @@ import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
 import { type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
 import { hashOf, mossStrip, PAVE_STAGES, pavingMoss, PPM, slabTopMoss } from './ivy';
-import { bridgeGreen, greenNow, greenShows, mossyPiece, pavingGreen, pieceGreen, slabGreen } from '../game/greening';
+import { bridgeGreen, greenNow, greenShows, greenStart, GREEN_DAY, mossyBridge, mossyPiece, pavingGreen, pieceGreen, slabGreen } from '../game/greening';
 import { ANVIL_SUBTILES, anvilCentre } from '../game/anvil';
 import { postCentre, postLeft, postLife } from '../game/posts';
 import { trapCentre } from '../game/traps';
@@ -3927,7 +3927,12 @@ export class Renderer {
         sx: (wx, wy) => cam.worldToScreenX(wx, wy),
         sy: (wx, wy, h) => cam.worldToScreenY(wx, wy, h),
         heightAt: (wx, wy) => world.heightAt(wx, wy),
-        greenStage: (b) => Math.round(greenShows(bridgeGreen(this.game, b, this.greenAt) ?? 0, 0, 0) * PAVE_STAGES),
+        // what a stone bridge has grown (growth.ts): its whole days since it was built or scrubbed, and the season
+        growthOf: (b) => {
+          if (!mossyBridge(b)) return null;
+          const days = Math.floor((this.greenAt - greenStart(b.greenSince, this.game.greenFrom)) / GREEN_DAY);
+          return days > 0 ? { days, season: seasonAt(this.greenAt).season } : null;
+        },
       };
     }
     return this.bFrame;

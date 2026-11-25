@@ -608,7 +608,7 @@ function studioBridgePieces(sx: number, sy: number, zoom: number, b: Bridge, tur
     sx: (wx, wy) => sx + at(wx, wy)[0] * zoom,
     sy: (wx, wy, h) => sy + (at(wx, wy)[1] - h * HEIGHT_SCALE) * zoom,
     heightAt: () => 0,
-    greenStage: () => 0,
+    growthOf: () => null,
   };
   const out: BridgePieceAt[] = [];
   for (const s of b.spans) for (const o of [-1, 0, 1]) out.push(...piecesAt(b, s.x, s.y + o, f));

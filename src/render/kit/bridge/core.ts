@@ -1,4 +1,5 @@
-import { cushions, hashOf, PAVE_STAGES, rand, type Cushion } from '../../ivy';
+import { rand } from '../../ivy';
+import { hashI, paintGrowth, type GrowthFace, type GrowthSeason } from '../../growth';
 import { cut, glyphPath, lightOf, newell, proj, RUNE_GOLD, RUNE_WHITE, type Eye, type PaintCtx } from '../../runestone';
 import { add, css, dot, faceColour, hex, mix, mul, sub, TAU, type Ctx, type RGB, type Tone, type V3 } from '../core';
 
@@ -153,8 +154,12 @@ export interface Plan {
   width: number;
   /** How far the moss has got, in stages of `PAVE_STAGES` (stone only): laid over whatever the style paints (`mossPaint`). */
   moss: number;
+  /** What has grown on it, a stone one (`growthPaint`): its days since it was built or scrubbed, and the season. */
+  growth?: BridgeGrowth | null;
   style: BridgeStyle;
 }
+/** What a stone bridge has grown: its days since it was built or scrubbed (not capped), and the season it is dressed for. */
+export interface BridgeGrowth { days: number; season: GrowthSeason }
 
 /** What a plan is made from: the bridge as the renderer reads it. */
 export interface PlanInput {
@@ -168,6 +173,7 @@ export interface PlanInput {
   rise: number;
   width: number;
   moss: number;
+  growth?: BridgeGrowth | null;
   style: BridgeStyle;
 }
 
@@ -228,7 +234,7 @@ export function planOf(p: PlanInput): Plan {
   const base = Math.min(...piers.map((q) => q.foot), minGround(0, p.n)) - 2;
   return {
     n: p.n, lanes: p.lanes, tLo, tHi, deck: p.deck, thick, ground: p.ground, base, bays, piers, done: p.done, fitted: p.fitted ?? p.done.map(() => ({})),
-    ramp: Math.abs(p.rise) > 0, width: p.width, moss: p.moss, style: p.style,
+    ramp: Math.abs(p.rise) > 0, width: p.width, moss: p.moss, growth: p.growth ?? null, style: p.style,
   };
 }
 
@@ -1422,8 +1428,8 @@ export const BRIDGE_INK: RGB = mix(hex('#5f5148'), hex('#5a3a30'), 0.35);
  * twice the ink wide, its faces filled a hair over them nearest last, lit
  * and painted; the loose drawings in their turn.
  */
-export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 0.7, moss = 0): void {
-  const mossy = moss > 0 && st.family === 'stone';
+export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 0.7, growth: BridgeGrowth | null = null): void {
+  const mossy = !!growth && growth.days > 0 && st.family === 'stone';
   const parts = pm.parts.slice();
   const near = (p: BPart): number => {
     const pts = p.faces.length ? p.faces.flatMap((f) => f.pts) : p.reach ?? [];
@@ -1482,8 +1488,8 @@ export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 
       g.fillStyle = css(fill);
       g.fill();
       const p = painter(st, f.info);
-      // And the moss over whatever the material paints, on a stone bridge (`mossPaint`).
-      const green = mossy && !!f.info && MOSS_ON.has(f.info.role);
+      // And what has grown over whatever the material paints, on a stone bridge (`growthPaint`).
+      const green = mossy && !!f.info && GROWS_ON.has(f.info.role);
       if ((p || green) && f.frame && f.info) {
         let a2 = 0;
         for (let j = 0; j < pts.length; j++) { const q = pts[j], r = pts[(j + 1) % pts.length]; a2 += q[0] * r[1] - r[0] * q[1]; }
@@ -1493,7 +1499,7 @@ export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 
           const [ox, oy] = proj(e, f.frame.o), [ax, ay] = proj(e, f.frame.a), [bx, by] = proj(e, f.frame.b);
           g.transform(ax, ay, bx, by, ox, oy);
           if (p) p(g, { e, L, fill, base }, f.info, st);
-          if (green) mossPaint(g, f.info, moss);
+          if (green) growthPaint(g, f.info, growth!);
           g.restore();
         }
       }
@@ -1501,67 +1507,38 @@ export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 
   }
 }
 
-/* ---- moss ---------------------------------------------------------------------------------------------- */
+/* ---- what grows on it --------------------------------------------------------------------------------- */
 
-/** The faces moss is laid on: where it climbs from the foot, where it hangs from an edge, and along a coping's top. */
-const MOSS_FOOT = new Set<Role>(['pier', 'wall', 'post', 'parapet']);
-const MOSS_LIP = new Set<Role>(['cornice', 'ring']);
-const MOSS_ON = new Set<Role>([...MOSS_FOOT, ...MOSS_LIP, 'cap', 'plinth']);
-const ROLE_SALT: Partial<Record<Role, number>> = { pier: 3, wall: 5, post: 7, parapet: 11, cornice: 13, ring: 17, cap: 19, plinth: 23 };
-
-/** Value noise along a face, nought to one: the same clumps at every stage, so moss spreads rather than moves. */
-function clumpAt(x: number, y: number, salt: number): number {
-  const ix = Math.floor(x), iy = Math.floor(y);
-  const fx = x - ix, fy = y - iy;
-  const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
-  const h = (a: number, b: number): number => hashOf(a + 4096, b + 4096, 0, salt);
-  const a = h(ix, iy), b = h(ix + 1, iy), c = h(ix, iy + 1), d = h(ix + 1, iy + 1);
-  return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
-}
+/** The parts growth takes on: a side with its foot at the bottom of its frame, an underside that drips, a top that holds the rain. */
+const GROW_FOOT = new Set<Role>(['pier', 'wall', 'post', 'parapet']);
+const GROW_LIP = new Set<Role>(['cornice', 'ring']);
+const GROW_TOP = new Set<Role>(['cap', 'plinth']);
+const GROWS_ON = new Set<Role>([...GROW_FOOT, ...GROW_LIP, ...GROW_TOP]);
 
 /**
- * Moss on a face of a stone bridge at `stage` of `PAVE_STAGES`, in the
- * face's own frame (`FaceInfo`, units), over whatever its material paints:
- * cushions climbing from the foot of a pier, a wall, a newel or a parapet;
- * a row hanging from the underside of a cornice or an arch ring; clumps
- * along the top of a coping. Clumped by noise along the face off where it
- * is on the bridge, so slices join and a stage only adds to the last.
+ * What has grown on a face of a stone bridge (`growth.ts`), in the face's
+ * own frame (`FaceInfo`, units, a tenth of a metre each way): moss,
+ * lichen, ferns at a pier's or a wall's foot, grass and flowers on a top,
+ * by the part of the bridge it is -- a side's foot splashed, an underside
+ * dripping, a top holding the rain -- spread from where it took root over
+ * the days since the bridge was built or scrubbed. Its frame's foot is its
+ * `y0`, as for the moss before it.
  */
-export function mossPaint(g: Ctx, f: FaceInfo, stage: number): void {
-  const upto = Math.min(stage, PAVE_STAGES) / PAVE_STAGES;
-  if (upto <= 0) return;
-  const salt = ROLE_SALT[f.role] ?? 29;
+export function growthPaint(g: Ctx, f: FaceInfo, growth: BridgeGrowth): void {
   const x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1);
   const y0 = Math.min(f.y0, f.y1), y1 = Math.max(f.y0, f.y1);
-  const cover = 0.62 * Math.pow(upto, 0.8);
-  const cs: Cushion[] = [];
-  const step = 1.3;
-  for (let x = Math.floor(x0 / step) * step; x <= x1 + step; x += step) {
-    const xi = Math.round(x / step);
-    const clump = clumpAt(x / 9, salt * 0.37, salt) + 0.12 * hashOf(xi + 4096, 0, salt, 43);
-    if (clump >= cover) continue;
-    const deep = Math.min(1, (cover - clump) / 0.2);
-    if (MOSS_FOOT.has(f.role)) {
-      // Up from the foot in a band, higher in the heart of a clump; and specks in the joints above it.
-      const rise = 1.2 + 9 * deep * upto;
-      for (let y = y0 + 0.5, j = 0; y < Math.min(y1, y0 + rise); y += 1.5, j++) {
-        const t = (y - y0) / rise;
-        if (hashOf(xi + 4096, j, salt, 47) > 0.92 - 0.45 * t) continue;
-        cs.push([x + (hashOf(xi + 4096, j, salt, 53) - 0.5) * 1.6, y, (0.75 + 0.75 * deep) * (1 - 0.35 * t)]);
-      }
-    } else if (MOSS_LIP.has(f.role)) {
-      // Along the underside of the edge, a few hanging lower where it is heaviest.
-      cs.push([x, y0 + 0.4 + hashOf(xi + 4096, 1, salt, 59) * 0.6, 0.6 + 0.7 * deep]);
-      if (deep > 0.55 && hashOf(xi + 4096, 2, salt, 59) < 0.4) cs.push([x, y0 - 0.6 - deep * 1.4, 0.5 + 0.4 * deep]);
-    } else {
-      // Along the top of a coping or a plinth: down its middle and on its edges.
-      const span = y1 - y0;
-      cs.push([x, y0 + span * (0.25 + 0.5 * hashOf(xi + 4096, 3, salt, 61)), Math.min(span * 0.45, 0.7 + 0.8 * deep)]);
-      if (deep > 0.5 && hashOf(xi + 4096, 4, salt, 61) < 0.5) cs.push([x + 0.6, y0 + span * 0.1, Math.min(span * 0.3, 0.5 + 0.5 * deep)]);
-    }
-  }
-  if (cs.length) cushions(g, cs);
+  const face: GrowthFace = {
+    width: (x1 - x0) / 10, height: (y1 - y0) / 10, days: growth.days, sun: GROW_TOP.has(f.role) ? 0.9 : 0.6, wet: 0.6,
+    foot: f.role === 'pier' || f.role === 'wall', top: GROW_TOP.has(f.role), drip: GROW_LIP.has(f.role), cornerA: 0, cornerB: 0,
+    seed: Math.floor(hashI(f.seed, ROLE_NO[f.role] ?? 29, 0, 79) * 2147483647),
+  };
+  g.save();
+  g.translate(x0, y0);
+  g.scale(10, 10);
+  paintGrowth(g, face, growth.season);
+  g.restore();
 }
+const ROLE_NO: Partial<Record<Role, number>> = { pier: 3, wall: 5, post: 7, parapet: 11, cornice: 13, ring: 17, cap: 19, plinth: 23 };
 
 const avgNear = (f: BFace, e: Eye): number => {
   let s = 0;

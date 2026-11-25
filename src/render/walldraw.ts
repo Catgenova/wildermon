@@ -6,7 +6,7 @@ import { counterHeld, counterSeat, streetOf, COUNTER_HOLDS } from '../game/count
 import type { Game } from '../game/game';
 import { hingeKey } from '../game/gates';
 import { GLASS } from '../game/glasshouse';
-import { wallGreen, greenShows, GREEN_WET_REACH, panelOn, wetFrom } from '../game/greening';
+import { wallGreen, greenShows, GREEN_WET_REACH, panelOn, wetFrom, ivied, greenStart, GREEN_DAY } from '../game/greening';
 import type { LightSource } from '../game/light';
 import { isRuneGate, gateMiddle, runeGateLit, RUNE_GATE_RISE, gateTiles } from '../game/runegate';
 import { hash2 } from '../world/noise';
@@ -17,7 +17,9 @@ import { type Motion, gatewayArch, drawGrooves, gatewayPicture, GATEWAY, gateway
 import { drawGlassWall } from './glasswall';
 import { drawObsidianWall } from './obsidianglass';
 import { UNITS_PER_TILE } from './iso';
-import { capMoss, hashOf, PAVE_STAGES, CAP_W, CAP_D, type Keep, ivyLayout, vigour, PPM, strandPic } from './ivy';
+import { hashOf, type Keep, ivyLayout, vigour, PPM, strandPic } from './ivy';
+import { growthPicture, seedOf, sunOf, type GrowthFace, type GrowthSeason } from './growth';
+import { seasonAt } from '../world/calendar';
 import { WINDOW, FENCE_GAP, DOOR, DOUBLE, BAY, ARCH, type Masonry } from './masonry';
 import type { HitRect } from './picking';
 import { gateVariant, drawRuneGate, RUNE_GATE_OPENING } from './runegate';
@@ -2066,15 +2068,22 @@ export class WallPainter {
      * roof of the storey over it, on either side, a top grows none
      * (`openOver`).
      */
-    if (!roofed && this.openOver(wall)) {
-      const g = greenShows(days, 0, this.wetness(wall.x, wall.y));
-      const cm = capMoss(Math.floor(hashOf(wall.x, wall.y, wall.level, wall.dir === 'h' ? 3 : 4) * 3), Math.round(g * PAVE_STAGES));
-      if (cm) {
+    const season = seasonAt(this.r.greenAt).season as GrowthSeason;
+    const grownDays = ivied(wall) ? Math.max(0, Math.floor((this.r.greenAt - greenStart(wall.greenSince, this.r.game.greenFrom)) / GREEN_DAY)) : 0;
+    if (!roofed && this.openOver(wall) && grownDays > 0) {
+      // what has grown along its top (growth.ts), seen from above: its picture laid over the coping
+      const wet = this.wetness(wall.x, wall.y);
+      const face: GrowthFace = {
+        width: 4, height: WALL_THICK * 2 * 4, days: grownDays, sun: 0.9, wet, foot: false, top: true, drip: false, cornerA: 0, cornerB: 0,
+        seed: seedOf(wall.x, wall.y, wall.level, wall.dir === 'h' ? 61 : 67),
+      };
+      const pic = growthPicture(`top|${wall.x},${wall.y},${wall.level},${wall.dir}|${grownDays}|${season}|${wet.toFixed(2)}`, face, season);
+      if (pic) {
         const ctx = this.r.canvas.ctx;
         const x0 = px(0, 1, 1), y0 = py(0, 1, 1);
         ctx.save();
-        ctx.transform((px(1, 1, 1) - x0) / CAP_W, (py(1, 1, 1) - y0) / CAP_W, (px(0, 1, -1) - x0) / CAP_D, (py(0, 1, -1) - y0) / CAP_D, x0, y0);
-        ctx.drawImage(cm, 0, 0);
+        ctx.transform((px(1, 1, 1) - x0) / pic.width, (py(1, 1, 1) - y0) / pic.width, (px(0, 1, -1) - x0) / pic.height, (py(0, 1, -1) - y0) / pic.height, x0, y0);
+        ctx.drawImage(pic, 0, 0);
         ctx.restore();
       }
     }
@@ -2099,6 +2108,7 @@ export class WallPainter {
     }
     const low = !!kind?.low;
     const height = (WALL_HEIGHT * tall) / 10;
+    if (grownDays > 0) this.wallGrowth(wall, px, py, height, ox, oy, tx, ty, roofed, keep, grownDays, season);
     const strands = ivyLayout({
       seed: Math.floor(hashOf(wall.x, wall.y, wall.dir === 'h' ? 0 : 1, (ox + oy > 0 ? 1 : 0) + wall.level * 2) * 2 ** 31),
       grown: greenShows(days, shade, wet),
@@ -2147,6 +2157,47 @@ export class WallPainter {
       ctx.restore();
     }
     if (cutOut) ctx.restore();
+  }
+
+  /**
+   * What has grown on a wall's outdoor face (growth.ts): moss, lichen, ferns,
+   * grass and flowers, as far as its days, its sun (by the way it looks,
+   * dimmed in an alley), how wet it is, the drips from a covered head, the
+   * shelter of a corner at either end and its openings bring it; painted once
+   * as a picture of the face (kept by its place, its days and the season) and
+   * laid over the face as the ivy is.
+   */
+  private wallGrowth(wall: Wall, px: (t: number, k: number, s?: number) => number, py: (t: number, k: number, s?: number) => number,
+    height: number, ox: number, oy: number, tx: number, ty: number, roofed: boolean, keep: Keep[], days: number, season: GrowthSeason): void {
+    const bld = this.r.game.buildings;
+    const sx = Math.sign(ox), sy = Math.sign(oy);
+    // the tile beyond its own built on shuts it in an alley
+    const alley = bld.buildingAt(tx + sx, ty + sy) ? 0.45 : 1;
+    const covered = roofed || !this.openOver(wall);
+    // an inside corner at either end: a wall the other way meeting it there, on the same storey
+    const solid = (w: Wall | undefined): boolean => !!w && !['fence', 'fence_gate', 'railing'].includes(w.type);
+    const cornerAt = (cx: number, cy: number): number => {
+      if (wall.dir === 'h') return solid(bld.wallOnBorder(wall.level, { x: cx, y: cy, dir: 'v' })) || solid(bld.wallOnBorder(wall.level, { x: cx, y: cy - 1, dir: 'v' })) ? 1 : 0;
+      return solid(bld.wallOnBorder(wall.level, { x: cx, y: cy, dir: 'h' })) || solid(bld.wallOnBorder(wall.level, { x: cx - 1, y: cy, dir: 'h' })) ? 1 : 0;
+    };
+    const wet = this.wetness(tx, ty);
+    // which side, as Unity's GrowSide numbers it: a north border's north face, a west border's east face
+    const sideBit = wall.dir === 'h' ? (oy < 0 ? 1 : 0) : (ox > 0 ? 1 : 0);
+    const face: GrowthFace = {
+      width: 4, height, days, sun: sunOf(ox, oy) * alley, wet, foot: wall.level === 0, top: false, drip: covered,
+      cornerA: cornerAt(wall.x, wall.y), cornerB: wall.dir === 'h' ? cornerAt(wall.x + 1, wall.y) : cornerAt(wall.x, wall.y + 1),
+      keep, seed: seedOf(wall.x, wall.y, wall.level * 2 + sideBit, wall.dir === 'h' ? 53 : 59),
+    };
+    const key = `side|${wall.x},${wall.y},${wall.level},${wall.dir},${sideBit}|${days}|${season}|${height.toFixed(2)}|${face.sun.toFixed(2)}|${wet.toFixed(2)}|${covered ? 1 : 0}|${face.cornerA}${face.cornerB}|${wall.type}`;
+    const pic = growthPicture(key, face, season);
+    if (!pic) return;
+    // the picture's top-left at the face's top-left, a metre of it a metre of the face
+    const ctx = this.r.canvas.ctx;
+    const x0 = px(0, 1), y0 = py(0, 1);
+    ctx.save();
+    ctx.transform((px(1, 0) - px(0, 0)) / pic.width, (py(1, 0) - py(0, 0)) / pic.width, -(px(0, 1) - px(0, 0)) / pic.height, -(py(0, 1) - py(0, 0)) / pic.height, x0, y0);
+    ctx.drawImage(pic, 0, 0);
+    ctx.restore();
   }
 
   /**

@@ -4,7 +4,7 @@ import { HALF_H, HALF_W, UNITS_PER_TILE } from './iso';
 import { kitBaked, kitFrameNow, kitIsSync, kitMayBake } from './kitpieces';
 import { canvasOf, eyeOfView, proj, scaleFor, BAKE_STEPS, type Eye, type NightHole, type NightMask } from './runestone';
 import { VIEWS } from './view';
-import { buildSlice, layGlowMask, layPiece, piecePoints, planOf, type Part3, type PieceModel, type Plan, type Slice } from './kit/bridge/core';
+import { buildSlice, layGlowMask, layPiece, piecePoints, planOf, type BridgeGrowth, type Part3, type PieceModel, type Plan, type Slice } from './kit/bridge/core';
 import { BRIDGE_STYLES } from './kit/bridge/index';
 
 /**
@@ -48,7 +48,8 @@ export interface BridgeFrame {
   sx: (wx: number, wy: number) => number;
   sy: (wx: number, wy: number, h: number) => number;
   heightAt: (wx: number, wy: number) => number;
-  greenStage: (b: Bridge) => number;
+  /** What a stone bridge has grown (`growth.ts`): its days since it was built or scrubbed and the season, or null. */
+  growthOf: (b: Bridge) => BridgeGrowth | null;
 }
 
 /* ---- the view ---------------------------------------------------------------------------- */
@@ -135,12 +136,12 @@ function planAnew(b: Bridge, f: BridgeFrame): Planned | null {
   const fitted = b.spans.map(fittedOf);
   const staged = !!style.stage;
   const stages = staged ? fitted.map((ft, i) => (done[i] ? 'done' : style.stage!(ft))) : [];
-  const moss = style.family === 'stone' ? f.greenStage(b) : 0;
+  const growth = style.family === 'stone' ? f.growthOf(b) : null;
   // What it is built from, as a key: the ground under it read at its piers and its middles, coarsely.
   let gk = '';
   for (let s = 0; s <= n; s += 0.5) for (const t of [Math.min(...lanes) - 0.5, Math.max(...lanes) + 0.5]) gk += `${Math.round(ground(s, t))},`;
   // A style that shows a tile being built keeps its plan as its tiles go in, and makes only the tile that changed again.
-  const key = `${b.kind}|${n}|${b.height}|${b.rise ?? 0}|${lanes.join(',')}|${staged ? '' : done.map((d) => (d ? 1 : 0)).join('')}|${moss}|${gk}`;
+  const key = `${b.kind}|${n}|${b.height}|${b.rise ?? 0}|${lanes.join(',')}|${staged ? '' : done.map((d) => (d ? 1 : 0)).join('')}|${growth ? `${growth.days}${growth.season}` : ''}|${gk}`;
   const had = plans.get(b.id);
   if (had && had.key === key) {
     if (staged) {
@@ -156,7 +157,7 @@ function planAnew(b: Bridge, f: BridgeFrame): Planned | null {
     return had;
   }
   const plan = planOf({
-    n, lanes, ground, done, fitted, rise: b.rise ?? 0, width: bridgeWidth(b), moss, style,
+    n, lanes, ground, done, fitted, rise: b.rise ?? 0, width: bridgeWidth(b), moss: 0, growth, style,
     // Where a body walking it stands (`deckWalk`): up a ramp, over a garden footbridge's arch.
     deck: (s) => rampDeck(b.height, b.rise ?? 0, n, s) + deckArch(b.kind, n, s, b.rise ?? 0),
     bays: drawnBays(n, BRIDGES[b.kind].bay, !!b.rise),
@@ -386,7 +387,7 @@ function drawPiece(ctx: CanvasRenderingContext2D, p: BridgePieceAt, zoom: number
   let sh = kept.get(key);
   const make = (): Sheet => {
     const t0 = performance.now();
-    const s = bake(pm, sl.box[p.part], e, scale, (g) => layPiece(g, e, pm, pl.plan.style, 0.7, pl.plan.moss));
+    const s = bake(pm, sl.box[p.part], e, scale, (g) => layPiece(g, e, pm, pl.plan.style, 0.7, pl.plan.growth ?? null));
     bridgeBakes.count++;
     bridgeBakes.ms += performance.now() - t0;
     keep(key, s);
