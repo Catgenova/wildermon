@@ -447,6 +447,14 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Ivy's stems counted the same on both clients.
+  {
+    n: 707,
+    day: '2026-11-25',
+    lines: () => [
+      'Fixed: an ivy stem whose length fell on a whole step was a leaf shorter than in the Unity client.',
+    ],
+  },
   // Carpets shaded by their own spread, not by where their face ends.
   {
     n: 706,

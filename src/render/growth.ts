@@ -405,7 +405,7 @@ function seams(o: IvyStem[], f: GrowthFace): void {
     const inward = end === 0 ? 1 : -1;
     const edge = end === 0 ? 0.035 : f.width - 0.035;
     const s: IvyStem = { pts: [], branch: false, thick: 3.5 };
-    const steps = Math.floor(len / IVY_STEP);
+    const steps = Math.floor(len / IVY_STEP + 1e-3); // a hair over, so a length on a whole step counts it as Unity does (double against float)
     const v0 = hang ? f.height - 0.02 : 0.02;
     for (let k = 0; k <= steps; k++) {
       const v = v0 + (hang ? -k : k) * IVY_STEP;
@@ -424,7 +424,7 @@ function seams(o: IvyStem[], f: GrowthFace): void {
 
 function walk(into: IvyStem[], f: GrowthFace, no: number, u: number, v: number, way: number, lean: number, len: number, branch: boolean): void {
   const s: IvyStem = { pts: [[u, v]], branch };
-  const steps = Math.floor(len / IVY_STEP);
+  const steps = Math.floor(len / IVY_STEP + 1e-3); // a hair over, so a length on a whole step counts it as Unity does (double against float)
   let ang = lean;
   for (let k = 1; k <= steps; k++) {
     ang = Math.max(lean - 0.55, Math.min(lean + 0.55, ang + (H(f.seed, wrap(Math.imul(no, 97) + k), 7, 601) - 0.5) * 0.45));
