@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.sailing_learn()
  RETURNS double precision
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select 0.003::double precision $function$
+AS $function$ select 0.006::double precision $function$

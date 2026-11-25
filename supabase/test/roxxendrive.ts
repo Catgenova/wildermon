@@ -47,8 +47,8 @@ check('the Roxxen, and only the Roxxen, learns driving by pulling, on both sides
   kinds.join(',') === 'roxxen' && roxxen.learns?.skill === DRIVING && isleKinds === `roxxen:${DRIVING}`,
   `browser ${kinds.join(',')}, island ${isleKinds}`);
 const isleGain = Number(psql('select learns_gain_pull()'));
-check('a tile pulled is worth what a tile driven teaches the driver, on both sides',
-  PULL_LEARN === DRIVING_LEARN && LEARNS_GAIN.pull === PULL_LEARN && isleGain === PULL_LEARN,
+check('a tile pulled is worth half what a tile driven teaches the driver, on both sides',
+  PULL_LEARN * 2 === DRIVING_LEARN &&LEARNS_GAIN.pull === PULL_LEARN && isleGain === PULL_LEARN,
   `browser ${LEARNS_GAIN.pull}, island ${isleGain}, the driver's ${DRIVING_LEARN}`);
 const yoked = Object.values(FURNITURE).filter((d) => d.vehicle).map((d) => d.id).sort();
 const isleYoked = psql(`select string_agg(id, ',' order by id) from vehicle_def`);

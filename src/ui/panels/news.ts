@@ -110,6 +110,7 @@ import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_28
 import { AROUND_LEASH as AROUND_LEASH_602, AROUND_LEFT as AROUND_LEFT_602 } from '../../game/creatures';
 import { PIER_SHOO as PIER_SHOO_602 } from '../../game/piers';
 import { RANGE_PER_STEP as RANGE_PER_STEP_606, SKILL_STEP as SKILL_STEP_606 } from '../../game/creatures';
+import { PULL_LEARN } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_450, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_450, HAUL_STEEP_AT as HAUL_STEEP_AT_450 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -445,6 +446,15 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Driving and Sailing learned twice as fast; a Roxxen's pulling and a hauler's not.
+  {
+    n: 704,
+    day: '2026-11-25',
+    lines: () => [
+      `Changed: Driving ${DRIVING_LEARN} experience a tile driven, Sailing ${SAILING_LEARN} a tile sailed or rowed (was 0.003 each).`,
+      `Unchanged: a Roxxen pulling learns ${PULL_LEARN} a tile.`,
+    ],
+  },
   // Overgrowth round openings, up corner seams and on bridges.
   {
     n: 703,

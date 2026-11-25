@@ -7461,8 +7461,8 @@ create or replace function sailing_skill() returns text language sql immutable a
 create or replace function driving_top() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function sailing_top() returns double precision language sql immutable as $fn$ select 0.25::double precision $fn$;
 create or replace function travel_top_at() returns double precision language sql immutable as $fn$ select 100::double precision $fn$;
-create or replace function driving_learn() returns double precision language sql immutable as $fn$ select 0.003::double precision $fn$;
-create or replace function sailing_learn() returns double precision language sql immutable as $fn$ select 0.003::double precision $fn$;
+create or replace function driving_learn() returns double precision language sql immutable as $fn$ select 0.006::double precision $fn$;
+create or replace function sailing_learn() returns double precision language sql immutable as $fn$ select 0.006::double precision $fn$;
 create or replace function dye_parts() returns double precision language sql immutable as $fn$ select 1000::double precision $fn$;
 create or replace function dye_boil_litres() returns double precision language sql immutable as $fn$ select 5::double precision $fn$;
 create or replace function dye_litres_per_kg() returns double precision language sql immutable as $fn$ select 1::double precision $fn$;

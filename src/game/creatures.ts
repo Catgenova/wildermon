@@ -51,7 +51,7 @@ import { article, capital, daySays, fill, listed, listedOr, percent, share, time
 import { BASE_SPEED, groundStep, standsOn, SWIM_DEPTH } from './player';
 import type { World } from '../world/world';
 import { skillGain } from './skills';
-import { DRIVING, DRIVING_LEARN } from './travel';
+import { DRIVING } from './travel';
 import { BARDING_CUT, gearGoneSays, gearOn, gearShare, HARNESS_PACE, PACK_LOADS, wearGear, type GearSlot } from './wildgear';
 import { keyX, keyY, tileKey } from './tileindex';
 import { ASH_QL, fireCentre, FIRE_CAPACITY, FUELS, FUEL_VALUES, isFuel } from './campfire';
@@ -1370,13 +1370,14 @@ export type LearnsBy = 'tended' | 'spar' | 'out' | 'dark' | 'pull' | 'bout';
 /** Seconds of being out that count as one go at its task, for a kind that learns by being out. */
 export const OUT_EVERY = 30;
 /**
- * What a tile pulled teaches a kind that learns by pulling, as the base of a gain: what the same tile teaches whoever
- * has the reins (`DRIVING_LEARN`), as a deed worker's go at its task is priced about as yours at it is. A lone Roxxen
+ * What a tile pulled teaches a kind that learns by pulling, as the base of a gain: what the same tile taught whoever
+ * had the reins before Driving was asked to come twice as fast (`DRIVING_LEARN`, now twice this), as a deed worker's go
+ * at its task is priced about as yours at it is; a kind's pulling (and hauling, `HAUL_LEARN`) was not. A lone Roxxen
  * takes a large cart along at under a tile a second and a wagon team goes at nearer three, so this comes to from under
  * half to a little over what a kind that learns by being out (`LEARNS_GAIN.out` every `OUT_EVERY`) picks up in the
  * same time.
  */
-export const PULL_LEARN = DRIVING_LEARN;
+export const PULL_LEARN = 0.003;
 /** What a spar teaches a Sparra, as the base of a gain: your swing that lands on it, and a spar with a guard on a settlement. */
 const SPAR_GAIN = 0.05;
 /** What each go teaches, as the base of a gain: a shearing or a milking, a spar swing, a spell of being out, a tile pulled, and a spar on a settlement. */
