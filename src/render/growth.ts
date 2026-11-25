@@ -232,7 +232,8 @@ function stoneDist(f: GrowthFace, u: number, v: number, w: readonly number[]): n
     const margin = 0.04 + 0.22 * noise3(w[0] / 0.7, w[1] / 0.7, w[2] / 0.7, 877);
     for (const k of f.keep) d = Math.min(d, keepDist(f, k, u, v) - margin);
   }
-  if (f.outline && f.outline.length >= 3) d = Math.min(d, outlineDist(f.outline, u, v) - 0.02);
+  // a hair past its outline, so neighbouring faces' carpets meet
+  if (f.outline && f.outline.length >= 3) d = Math.min(d, outlineDist(f.outline, u, v) + 0.02);
   return d;
 }
 

@@ -453,6 +453,7 @@ export const NEWS: News[] = [
       'Changed: carpets cut to the true shape of windows, doors and archways (round heads round), with an irregular margin showing their frame stones.',
       'Added: thick old vines up corner seams on every storey, branching across the face.',
       "Changed: an overgrown wall's moss creeps onto open stone floors at its foot, as onto paving.",
+      'Fixed: carpets on neighbouring faces with an outline overlap slightly instead of leaving a gap.',
       'Changed: bridge sides at most half covered, arch undersides less. Vines hang down bridge walls and parapets, stopping short of the arches.',
     ],
   },
