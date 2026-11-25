@@ -44,6 +44,7 @@
  * perk's own `fx` so that the two cannot say different things, and the
  * benefit check reads these functions as it reads any other note.
  */
+import { ACTION_PACE } from './pace';
 import { CLASSES, PERK_CLASSES, PERK_TIER_AT, PERKS_PER_TIER, tiersAtFor } from './classes';
 import { BLOCK_MOST, COMPANION_BLOW, COMPANION_LEASH, COMPANION_SIGHT, CRIT_HIT, DRAW_CLOSEST, DRAW_WALK, FIGHT_BACK_STILL, HUNT_REACH, KNIFE_BLEED_SECS, reachOf, STANCE_DEALT, STANCE_TAKEN, THROW_REACH } from './fight';
 import { classSpellsOf, GUARDIAN_REACH, spellTerms } from './talents';
@@ -174,7 +175,8 @@ const cut = (m: number): string => `−${percent(1 - m)}`;
 /** "×0.5", a multiplier as it stands. */
 const mul = (m: number): string => `×${Number(m.toFixed(3))}`;
 const secs = (s: number): string => `${Number(s.toFixed(1))} s`;
-const base = (id: string): number => ACTION_BY_ID.get(id)?.baseTime ?? 0;
+/** An action's base time in seconds: its weight (`baseTime`) at the pace (`ACTION_PACE`), as a beginner's go at it comes to. */
+const base = (id: string): number => (ACTION_BY_ID.get(id)?.baseTime ?? 0) * ACTION_PACE;
 /** A dressing's time, by this much: a Healer's poultice (`dress_poultice`) is a dressing too. */
 const dressTime = (v: number): Record<string, number> => ({ 'time:bind_wound': v, 'time:dress_poultice': v });
 const diff = (id: string): number => ACTION_BY_ID.get(id)?.difficulty ?? 0;
@@ -286,7 +288,7 @@ const TERRAFORMER: Seed[] = [
   {
     num: 44, name: 'Dig Out the Tile',
     fx: { dig_tile: 1 },
-    note: () => `New action: Dig out the tile. Lowers all ${TILE_CORNERS} corners by ${metres(1)} m in one action: ${secs(DIG_TILE_TIME)} base `
+    note: () => `New action: Dig out the tile. Lowers all ${TILE_CORNERS} corners by ${metres(1)} m in one action: ${secs(DIG_TILE_TIME * ACTION_PACE)} base `
       + `(${TILE_CORNERS} digs: ${secs(TILE_CORNERS * base('dig'))}). Output: ${TILE_CORNERS} of the material.`,
   },
 ];
@@ -558,7 +560,7 @@ const MASON: Seed[] = [
     num: 47, name: 'Repoint',
     fx: { repoint: 1 },
     note: () => `New action: Repoint, on a finished wall of ${STONE_WORK}. Relays it in another stone in one action: `
-      + `${secs(BUILD_ACTION_BY_ID.get('repoint_wall')?.baseTime ?? 0)} base. Cost: the new stone's full bill. `
+      + `${secs((BUILD_ACTION_BY_ID.get('repoint_wall')?.baseTime ?? 0) * ACTION_PACE)} base. Cost: the new stone's full bill. `
       + `Returns ${percent(REPOINT_BACK)} of the old stone, rounded down.`,
   },
   {
@@ -1309,7 +1311,7 @@ const TAILOR: Seed[] = [
   {
     num: 3, name: 'Quick Spindle',
     fx: onEach('time', SPINS.map((r) => r.id), 0.6),
-    note: (fx) => `Spinning time ${cut(fx[`time:${SPINS[0].id}`])} (base ${secs(SPINS[0].baseTime)}): wool, cotton and wemp.`,
+    note: (fx) => `Spinning time ${cut(fx[`time:${SPINS[0].id}`])} (base ${secs(SPINS[0].baseTime * ACTION_PACE)}): wool, cotton and wemp.`,
   },
   {
     num: 4, name: 'Even Thread',

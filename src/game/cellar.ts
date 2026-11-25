@@ -368,7 +368,7 @@ export const CELLAR_ACTIONS: ActionDef[] = [
     tool: 'pickaxe',
     repeat: true,
     stamina: 0.06,
-    baseTime: 8,
+    baseTime: 4,
     difficulty: 12,
     applies: (t, g) => t.kind === 'tile' && !!g.buildings.buildingAt(t.x, t.y) && !g.buildings.cellarDone(t.x, t.y) && nextSliceRock(g, t.x, t.y),
     check: (t, g) => {

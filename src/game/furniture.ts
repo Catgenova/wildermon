@@ -405,7 +405,7 @@ export const ONE_ALTAR = 'Settlement already has an altar; one per settlement.';
 
 export const FURNITURE: FurnitureDef[] = [
   piece('stool', 'Stool', 1, 1, [['plank', 4], ['shaft', 3], ['nail', 12]], 8, 6, ''),
-  piece('chair', 'Chair', 1, 1, [['plank', 8], ['shaft', 4], ['nail', 20]], 12, 8, ''),
+  piece('chair', 'Chair', 1, 1, [['plank', 8], ['shaft', 4], ['nail', 20]], 12, 4, ''),
   piece('bench', 'Bench', 2, 1, [['plank', 16], ['shaft', 4], ['nail', 28]], 12, 9, ''),
   piece('table', 'Table', 2, 2, [['plank', 24], ['shaft', 4], ['nail', 32]], 14, 11, ''),
   piece('long_table', 'Long table', 3, 2, [['plank', 40], ['timber', 8], ['shaft', 4], ['nail', 52]], 20, 16, ''),
@@ -420,7 +420,7 @@ export const FURNITURE: FurnitureDef[] = [
    * a vine hood hung with lavender bells. A subtile across for the smallest,
    * two for the next and three for the last, by how big each stage is drawn.
    */
-  piece('den_small', 'Small wildermon bed', 1, 1, [['plank', 1], ['reed', 12], ['shaft', 2], ['cloth', 2], ['moss', 2], ['wildflowers', 3]], 10, 8,
+  piece('den_small', 'Small wildermon bed', 1, 1, [['plank', 1], ['reed', 12], ['shaft', 2], ['cloth', 2], ['moss', 2], ['wildflowers', 3]], 10, 4,
     '', undefined,
     { skill: 'carpentry', tool: 'carving_knife', den: 0 }),
   piece('den_medium', 'Medium wildermon bed', 2, 2, [['plank', 2], ['reed', 24], ['shaft', 6], ['cloth', 4], ['fur', 1], ['moss', 4], ['wildflowers', 6], ['lavender', 3]], 16, 12,
@@ -434,7 +434,7 @@ export const FURNITURE: FurnitureDef[] = [
   piece('hammock', 'Hammock', 3, 1, [['rope', 6], ['cloth', 2]], 14, 12, '', undefined, { bed: HAMMOCK_REST, skill: ROPEMAKING, tool: 'needle' }),
   piece(ROPE_WALK, 'Rope walk', 1, 4, [['plank', 20], ['shaft', 8], ['rope', 4], ['nail', 30]], 18, 24, '', undefined, { skill: 'carpentry' }),
   piece('chest', 'Chest', 2, 2, [['plank', 32], ['timber', 8], ['nail', 36]], 16, 12, '', 60),
-  piece('coffer', 'Coffer', 1, 1, [['plank', 16], ['nail', 20]], 14, 8, '', 25),
+  piece('coffer', 'Coffer', 1, 1, [['plank', 16], ['nail', 20]], 14, 4, '', 25),
   piece('cupboard', 'Cupboard', 2, 1, [['plank', 40], ['timber', 8], ['nail', 44]], 20, 14, '', 80),
   piece('wardrobe', 'Wardrobe', 2, 2, [['plank', 56], ['timber', 16], ['nail', 60]], 24, 18, '', 100),
   piece('shelves', 'Shelves', 3, 1, [['plank', 48], ['timber', 8], ['nail', 52]], 18, 15, '', 120),
@@ -470,8 +470,8 @@ export const FURNITURE: FurnitureDef[] = [
   piece('coat_rack', 'Coat rack', 1, 1, [['plank', 4], ['shaft', 4], ['nail', 12]], 10, 6, ''),
   piece('planter', 'Planter', 2, 1, [['plank', 24], ['nail', 20]], 10, 7, '', undefined, { planter: true }),
   // A grapevine climbs it, planted at its foot: see `vineyard.ts`.
-  piece('trellis', 'Trellis', SUBTILES, 1, [['plank', 4], ['shaft', 6], ['nail', 12]], 10, 8, '', undefined, { vine: true }),
-  piece('firewood_rack', 'Firewood rack', 2, 1, [['plank', 8], ['shaft', 6], ['nail', 20]], 12, 8, '', 40),
+  piece('trellis', 'Trellis', SUBTILES, 1, [['plank', 4], ['shaft', 6], ['nail', 12]], 10, 4, '', undefined, { vine: true }),
+  piece('firewood_rack', 'Firewood rack', 2, 1, [['plank', 8], ['shaft', 6], ['nail', 20]], 12, 4, '', 40),
   /*
    * The biggest thing a carpenter builds, and the only one whose footprint is
    * the point of it: two subtiles across and four deep, and every one of the
@@ -654,14 +654,14 @@ export const FURNITURE: FurnitureDef[] = [
   piece(GAZEBO, 'Gazebo', 3, 3, [['plank', 40], ['timber', 12], ['shaft', 6], ['thatch', 16], ['nail', 48]], 22, 30, '', undefined, { skill: 'carpentry', seats: GAZEBO_SEATS }),
   piece(HAY_BALE, 'Hay bale stack', 2, 2, [[HAY, HAY_HOLDS]], 6, 12, '', undefined, { skill: 'farming', tool: 'sickle' }),
   piece(WATER_TROUGH, 'Water trough', 2, 1, [['plank', 16], ['barrel', 1], ['nail', 16]], 14, 12, '', undefined, { skill: 'carpentry', liquid: TROUGH_HOLDS }),
-  piece(SIGNPOST, 'Signpost', 1, 1, [['shaft', 2], ['plank', 4], ['nail', 8]], 10, 8, '', undefined, { skill: 'carpentry' }),
+  piece(SIGNPOST, 'Signpost', 1, 1, [['shaft', 2], ['plank', 4], ['nail', 8]], 10, 4, '', undefined, { skill: 'carpentry' }),
   piece(CAIRN, 'Cairn', 1, 1, [['rock_shards', 12]], 8, 10, '', undefined, { skill: 'masonry', tool: 'trowel' }),
   piece(FIREPLACE, 'Fireplace', 2, 1, [['stone_brick', 30], ['mortar', 12]], 22, 20, '', undefined, { skill: 'masonry', tool: 'trowel', hearth: true, mount: 'hearth' }),
   piece(FOUR_POSTER, 'Four-poster bed', 3, 2, [['plank', 32], ['timber', 20], ['cloth', 16], ['nail', 48]], 24, 22, '', undefined, { bed: FOUR_POSTER_REST }),
-  piece(VASE, 'Vase', 1, 1, [['clay', 2]], 10, 8, '', undefined, { skill: 'pottery', tool: 'trowel' }),
+  piece(VASE, 'Vase', 1, 1, [['clay', 2]], 10, 4, '', undefined, { skill: 'pottery', tool: 'trowel' }),
   piece(SIDE_TABLE, 'Side table', 1, 1, [['plank', 6], ['nail', 8]], 10, 7, '', undefined, { skill: 'carpentry' }),
   piece(FOOTSTOOL, 'Footstool', 1, 1, [['plank', 3], ['nail', 4]], 6, 5, '', undefined, { skill: 'carpentry', seats: STOOL_SEATS }),
-  piece(FISH_MOUNT, 'Trophy fish mount', 1, 1, [['plank', 4], ['nail', 4]], 12, 8, '', undefined, { skill: 'fishing', tool: 'carving_knife', mount: 'wall' }),
+  piece(FISH_MOUNT, 'Trophy fish mount', 1, 1, [['plank', 4], ['nail', 4]], 12, 4, '', undefined, { skill: 'fishing', tool: 'carving_knife', mount: 'wall' }),
   /*
    * The fittings (`fitting.ts`; their numbers in `fittingdefs.ts`): a paper
    * lantern pole, a moss boulder, a tree bench round a living tree, a spice
@@ -671,11 +671,11 @@ export const FURNITURE: FurnitureDef[] = [
   piece(LANTERN_POLE, 'Paper lantern pole', 1, 1, [['papyrus', 6], ['shaft', 1], ['candle', POLE_LANTERNS]], 12, 10, '', undefined, { skill: 'papyrusmaking', tool: 'needle' }),
   piece(MOSS_BOULDER, 'Moss boulder', 2, 2, [['rock_shards', 10]], 8, 10, '', undefined, { skill: 'masonry', tool: 'trowel', mossy: true }),
   piece(TREE_BENCH, 'Tree bench', SUBTILES, SUBTILES, [['plank', 24], ['nail', 24]], 16, 16, '', undefined, { skill: 'carpentry', seats: TREE_BENCH_SEATS }),
-  piece(SPICE_SHELF, 'Spice shelf', 2, 1, [['plank', 4], ['clay_jar', 4], ['nail', 6]], 12, 8, '', undefined, { skill: 'carpentry', mount: 'wall' }),
+  piece(SPICE_SHELF, 'Spice shelf', 2, 1, [['plank', 4], ['clay_jar', 4], ['nail', 6]], 12, 4, '', undefined, { skill: 'carpentry', mount: 'wall' }),
   piece(WINDOW_SEAT, 'Window seat', 2, 1, [['plank', 8], ['cloth', 4], ['nail', 8]], 12, 10, '', undefined, { skill: 'carpentry', mount: 'sill', seats: WINDOW_SEATS }),
-  piece(TRAINING_DUMMY, 'Training dummy', 2, 2, [['thatch', 8], ['timber', 1], ['nail', 4]], 8, 8, '', undefined, { skill: 'carpentry' }),
+  piece(TRAINING_DUMMY, 'Training dummy', 2, 2, [['thatch', 8], ['timber', 1], ['nail', 4]], 8, 4, '', undefined, { skill: 'carpentry' }),
   piece(ARCHERY_TARGET, 'Archery target', 2, 1, [['thatch', 12], ['plank', 6], ['nail', 6]], 10, 10, '', undefined, { skill: 'carpentry' }),
-  piece(MOORING_POST, 'Mooring post', 1, 1, [['log', 1], ['rope', 2]], 8, 8, '', undefined, { skill: 'carpentry' }),
+  piece(MOORING_POST, 'Mooring post', 1, 1, [['log', 1], ['rope', 2]], 8, 4, '', undefined, { skill: 'carpentry' }),
   piece(STONE_BUST, 'Stone bust', 1, 1, [['rock_shards', 4]], 20, 14, '', undefined, { skill: 'stonecutting', tool: 'chisel' }),
   /*
    * The adornments (`adorn.ts`; their numbers in `adorndefs.ts`): a lily pond,
@@ -686,17 +686,17 @@ export const FURNITURE: FurnitureDef[] = [
    * wildermon bed; a garden footbridge is a bridge, `bridges.ts`.)
    */
   piece(LILY_POND, 'Lily pond', 2, 2, [['stone_brick', 12], ['mortar', 4], ['clay', 4]], 14, 14, '', undefined, { skill: 'masonry', tool: 'shovel' }),
-  piece(IVY_PANEL, 'Ivy wall panel', 2, 1, [[IVY_CUTTING, 4], ['plank', 4], ['nail', 6]], 10, 8, '', undefined, { skill: 'forestry', tool: 'sickle', mount: 'wall' }),
+  piece(IVY_PANEL, 'Ivy wall panel', 2, 1, [[IVY_CUTTING, 4], ['plank', 4], ['nail', 6]], 10, 4, '', undefined, { skill: 'forestry', tool: 'sickle', mount: 'wall' }),
   piece(GARDEN_OBELISK, 'Garden obelisk', 1, 1, [['plank', 6], ['shaft', 4], ['nail', 10], ['wildflowers', 4]], 12, 10, '', undefined, { skill: 'carpentry', climber: 'sweet_pea' }),
   piece(HERB_SPIRAL, 'Herb spiral', 3, 3, [['rock_shards', 16], ['mortar', 4], ['dirt', 2]], 14, 14, '', undefined, { skill: 'masonry', tool: 'trowel' }),
-  piece(BUOY, 'Buoy', 1, 1, [['log', 1], ['rope', 2], ['nail', 4]], 8, 8, '', undefined, { skill: 'carpentry' }),
+  piece(BUOY, 'Buoy', 1, 1, [['log', 1], ['rope', 2], ['nail', 4]], 8, 4, '', undefined, { skill: 'carpentry' }),
   piece(CAULDRON_HEARTH, 'Cauldron hearth', 2, 2, [['stone_brick', 20], ['mortar', 8], ['iron_lump', 6]], 20, 16, '', undefined, { skill: 'blacksmithing', tool: 'hammer', hearth: true }),
-  piece(CHEESE_RACK, 'Cheese rack', 2, 1, [['plank', 8], ['shaft', 4], ['nail', 10]], 10, 8, '', undefined, { skill: 'carpentry' }),
+  piece(CHEESE_RACK, 'Cheese rack', 2, 1, [['plank', 8], ['shaft', 4], ['nail', 10]], 10, 4, '', undefined, { skill: 'carpentry' }),
   piece(PELT_RUG, 'Pelt rug', 2, 2, [[FUR, 4], ['leather', 2]], 12, 12, '', undefined, { skill: 'leatherworking', tool: 'needle', material: 'pelt' }),
   piece(PLUSH, 'Plush wildermon', 1, 1, [['cloth', 3], ['yarn', 2]], 14, 10, '', undefined, { skill: 'tailoring', tool: 'needle', plush: true }),
   piece(GAME_TABLE, 'Game table', 2, 2, [['plank', 10], ['shaft', 4], ['nail', 14]], 12, 10, '', undefined, { skill: 'carpentry', seats: TABLE_SEATS }),
   piece(GEM_LAMP, 'Gem lamp', 1, 1, [['gem', 1], ['stone_brick', 4], ['mortar', 1]], 18, 12, '', undefined, { skill: 'jewellery', tool: 'file', material: 'gem' }),
-  piece(PEDIGREE_BOARD, 'Pedigree board', 2, 1, [['plank', 6], ['shaft', 2], ['nail', 8], ['papyrus', 1]], 10, 8, '', undefined, { skill: 'carpentry' }),
+  piece(PEDIGREE_BOARD, 'Pedigree board', 2, 1, [['plank', 6], ['shaft', 2], ['nail', 8], ['papyrus', 1]], 10, 4, '', undefined, { skill: 'carpentry' }),
   /*
    * The obsidian pieces (`obsidian.ts`; their numbers in `obsidiandefs.ts`),
    * each of obsidian and more: blown at a lit smelter (glassblowing), cut with
@@ -708,9 +708,9 @@ export const FURNITURE: FurnitureDef[] = [
   piece(OBSIDIAN_OBELISK, 'Obsidian obelisk', 2, 2, [[OBSIDIAN, 10], ['stone_slab', 1]], 26, 20, '', undefined, { skill: 'stonecutting', tool: 'chisel' }),
   piece(DRAGON_FOUNTAIN, 'Dragon-glass fountain', 3, 3, [[OBSIDIAN, 16], ['stone_brick', 24], ['mortar', 12], [WATER_MOTE, WATER_MOTES_EACH]], 34, 28, '', undefined, { skill: 'masonry', tool: 'trowel', well: FOUNTAIN_HOLDS }),
   piece(SHARD_GARDEN, 'Shard garden', 2, 2, [[OBSIDIAN, 6], ['ash', 4], ['rock_shards', 4]], 14, 10, '', undefined, { skill: 'masonry', tool: 'trowel' }),
-  piece(OBSIDIAN_VASE, 'Obsidian vase', 1, 1, [[OBSIDIAN, 3], ['sand', 1]], 16, 8, '', undefined, { skill: 'glassblowing', station: 'smelter' }),
+  piece(OBSIDIAN_VASE, 'Obsidian vase', 1, 1, [[OBSIDIAN, 3], ['sand', 1]], 16, 4, '', undefined, { skill: 'glassblowing', station: 'smelter' }),
   piece(LAVA_LAMP, 'Lava lamp column', 1, 1, [[OBSIDIAN, 4], ['glass', 2], ['copper_lump', 1]], 22, 14, '', undefined, { skill: 'glassblowing', station: 'smelter' }),
-  piece(OBSIDIAN_CHIME, 'Obsidian wind chime', 1, 1, [[OBSIDIAN, 3], ['rope', 1], ['iron_lump', 1]], 16, 8, '', undefined, { skill: 'glassblowing', station: 'smelter', mount: 'hang', chime: true }),
+  piece(OBSIDIAN_CHIME, 'Obsidian wind chime', 1, 1, [[OBSIDIAN, 3], ['rope', 1], ['iron_lump', 1]], 16, 4, '', undefined, { skill: 'glassblowing', station: 'smelter', mount: 'hang', chime: true }),
   piece(OBSIDIAN_BUST, 'Obsidian bust', 1, 1, [[OBSIDIAN, 4], ['stone_brick', 1]], 22, 14, '', undefined, { skill: 'stonecutting', tool: 'chisel' }),
   piece(SHARD_PATH, 'Glass shard path', SUBTILES, 1, [[OBSIDIAN, 2], ['ash', 1]], 8, 6, '', undefined, { skill: 'masonry', tool: 'trowel', mount: 'edge' }),
   piece(EMBER_ORB, 'Ember orb on a stand', 1, 1, [[OBSIDIAN, 4], ['copper_lump', 1], ['stone_brick', 2]], 24, 14, '', undefined, { skill: 'jewellery', tool: 'file' }),

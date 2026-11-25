@@ -311,7 +311,7 @@ export const TREASURE_ACTIONS: ActionDef[] = [
     skill: 'digging',
     tool: 'shovel',
     stamina: 0.06,
-    baseTime: 8,
+    baseTime: 4,
     applies: (t, g) => t.kind === 'item' && g.inventory.get(t.uid)?.id === 'treasure_map',
     /*
      * The refusal *is* the search: a map that will not be dug tells you how

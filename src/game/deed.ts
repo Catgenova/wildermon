@@ -136,7 +136,7 @@ export const DEED_ACTIONS: ActionDef[] = [
     label: 'Upgrade settlement',
     verb: 'marking out the new boundary',
     stamina: 0.05,
-    baseTime: 8,
+    baseTime: 4,
     // Offered inside the settlement it aims at (its founder's, or the one whose token it is), to a rank allowed it,
     // until the settlement is at its last level.
     applies: (t, g) => {

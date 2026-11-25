@@ -114,7 +114,7 @@ export const BUTCHER_ACTIONS: ActionDef[] = [
     skill: 'butchering',
     tool: 'butchering_knife',
     stamina: 0.06,
-    baseTime: 8,
+    baseTime: 4,
     applies: (t, g) => corpse(g, t) !== undefined,
     check: (t, g) => {
       const item = corpse(g, t);

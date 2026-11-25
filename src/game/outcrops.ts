@@ -46,7 +46,7 @@ export const isOutcropKind = (kind: string): boolean => OUTCROP_BY_ID.has(kind);
 /** The job: Mine, on an outcropping. Its skill, tool, time, wind and odds are mining's (`MINE_JOB`). */
 export const OUTCROP_MINE = 'mine_outcrop';
 /** Mining's skill, tool, wind, time and difficulty: Mine at a face (`mine` in `actions.ts`) and at an outcropping alike. */
-export const MINE_JOB = { skill: 'mining', tool: 'pickaxe', stamina: 0.06, baseTime: 8, difficulty: 12 } as const;
+export const MINE_JOB = { skill: 'mining', tool: 'pickaxe', stamina: 0.06, baseTime: 4, difficulty: 12 } as const;
 /** Swings that come off before an outcropping breaks. */
 export const OUTCROP_USES = 20;
 /** The QL of everything mined off one, whatever the skill or the pickaxe. */

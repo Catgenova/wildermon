@@ -343,7 +343,7 @@ export interface Enchant {
 export const ENCHANT_LEAST = 0.05;
 export const ENCHANT_MOST = 0.95;
 /** A go at it: seconds at enchanting 1, and wind. */
-export const ENCHANT_TIME = 8;
+export const ENCHANT_TIME = 4;
 export const ENCHANT_WIND = 0.02;
 /** One that does not take: the weapon takes this much damage, and one in `1 / ENCHANT_BREAK` goes to pieces outright. */
 export const ENCHANT_HARM = 30;

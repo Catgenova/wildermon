@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.mining_seconds()
  RETURNS double precision
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select 30::double precision $function$
+AS $function$ select 15::double precision $function$

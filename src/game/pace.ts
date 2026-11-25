@@ -27,16 +27,19 @@
  * There is no second place to forget.
  */
 
-/** What a full go at a face of rock costs somebody who has never done it. */
-export const MINING_SECONDS = 30;
+/**
+ * What a full go at a face of rock costs somebody who has never done it. Fifteen since everything that took thirty seconds was asked to take fifteen: mining's weight halved with it
+ * (`MINING_WEIGHT`), so the unit (`ACTION_PACE`) and every other job kept their price.
+ */
+export const MINING_SECONDS = 15;
 
 /**
  * Mining's weight in `ACTIONS`, which is the whole of what makes it the
  * yardstick. The suite checks these two have not drifted apart: change the
  * weight without changing this and every timer in the game would quietly
- * re-price itself around a mining job that is no longer thirty seconds.
+ * re-price itself around a mining job that is no longer fifteen seconds.
  */
-export const MINING_WEIGHT = 8;
+export const MINING_WEIGHT = 4;
 
 /** Seconds to the unit. */
 export const ACTION_PACE = MINING_SECONDS / MINING_WEIGHT;

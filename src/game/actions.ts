@@ -728,7 +728,7 @@ export const sproutToHand = (g: Game, asked: number | undefined, ok: (it: Item) 
 /**
  * A Miner's Pan: how long a go takes. What it brings up is `PAN_ORES` (`worksites.ts`).
  */
-export const PAN_TIME = 8;
+export const PAN_TIME = 4;
 
 /**
  * The steepest slope a spade or a trowel may leave: this many times the skill,
@@ -1842,7 +1842,7 @@ export const ACTIONS: ActionDef[] = [
     skill: 'woodcutting',
     tool: 'hatchet',
     stamina: 0.07,
-    baseTime: 8,
+    baseTime: 4,
     difficulty: 10,
     applies: (t, g) => tile(t, g) === TileType.Tree || tile(t, g) === TileType.Bush,
     check: (t, g) => {
@@ -1914,7 +1914,7 @@ export const ACTIONS: ActionDef[] = [
     skill: 'digging',
     tool: 'shovel',
     stamina: 0.06,
-    baseTime: 8,
+    baseTime: 4,
     difficulty: 5,
     applies: (t, g) => tile(t, g) === TileType.Stump,
     check: (t, g) => {
@@ -2171,7 +2171,7 @@ export const ACTIONS: ActionDef[] = [
     skill: 'forestry',
     tool: 'carving_knife',
     stamina: 0.03,
-    baseTime: 8,
+    baseTime: 4,
     difficulty: 40,
     applies: (t, g) => tile(t, g) === TileType.Tree && g.inventory.items.some((it) => it.id === 'sprout' && fruitSprout(it)),
     check: (t, g) => {
@@ -2230,7 +2230,7 @@ export const ACTIONS: ActionDef[] = [
     skill: 'woodcutting',
     tool: 'hatchet',
     stamina: 0.07,
-    baseTime: 8,
+    baseTime: 4,
     difficulty: 10,
     applies: (t, g) => t.kind === 'tile' && g.perk('coppice', 0) > 0 && tile(t, g) === TileType.Tree,
     check: (t, g) => {

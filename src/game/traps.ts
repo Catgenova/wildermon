@@ -242,7 +242,7 @@ export const TRAP_ACTIONS: ActionDef[] = [
     verb: 'taking it out of the trap',
     skill: 'taming',
     stamina: 0.05,
-    baseTime: 8,
+    baseTime: 4,
     applies: (t, g) => trapOf(g, t)?.caught !== null && trapOf(g, t) !== undefined,
     labelFor: (t, g) => {
       const trap = trapOf(g, t);

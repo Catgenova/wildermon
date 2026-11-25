@@ -453,7 +453,7 @@ export const DYE_ACTIONS: ActionDef[] = [
     verb: 'dyeing',
     skill: 'alchemy',
     stamina: 0.02,
-    baseTime: 8,
+    baseTime: 4,
     applies: (t, g) => {
       const it = itemOf(g, t);
       return !!it && takesDye(it.id);

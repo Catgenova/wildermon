@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION public.mining_weight()
  RETURNS double precision
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select 8::double precision $function$
+AS $function$ select 4::double precision $function$

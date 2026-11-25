@@ -111,6 +111,7 @@ import { AROUND_LEASH as AROUND_LEASH_602, AROUND_LEFT as AROUND_LEFT_602 } from
 import { PIER_SHOO as PIER_SHOO_602 } from '../../game/piers';
 import { RANGE_PER_STEP as RANGE_PER_STEP_606, SKILL_STEP as SKILL_STEP_606 } from '../../game/creatures';
 import { PULL_LEARN } from '../../game/creatures';
+import { MINING_SECONDS as MINING_SECONDS_705 } from '../../game/pace';
 import { HAUL_LEARN as HAUL_LEARN_290, HAUL_LEARN_RISE as HAUL_LEARN_RISE_290, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_290 } from '../../game/creatures';
 import { HAUL_LEARN as HAUL_LEARN_450, HAUL_LEARN_STEEP as HAUL_LEARN_STEEP_450, HAUL_STEEP_AT as HAUL_STEEP_AT_450 } from '../../game/creatures';
 import { SEASON_DAYS, SHORT_SEASON_DAYS, YEAR_DAYS, YEAR_FROM } from '../../world/calendar';
@@ -446,6 +447,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Every action that took thirty seconds at its base takes fifteen.
+  {
+    n: 705,
+    day: '2026-11-25',
+    lines: () => [
+      `Changed: every action with a 30 s base now ${MINING_SECONDS_705} s: Mine, Mine an outcropping, Mine a cellar, Pan, Cut down, Dig a stump, Graft, Coppice, Dye, Take a catch, Enchant, Enchant a statue, Unearth, Butcher, Upgrade a deed, Clear ivy, Scrub moss.`,
+      'Changed: 34 recipes from 30 s to 15 s, among them mallet, whetstone, clay pot, brush, arrows, fitting sword, axe and maul heads, cooked meat, dough, cod, repair kit, herb teas, and chair, coffer, trellis, signpost, vase, buoy and other pieces.',
+      'Fixed: perk descriptions give base times in seconds.',
+    ],
+  },
   // Driving and Sailing learned twice as fast; a Roxxen's pulling and a hauler's not.
   {
     n: 704,

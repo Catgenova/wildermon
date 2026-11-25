@@ -260,7 +260,7 @@ const CLEAR_IVY: ActionDef = {
   verb: 'clearing ivy',
   tool: 'sickle',
   stamina: 0.04,
-  baseTime: 8,
+  baseTime: 4,
   // Offered on the wall's own menu, a side at a time: see `buildingEntries`.
   hidden: true,
   applies: (t, g) => t.kind === 'tile' && !!t.side && ivyWalls(g, t.x, t.y, t.side).length > 0,
@@ -281,7 +281,7 @@ const SCRUB_MOSS: ActionDef = {
   verb: 'scrubbing moss',
   tool: 'brush',
   stamina: 0.04,
-  baseTime: 8,
+  baseTime: 4,
   applies: (t, g) => mossOn(g, t, greenNow()) !== null,
   check: (t, g) => greenRefusal(g, SCRUB_MOSS, t),
   perform: (t, g) => {
