@@ -63,6 +63,14 @@ export interface GrowthFace {
   trodden?: number;
   /** Ivy alone (an ivy wall panel's wall that is not of stone). */
   ivyOnly?: boolean;
+  /**
+   * Its point in the world in metres (x east, y up, z north, as Unity's), at
+   * (u, v): the carpets' field is the world's, so it runs on across the edges
+   * of faces.
+   */
+  world?: (u: number, v: number) => readonly number[];
+  /** The carpets' cover at its corners, (0,0), (w,0), (w,h), (0,h): blended across it, so paving shares its neighbours'. */
+  coverAt?: readonly [number, number, number, number];
 }
 
 /* ---- the stages --------------------------------------------------------------------------------------- */
@@ -84,7 +92,11 @@ export function stageOf(days: number): number {
 /** How far on a face is, 0 (bare) to 1 (wholly overgrown). */
 const ripe = (f: GrowthFace): number => stageOf(f.days) / LAST_STAGE;
 /** How much of a face its carpets cover, by its stage: none before about the fifth, all of it by the last; trodden the less. */
-const cover = (f: GrowthFace): number => clamp01((ripe(f) - 0.33) / 0.55) * (1 - 0.7 * (f.trodden ?? 0));
+const cover = (f: GrowthFace): number => (f.coverAt ? (f.coverAt[0] + f.coverAt[1] + f.coverAt[2] + f.coverAt[3]) / 4 : coverOf(f.days, f.trodden ?? 0));
+/** The carpets' cover after so many days, as trodden: none before about the fifth stage, all by the last. */
+export const coverOf = (days: number, trodden: number): number => clamp01((stageOf(days) / LAST_STAGE - 0.33) / 0.55) * (1 - 0.7 * trodden);
+/** How far on after so many days, 0 to 1. */
+export const ripeOf = (days: number): number => stageOf(days) / LAST_STAGE;
 
 /* ---- the numbers -------------------------------------------------------------------------------------- */
 
@@ -402,78 +414,115 @@ function paintIvy(g: Ctx, f: GrowthFace, season: GrowthSeason): number {
 
 /* ---- carpets and shrubs: what the late stages bring ------------------------------------------------------ */
 
-/** The best places of a face for moss to have rooted (the carpets spread from them), and how well each suits. */
-function rootsOf(f: GrowthFace, season: GrowthSeason): Array<{ u: number; v: number; s: number }> {
-  const tries: Array<{ s: number; u: number; v: number }> = [];
-  for (let i = 0; i < 16; i++) {
-    const u = H(f.seed, i, 1, 701) * f.width, v = H(f.seed, i, 2, 701) * f.height;
-    if (!onStone(f, u, Math.max(0.01, v))) continue;
-    tries.push({ s: suit('moss', f, u, v, season) + 0.2 * H(f.seed, i, 3, 701), u, v });
-  }
-  tries.sort((a, b) => b.s - a.s);
-  const roots: Array<{ u: number; v: number; s: number }> = [];
-  for (const t of tries) {
-    if (roots.length >= 5) break;
-    if (roots.every((p) => Math.hypot(p.u - t.u, p.v - t.v) >= ROOTS_APART)) roots.push({ u: t.u, v: t.v, s: clamp01(t.s) });
-  }
-  return roots;
+/** Value noise in three dimensions, nought to one, smooth: the same at a place whatever face asks it (as Unity's `Growth.Noise3`). */
+export function noise3(x: number, y: number, z: number, salt: number): number {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  let fx = x - ix, fy = y - iy, fz = z - iz;
+  fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); fz = fz * fz * (3 - 2 * fz);
+  const L = (a: number, b: number, c: number): number => H(ix + a, iy + b, wrap(Math.imul(iz, 7919) + Math.imul(c, 7919) + salt), salt);
+  const lerp = (p: number, q: number, t: number): number => p + (q - p) * t;
+  const x00 = lerp(L(0, 0, 0), L(1, 0, 0), fx), x10 = lerp(L(0, 1, 0), L(1, 1, 0), fx);
+  const x01 = lerp(L(0, 0, 1), L(1, 0, 1), fx), x11 = lerp(L(0, 1, 1), L(1, 1, 1), fx);
+  return lerp(lerp(x00, x10, fy), lerp(x01, x11, fy), fz);
 }
+/** Two octaves of it at a place in the world (metres), a stride of 1.6 m and of 0.55 m: where a carpet runs. */
+const patchy = (w: readonly number[], salt: number): number =>
+  0.62 * noise3(w[0] / 1.6, w[1] / 1.6, w[2] / 1.6, salt) + 0.38 * noise3(w[0] / 0.55, w[1] / 0.55, w[2] / 0.55, salt + 1);
 
-/** A carpet: a lumpy patch round (u, v), its edge the darker shade and its heart the lighter, flecked; cut to the face. */
-function blob(g: Ctx, f: GrowthFace, u: number, v: number, r: number, lo: number[], hi: number[], id: number): void {
-  const path = (scale: number): void => {
-    g.beginPath();
-    for (let i = 0; i <= 16; i++) {
-      const ang = ((i % 16) / 16) * Math.PI * 2;
-      const lump = 0.72 + 0.2 * Math.sin(ang * 3 + id) + 0.16 * H(id, i % 16, 1, 711);
-      const x = u + Math.cos(ang) * r * lump * scale, y = v + Math.sin(ang) * r * lump * scale;
-      if (i) g.lineTo(x, y); else g.moveTo(x, y);
-    }
-    g.closePath();
-  };
-  g.save();
-  g.beginPath(); g.rect(0, 0, f.width, f.height); g.clip();
-  path(1); g.fillStyle = css(lo); g.fill();
-  path(0.78); g.fillStyle = css(mix(lo, hi, 0.6)); g.fill();
-  path(0.5); g.fillStyle = css(hi); g.fill();
-  // flecks of the light on it, as a moss sheet's tufts or a mat of leaves catch it
-  g.fillStyle = css(hi.map((c) => Math.min(1, c * 1.15)));
-  const flecks = Math.min(60, Math.round(r * r * 40));
-  for (let i = 0; i < flecks; i++) {
-    const ang = H(id, i, 3, 711) * Math.PI * 2, d = Math.sqrt(H(id, i, 4, 711)) * r * 0.85;
-    g.beginPath(); g.arc(u + Math.cos(ang) * d, v + Math.sin(ang) * d, 0.012 + 0.018 * H(id, i, 5, 711), 0, Math.PI * 2); g.fill();
-  }
-  g.restore();
+/** A face's point in the world, in metres (x east, y up, z north, as Unity's): its own `world`, or its own terms when it has none. */
+const worldOf = (f: GrowthFace, u: number, v: number): readonly number[] => (f.world ? f.world(u, v) : [u, v, f.seed % 997]);
+
+/** A carpet's cover at a point of a face: the face's own, or blended from its corners' (paving: its neighbours' share). */
+function coverHere(f: GrowthFace, u: number, v: number): number {
+  const c = f.coverAt;
+  if (!c) return cover(f);
+  const s = clamp01(u / f.width), t = clamp01(v / f.height);
+  return (c[0] + (c[1] - c[0]) * s) * (1 - t) + (c[3] + (c[2] - c[3]) * s) * t;
 }
 
 /**
- * The carpets a face has grown by its stage (as Unity's `Growth.Carpets`):
- * from about the fifth, moss in sheets on a top or paving, ivy in mats on a
- * wall's face, spreading from where it took root and running together, till
- * by the last the whole face is under it; a grass sward over paving late on.
- * Trodden paving keeps clearer.
+ * The carpet field at a point of a face: over `EDGE` it is carpeted. The
+ * cover there, the place's own patchiness in the world (so a carpet runs on
+ * across a tile's edge or round a wall's corner as though there were none),
+ * and how damp it is; none in an opening. `late` holds it back (a grass
+ * sward comes after the moss). As Unity's `Growth.Field`.
  */
+function field(f: GrowthFace, u: number, v: number, salt: number, late: number): number {
+  if (!onStone(f, Math.max(0.001, Math.min(f.width - 0.001, u)), Math.max(0.001, Math.min(f.height - 0.001, v)))) return -1;
+  const c = coverHere(f, u, v) - late;
+  return c * 1.3 - 0.15 + 0.55 * (patchy(worldOf(f, u, v), salt) - 0.5) + 0.35 * (damp(f, u, v) - 0.45);
+}
+const EDGE = 0.5;
+/** Samples a metre the field is painted at, smoothed up to the picture: soft edges, and cheap. */
+const FIELD_PER_M = 12;
+
+/** A canvas to paint the field into: the page's own, or the one `setCanvasMaker` was given (Node, the tools). */
+let canvasMaker: ((w: number, h: number) => HTMLCanvasElement) | null = null;
+export function setCanvasMaker(make: (w: number, h: number) => HTMLCanvasElement): void { canvasMaker = make; }
+function newCanvas(w: number, h: number): HTMLCanvasElement {
+  if (canvasMaker) return canvasMaker(w, h);
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return c;
+}
+
+/**
+ * A carpet on a face from the field, painted a sample at a time and laid
+ * over it smoothed: dark where it thins out, light where it runs high,
+ * mottled. `palette` gives the colours at a point (ivy over a wall's face,
+ * moss at its foot). Returns whether any of it showed.
+ */
+function fieldCarpet(g: Ctx, f: GrowthFace, salt: number, late: number, palette: (u: number, v: number) => [number[], number[]]): boolean {
+  const cols = Math.max(2, Math.ceil(f.width * FIELD_PER_M)), rows = Math.max(2, Math.ceil(f.height * FIELD_PER_M));
+  const cv = newCanvas(cols, rows);
+  const cg = cv.getContext('2d') as Ctx;
+  const img = cg.createImageData(cols, rows);
+  let any = false;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const u = ((c + 0.5) / cols) * f.width, v = ((rows - r - 0.5) / rows) * f.height;
+    const val = field(f, u, v, salt, late);
+    const a = clamp01((val - (EDGE - 0.05)) / 0.1);
+    if (a <= 0) continue;
+    any = true;
+    const [lo, hi] = palette(u, v);
+    const w = worldOf(f, u, v);
+    const mott = 0.9 + 0.2 * noise3(w[0] * 3.1, w[1] * 3.1, w[2] * 3.1, salt + 5);
+    const col = mix(lo, hi, clamp01((val - EDGE) * 2.5)).map((x) => Math.min(1, x * mott));
+    const i = (r * cols + c) * 4;
+    img.data[i] = col[0] * 255; img.data[i + 1] = col[1] * 255; img.data[i + 2] = col[2] * 255; img.data[i + 3] = a * 255;
+  }
+  if (!any) return false;
+  cg.putImageData(img, 0, 0);
+  g.save();
+  g.translate(0, f.height);
+  g.scale(1, -1);
+  g.imageSmoothingEnabled = true;
+  g.drawImage(cv, 0, 0, f.width, f.height);
+  g.restore();
+  return true;
+}
+
+/**
+ * The carpets a face has grown by its stage, from one field over the world
+ * (as Unity's `Growth.Carpets`): moss sheets on a top or paving and ivy
+ * mats on a wall's face (moss low on it, where it meets the ground), coming
+ * in from the damp and running on across the edges of tiles and faces, till
+ * by the last the whole face is under them; a grass sward over paving and
+ * tops late on.
+ */
+/** The most cover at any of a face's corners: what creeps in from round it. */
+const spill = (f: GrowthFace): number => (f.coverAt ? Math.max(...f.coverAt) : 0);
+
 function carpets(g: Ctx, f: GrowthFace, season: GrowthSeason): number {
   const p = ripe(f);
-  const cv = cover(f);
-  if (cv <= 0.02) return 0;
-  const ivyMat = !!f.ivy && !f.top;
-  const lo = seasoned(ivyMat ? IVY_OLD : MOSS_DARK, season, 'moss');
-  const hi = seasoned(ivyMat ? IVY_MID : mix(MOSS_FILL, MOSS_LIT, 0.3), season, 'moss');
-  const big = Math.max(f.width, f.height);
-  let n = 0;
-  rootsOf(f, season).forEach((root, i) => {
-    const r = cv * big * (0.3 + 0.25 * H(f.seed, i + 1, 4, 721)) * (0.6 + 0.4 * root.s);
-    blob(g, f, root.u, root.v, r, lo, hi, wrap(f.seed + Math.imul(i + 1, 131)));
-    n++;
-  });
-  // wholly overgrown: the face under it, its edge a little ragged
-  if (cv > 0.85) { blob(g, f, f.width / 2, f.height / 2, big * 0.9, lo, hi, wrap(f.seed + 977)); n++; }
-  // and a sward of grass over paving and tops, late
-  if ((f.paving || f.top) && p > 0.7) {
-    const sw = clamp01((p - 0.7) / 0.3) * (1 - 0.8 * (f.trodden ?? 0));
-    const gl = seasoned([0.42, 0.6, 0.3], season, 'grass'), gh = seasoned([0.58, 0.72, 0.38], season, 'grass');
-    for (let k = 0; k < 3; k++) if (sw > 0.05) { blob(g, f, H(f.seed, k, 5, 721) * f.width, H(f.seed, k, 6, 721) * f.height, sw * big * 0.45, gl, gh, wrap(f.seed + Math.imul(211, k))); n++; }
+  if (p < 0.05 && spill(f) < 0.05) return 0;
+  const moss: [number[], number[]] = [seasoned(MOSS_DARK, season, 'moss'), seasoned(mix(MOSS_FILL, MOSS_LIT, 0.3), season, 'moss')];
+  const ivy: [number[], number[]] = [seasoned(IVY_OLD, season, 'moss'), seasoned(IVY_MID, season, 'moss')];
+  const walled = !!f.ivy && !f.top;
+  let n = fieldCarpet(g, f, 811, 0, (_u, v) => (walled && !(f.foot && v < 0.45) ? ivy : moss)) ? 1 : 0;
+  if ((f.paving || f.top) && p > 0.6) {
+    const sward: [number[], number[]] = [seasoned([0.42, 0.6, 0.3], season, 'grass'), seasoned([0.58, 0.72, 0.38], season, 'grass')];
+    if (fieldCarpet(g, f, 823, 0.35, () => sward)) n++;
   }
   return n;
 }
@@ -655,7 +704,9 @@ function flower(g: Ctx, u: number, v: number, size: number, id: number, season: 
  * line; a top's are seen from above.
  */
 export function paintGrowth(g: Ctx, f: GrowthFace, season: GrowthSeason): number {
-  if (f.days <= 0.5 || f.width < 0.05 || f.height < 0.05) return 0;
+  if (f.width < 0.05 || f.height < 0.05) return 0;
+  // kept clear itself, but what grows round it creeps in over its edges (fresh paving at an old wall's foot)
+  if (f.days <= 0.5) return spill(f) >= 0.05 && !f.ivyOnly ? carpets(g, f, season) : 0;
   let n = 0;
   if (f.ivyOnly) return paintIvy(g, f, season);
   // the carpets under everything
@@ -718,7 +769,7 @@ export function growthPicture(key: string, f: GrowthFace, season: GrowthSeason):
   }
   const w = Math.ceil(f.width * GROWTH_PPM), h = Math.ceil(f.height * GROWTH_PPM);
   let out: HTMLCanvasElement | null = null;
-  if (w > 0 && h > 0 && f.days > 0.5) {
+  if (w > 0 && h > 0 && (f.days > 0.5 || spill(f) >= 0.05)) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
     const g = c.getContext('2d') as Ctx;

@@ -1499,7 +1499,7 @@ export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 
           const [ox, oy] = proj(e, f.frame.o), [ax, ay] = proj(e, f.frame.a), [bx, by] = proj(e, f.frame.b);
           g.transform(ax, ay, bx, by, ox, oy);
           if (p) p(g, { e, L, fill, base }, f.info, st);
-          if (green) growthPaint(g, f.info, growth!);
+          if (green) growthPaint(g, f.info, growth!, f.frame);
           g.restore();
         }
       }
@@ -1526,7 +1526,7 @@ const GROWS_ON = new Set<Role>([...GROW_FOOT, ...GROW_LIP, ...GROW_TOP, ...GROW_
  * the days since the bridge was built or scrubbed. Its frame's foot is its
  * `y0`, as for the moss before it.
  */
-export function growthPaint(g: Ctx, f: FaceInfo, growth: BridgeGrowth): void {
+export function growthPaint(g: Ctx, f: FaceInfo, growth: BridgeGrowth, frame?: { o: L; a: L; b: L }): void {
   const x0 = Math.min(f.x0, f.x1), x1 = Math.max(f.x0, f.x1);
   const y0 = Math.min(f.y0, f.y1), y1 = Math.max(f.y0, f.y1);
   const face: GrowthFace = {
@@ -1534,6 +1534,12 @@ export function growthPaint(g: Ctx, f: FaceInfo, growth: BridgeGrowth): void {
     foot: f.role === 'pier' || f.role === 'wall', top: GROW_TOP.has(f.role) || GROW_DECK.has(f.role), drip: GROW_LIP.has(f.role), cornerA: 0, cornerB: 0,
     paving: GROW_DECK.has(f.role), joint: 1, trodden: GROW_DECK.has(f.role) ? 0.5 : 0,
     seed: Math.floor(hashI(f.seed, ROLE_NO[f.role] ?? 29, 0, 79) * 2147483647),
+    // where it is on the bridge, in metres (tiles along and across, height units up), for the carpets' field
+    world: frame ? (u, v) => {
+      const x = x0 + u * 10, y = y0 + v * 10;
+      const p = [0, 1, 2].map((i) => frame.o[i] + frame.a[i] * x + frame.b[i] * y);
+      return [p[0] * 4, p[2] / 10, p[1] * 4];
+    } : undefined,
   };
   g.save();
   g.translate(x0, y0);

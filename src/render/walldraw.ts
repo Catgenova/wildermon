@@ -2076,6 +2076,7 @@ export class WallPainter {
       const face: GrowthFace = {
         width: 4, height: WALL_THICK * 2 * 4, days: grownDays, sun: 0.9, wet, foot: false, top: true, drip: false, cornerA: 0, cornerB: 0,
         seed: seedOf(wall.x, wall.y, wall.level, wall.dir === 'h' ? 61 : 67),
+        world: this.wallWorld(wall, (WALL_HEIGHT * tall) / 10, true),
       };
       const pic = growthPicture(`top|${wall.x},${wall.y},${wall.level},${wall.dir}|${grownDays}|${season}|${wet.toFixed(2)}`, face, season);
       if (pic) {
@@ -2121,6 +2122,22 @@ export class WallPainter {
    * as a picture of the face (kept by its place, its days and the season) and
    * laid over the face as the ivy is.
    */
+  /**
+   * A wall face's point in the world in metres (x east, y up, z north, as
+   * Unity's), at (u along it, v up it): its foot on the ground's height at the
+   * wall's start, its storey's height on that; `top` takes v across the top
+   * instead, at `up` metres.
+   */
+  private wallWorld(wall: Wall, up: number, top = false): (u: number, v: number) => readonly number[] {
+    const foot = this.r.game.world.getHeight(wall.x, wall.y) / 10 + wall.level * (WALL_HEIGHT / 10);
+    const h = wall.dir === 'h';
+    return (u, v) => {
+      const t = u / 4;
+      const tx = h ? wall.x + t : wall.x, ty = h ? wall.y : wall.y + t;
+      return top ? [tx * 4 + (h ? 0 : v), foot + up, -(ty * 4 + (h ? v : 0))] : [tx * 4, foot + v, -ty * 4];
+    };
+  }
+
   private wallGrowth(wall: Wall, px: (t: number, k: number, s?: number) => number, py: (t: number, k: number, s?: number) => number,
     height: number, ox: number, oy: number, tx: number, ty: number, roofed: boolean, keep: Keep[], days: number, season: GrowthSeason,
     panel: boolean, low: boolean, ivyOnly: boolean): void {
@@ -2142,6 +2159,8 @@ export class WallPainter {
       width: 4, height, days, sun: sunOf(ox, oy) * alley, wet, foot: wall.level === 0, top: false, drip: covered,
       cornerA: cornerAt(wall.x, wall.y), cornerB: wall.dir === 'h' ? cornerAt(wall.x + 1, wall.y) : cornerAt(wall.x, wall.y + 1),
       keep, seed: seedOf(wall.x, wall.y, wall.level * 2 + sideBit, wall.dir === 'h' ? 53 : 59),
+      // where it is in the world (metres, x east, y up, z north): its foot on the ground's height, as the paving's
+      world: this.wallWorld(wall, 0),
       // its ivy: climbing from a foot on the ground, hanging from a head nothing stands on
       ivy: true, climb: wall.level === 0, hang: low || !roofed, ivyOnly,
       vigour: panel ? 1 : vigour(wall.x + (wall.dir === 'h' ? 0.5 : 0), wall.y + (wall.dir === 'v' ? 0.5 : 0)),

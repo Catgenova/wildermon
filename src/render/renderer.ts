@@ -91,8 +91,8 @@ import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
 import { type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
 import { PAVE_STAGES } from './ivy';
-import { GROWTH_PPM, growthPicture, seedOf, sunOf, type GrowthFace, type GrowthSeason } from './growth';
-import { bridgeGreen, greenNow, greenShows, greenStart, GREEN_DAY, mossyBridge, mossyPiece, pieceGreen } from '../game/greening';
+import { coverOf, GROWTH_PPM, growthPicture, ripeOf, seedOf, sunOf, type GrowthFace, type GrowthSeason } from './growth';
+import { bridgeGreen, greenNow, greenShows, greenStart, GREEN_DAY, ivied, mossyBridge, mossyPiece, pieceGreen } from '../game/greening';
 import { ANVIL_SUBTILES, anvilCentre } from '../game/anvil';
 import { postCentre, postLeft, postLife } from '../game/posts';
 import { trapCentre } from '../game/traps';
@@ -3799,15 +3799,14 @@ export class Renderer {
     return days <= 0 ? -1 : days * 4 + ['spring', 'summer', 'autumn', 'winter'].indexOf(seasonAt(this.greenAt).season);
   }
 
-  private pavingMoss(x: number, y: number, pts: Float64Array, rot: number): void {
-    if (!PAVED.has(this.game.world.getTile(x, y))) return;
-    const days = Math.floor((this.greenAt - greenStart(this.game.pavingSince.get(`${x},${y}`), this.game.greenFrom)) / GREEN_DAY);
-    if (days <= 0) return;
-    const season = seasonAt(this.greenAt).season as GrowthSeason;
-    const bld = this.game.buildings;
-    const world = this.game.world;
+  /**
+   * How trodden a paved tile is: paving all round it for two tiles (the
+   * middle of an open square) the most; a worn path across it, paving in use,
+   * kept clear along it however long it has been laid.
+   */
+  private pavingTrodden(x: number, y: number): number {
+    const bld = this.game.buildings, world = this.game.world;
     const paved = (px: number, py: number): boolean => world.inBounds(px, py) && PAVED.has(world.getTile(px, py)) && !bld.buildingAt(px, py);
-    // trodden: paving all round it for two tiles, the middle of an open square
     let edge = false;
     for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !paved(x + dx, y + dy)) { edge = true; break; }
     let trodden = 0;
@@ -3815,16 +3814,77 @@ export class Renderer {
       trodden = 1;
       for (let dy = -2; dy <= 2 && trodden > 0.5; dy++) for (let dx = -2; dx <= 2; dx++) if ((Math.abs(dx) === 2 || Math.abs(dy) === 2) && !paved(x + dx, y + dy)) { trodden = 0.5; break; }
     }
-    // a worn path across it is paving in use: kept clear along it however long it has been laid
     if (this.trailMaskAt(x, y, true)) trodden = Math.max(trodden, 0.9);
+    return trodden;
+  }
+
+  /**
+   * A paved tile's carpets' cover at a corner of the grid (as Unity's
+   * `CornerCover`): the share of the four tiles round it. Paving its own
+   * cover; a building as overgrown as the stage allows; grass and the verge
+   * nearly as much; water a little less. So moss thickens toward a wall and
+   * in from a verge, and meets them, rather than stopping at a tile's edge.
+   */
+  private pavingCorner(cx: number, cy: number, days: number): number {
+    const bld = this.game.buildings, world = this.game.world;
+    const rp = ripeOf(days);
+    let sum = 0, weight = 4;
+    for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) {
+      const tx = cx + dx, ty = cy + dy;
+      // a building weighs double: its walls' growth reaches out from their foot
+      if (bld.buildingAt(tx, ty)) { sum += 2 * this.wallsCover(tx, ty, rp); weight++; }
+      else if (world.inBounds(tx, ty) && PAVED.has(world.getTile(tx, ty))) {
+        const d = Math.floor((this.greenAt - greenStart(this.game.pavingSince.get(`${tx},${ty}`), this.game.greenFrom)) / GREEN_DAY);
+        sum += coverOf(d, this.pavingTrodden(tx, ty));
+      } else if (world.inBounds(tx, ty) && world.hasWater(tx, ty)) sum += 0.5 * rp;
+      else sum += 0.85 * rp;
+    }
+    return sum / weight;
+  }
+
+  /**
+   * A built tile's share of a paving corner: the carpets' cover of the oldest
+   * ivied wall on its ground floor (what creeps from their foot onto the
+   * paving round, however freshly kept), or `fallback` with none.
+   */
+  private wallsCover(x: number, y: number, fallback: number): number {
+    let best = -1;
+    for (const side of ['n', 'e', 's', 'w'] as const) {
+      const w = this.game.buildings.wall(0, x, y, side);
+      if (w && ivied(w)) best = Math.max(best, Math.floor((this.greenAt - greenStart(w.greenSince, this.game.greenFrom)) / GREEN_DAY));
+    }
+    return best < 0 ? fallback : coverOf(Math.max(0, best), 0);
+  }
+
+  private pavingMoss(x: number, y: number, pts: Float64Array, rot: number): void {
+    if (!PAVED.has(this.game.world.getTile(x, y))) return;
+    const days = Math.max(0, Math.floor((this.greenAt - greenStart(this.game.pavingSince.get(`${x},${y}`), this.game.greenFrom)) / GREEN_DAY));
+    const season = seasonAt(this.greenAt).season as GrowthSeason;
+    const bld = this.game.buildings;
+    const world = this.game.world;
+    const trodden = this.pavingTrodden(x, y);
     // shut from the sun by a building to its south or east
     const shut = !!(bld.buildingAt(x + 1, y) || bld.buildingAt(x, y + 1) || bld.buildingAt(x + 1, y + 1));
     const wet = this.walls.wetness(x, y);
+    // the tile's corners in the world (metres), in the order its picture's corners are laid on them (`laidOver` by `rot`)
+    const corner = (k: number): number[] => {
+      const cx = x + (k === 1 || k === 2 ? 1 : 0), cy = y + (k >= 2 ? 1 : 0);
+      return [cx * 4, world.getHeight(cx, cy) / 10, -cy * 4, cx, cy];
+    };
+    const TL = corner(rot & 3), TR = corner((rot + 1) & 3), BR = corner((rot + 2) & 3), BL = corner((rot + 3) & 3);
     const gf: GrowthFace = {
       width: 4, height: 4, days, sun: shut ? 0.45 : 0.9, wet, foot: false, top: true, drip: false, cornerA: 0, cornerB: 0,
       paving: true, joint: 1, trodden, seed: seedOf(x, y, 0, 83),
+      world: (u, v) => {
+        const s = u / 4, t = 1 - v / 4;
+        return [0, 1, 2].map((i) => TL[i] * (1 - s) * (1 - t) + TR[i] * s * (1 - t) + BR[i] * s * t + BL[i] * (1 - s) * t);
+      },
+      // its carpets' cover at each corner shared with the tiles round that corner, so the edges of tiles do not show
+      coverAt: [this.pavingCorner(BL[3], BL[4], days), this.pavingCorner(BR[3], BR[4], days), this.pavingCorner(TR[3], TR[4], days), this.pavingCorner(TL[3], TL[4], days)],
     };
-    const pic = growthPicture(`pave|${x},${y}|${days}|${season}|${trodden}|${shut ? 1 : 0}|${wet.toFixed(2)}`, gf, season);
+    // kept clear itself: only what creeps in from round it, if anything does
+    if (days <= 0 && Math.max(...gf.coverAt!) < 0.05) return;
+    const pic = growthPicture(`pave|${x},${y},${rot}|${days}|${season}|${trodden}|${shut ? 1 : 0}|${wet.toFixed(2)}|${gf.coverAt!.map((c) => c.toFixed(2)).join(',')}`, gf, season);
     if (pic) this.laidOver(pic, pts, rot, 'source-over');
   }
 
@@ -10217,6 +10277,7 @@ export class Renderer {
           const gf: GrowthFace = {
             width: 4, height: 4, days, sun: 0.9, wet, foot: false, top: true, drip: false, cornerA: 0, cornerB: 0, trodden: 0.3,
             seed: seedOf(x, y, 0, 107),
+            world: (u, v) => [(x + u / 4) * 4, f.top / 10, -(y + 1 - v / 4) * 4],
           };
           const top = growthPicture(`slabtop|${x},${y}|${days}|${season}|${wet.toFixed(2)}`, gf, season);
           if (top) this.laidOver(top, quad, 0, 'source-over');
@@ -10318,13 +10379,20 @@ export class Renderer {
     const days = Math.floor((this.greenAt - this.game.greenFrom) / GREEN_DAY);
     if (days <= 0) return null;
     const open = (px: number, py: number): boolean => { const o = bld.floor(lv, px, py); return !!o && (!o.kind || o.kind === 'floor') && !bld.floor(lv + 1, px, py); };
-    let edge = false;
-    for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !open(x + dx, y + dy)) { edge = true; break; }
-    let trodden = 0;
-    if (!edge) {
-      trodden = 1;
-      for (let dy = -2; dy <= 2 && trodden > 0.5; dy++) for (let dx = -2; dx <= 2; dx++) if ((Math.abs(dx) === 2 || Math.abs(dy) === 2) && !open(x + dx, y + dy)) { trodden = 0.5; break; }
-    }
+    const troddenAt = (tx: number, ty: number): number => {
+      let edge = false;
+      for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !open(tx + dx, ty + dy)) { edge = true; break; }
+      if (edge) return 0;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if ((Math.abs(dx) === 2 || Math.abs(dy) === 2) && !open(tx + dx, ty + dy)) return 0.5;
+      return 1;
+    };
+    const trodden = troddenAt(x, y);
+    // its carpets' cover at a corner: the share of the open floors round it, what is not one as overgrown as the stage nearly allows
+    const cornerOf = (cx: number, cy: number): number => {
+      let sum = 0;
+      for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) sum += open(cx + dx, cy + dy) ? coverOf(days, troddenAt(cx + dx, cy + dy)) : 0.85 * ripeOf(days);
+      return sum / 4;
+    };
     // a wall on its east or south border keeps the sun off it
     const shut = !!(bld.wallOnBorder(lv, { x: x + 1, y, dir: 'v' }) || bld.wallOnBorder(lv, { x, y: y + 1, dir: 'h' }));
     const season = seasonAt(this.greenAt).season as GrowthSeason;
@@ -10333,6 +10401,8 @@ export class Renderer {
       face: {
         width: 4, height: 4, days, sun: shut ? 0.45 : 0.9, wet: this.walls.wetness(x, y), foot: false, top: true, drip: false, cornerA: 0, cornerB: 0,
         paving: true, joint: 1, trodden, seed: seedOf(x, y, lv, 113),
+        // corners (0,0), (w,0), (w,h), (0,h) of its picture: the tile's (x, y+1), (x+1, y+1), (x+1, y), (x, y)
+        coverAt: [cornerOf(x, y + 1), cornerOf(x + 1, y + 1), cornerOf(x + 1, y), cornerOf(x, y)],
       },
     };
   }
@@ -10394,7 +10464,8 @@ export class Renderer {
       // What has grown on it, a stone floor out under the sky (growth.ts), as paving grows.
       const fg = alpha >= 1 ? this.floorGrowth(floor, x, y) : null;
       if (fg) {
-        const pic = growthPicture(`floor|${x},${y},${floor.level}|${fg.days}|${fg.season}|${fg.face.trodden}|${fg.face.sun}|${fg.face.wet.toFixed(2)}`, fg.face, fg.season);
+        fg.face.world = (u, v) => [(x + u / 4) * 4, h / 10, -(y + 1 - v / 4) * 4];
+        const pic = growthPicture(`floor|${x},${y},${floor.level}|${fg.days}|${fg.season}|${fg.face.trodden}|${fg.face.sun}|${fg.face.wet.toFixed(2)}|${fg.face.coverAt!.map((c) => c.toFixed(2)).join(',')}`, fg.face, fg.season);
         if (pic) {
           const ox = fx(0, 0), oy = fy(0, 0);
           ctx.save();

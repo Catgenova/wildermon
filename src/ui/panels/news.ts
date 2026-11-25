@@ -445,6 +445,17 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Overgrowth's carpets from one field over the world, so they run on across the edges of tiles and walls.
+  {
+    n: 702,
+    day: '2026-11-25',
+    lines: () => [
+      'Changed: moss, ivy and grass carpets run on across paving tiles, wall corners and wall feet without seams.',
+      'Changed: paving overgrowth blends with its neighbours at each corner: thicker toward walls and verges, thinner toward water and trodden squares.',
+      "Changed: an overgrown wall's moss creeps onto the paving at its foot, even freshly kept paving.",
+      'Changed: carpet edges soft and irregular, darker where thin.',
+    ],
+  },
   // Overgrowth in stages: left long enough, walls, bridges and paving go under it.
   {
     n: 701,
