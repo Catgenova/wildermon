@@ -1513,7 +1513,9 @@ export function layPiece(g: Ctx, e: Eye, pm: PieceModel, st: BridgeStyle, ink = 
 const GROW_FOOT = new Set<Role>(['pier', 'wall', 'post', 'parapet']);
 const GROW_LIP = new Set<Role>(['cornice', 'ring']);
 const GROW_TOP = new Set<Role>(['cap', 'plinth']);
-const GROWS_ON = new Set<Role>([...GROW_FOOT, ...GROW_LIP, ...GROW_TOP]);
+// its deck too, walked as paving is: half trodden, greening at its edges first
+const GROW_DECK = new Set<Role>(['deck']);
+const GROWS_ON = new Set<Role>([...GROW_FOOT, ...GROW_LIP, ...GROW_TOP, ...GROW_DECK]);
 
 /**
  * What has grown on a face of a stone bridge (`growth.ts`), in the face's
@@ -1529,7 +1531,8 @@ export function growthPaint(g: Ctx, f: FaceInfo, growth: BridgeGrowth): void {
   const y0 = Math.min(f.y0, f.y1), y1 = Math.max(f.y0, f.y1);
   const face: GrowthFace = {
     width: (x1 - x0) / 10, height: (y1 - y0) / 10, days: growth.days, sun: GROW_TOP.has(f.role) ? 0.9 : 0.6, wet: 0.6,
-    foot: f.role === 'pier' || f.role === 'wall', top: GROW_TOP.has(f.role), drip: GROW_LIP.has(f.role), cornerA: 0, cornerB: 0,
+    foot: f.role === 'pier' || f.role === 'wall', top: GROW_TOP.has(f.role) || GROW_DECK.has(f.role), drip: GROW_LIP.has(f.role), cornerA: 0, cornerB: 0,
+    paving: GROW_DECK.has(f.role), joint: 1, trodden: GROW_DECK.has(f.role) ? 0.5 : 0,
     seed: Math.floor(hashI(f.seed, ROLE_NO[f.role] ?? 29, 0, 79) * 2147483647),
   };
   g.save();

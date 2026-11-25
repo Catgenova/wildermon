@@ -451,7 +451,7 @@ export const NEWS: News[] = [
     day: '2026-11-25',
     lines: () => [
       `Added: ${LAST_STAGE + 1} stages of overgrowth, bare to wholly overgrown, by days since built, laid or scrubbed: ${STAGE_DAYS.join(', ')}.`,
-      'Added: from stage 5, moss sheets on tops and paving and ivy mats on wall faces, spreading and joining until the face is covered. From stage 9, shrubs on tops, in paving and at wall feet: autumn colours, bare in winter. From stage 11, a grass sward over paving.',
+      'Added: from stage 5, moss sheets on tops, paving and bridge decks and ivy mats on wall faces, spreading and joining until the face is covered. From stage 9, shrubs on tops, in paving and at wall feet: autumn colours, bare in winter. From stage 11, a grass sward over paving.',
       'Changed: up to 4 times the moss, lichen, ferns, grass and flowers by the last stage; ivy denser, more and larger leaves.',
       'Changed: paving with a worn trail across it stays clear along it.',
     ],
