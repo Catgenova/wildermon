@@ -110,7 +110,8 @@ function seasoned(c: number[], season: GrowthSeason, k: Kind): number[] {
 
 function damp(f: GrowthFace, u: number, v: number): number {
   if (f.top) {
-    const mid = 1 - Math.abs(v / Math.max(0.01, f.height) - 0.5) * 2;
+    // a coping holds the rain down its middle; paving all over
+    const mid = f.paving ? 0.5 : 1 - Math.abs(v / Math.max(0.01, f.height) - 0.5) * 2;
     return clamp01(0.3 + 0.3 * f.wet + 0.35 * (1 - f.sun) + 0.1 * mid);
   }
   const splash = f.foot ? clamp01(1 - v / 0.7) : 0;
@@ -131,7 +132,7 @@ function damp(f: GrowthFace, u: number, v: number): number {
   return clamp01(0.18 * f.wet + 0.4 * (1 - f.sun) + 0.55 * splash + 0.6 * drip + 0.45 * corner);
 }
 
-const suit = (k: Kind, f: GrowthFace, u: number, v: number, season: GrowthSeason): number => suitHere(k, f, u, v, season) * (1 - 0.85 * (f.trodden ?? 0));
+const suit = (k: Kind, f: GrowthFace, u: number, v: number, season: GrowthSeason): number => suitHere(k, f, u, v, season) * (1 - 0.55 * (f.trodden ?? 0));
 
 function suitHere(k: Kind, f: GrowthFace, u: number, v: number, season: GrowthSeason): number {
   const d = damp(f, u, v);
@@ -178,15 +179,15 @@ export const ROOTS_APART = 0.9;
 /** Metres a day ivy climbs from a foot, and hangs from an open head (at its most vigorous, times 1.4; at its least, 0.6). */
 export const IVY_CLIMB = 0.12, IVY_HANG = 0.09;
 /** Metres a day moss spreads out from where it took root. */
-export const MOSS_SPREAD = 0.05;
+export const MOSS_SPREAD = 0.08;
 
 interface Habit { spacing: number; settle: number; speed: number; grow: number; nuclei: number; most: number; salt: number }
 const HABITS: Record<Kind, Habit> = {
-  moss: { spacing: 0.1, settle: 6, speed: MOSS_SPREAD, grow: 6, nuclei: 3, most: 34, salt: 301 },
-  lichen: { spacing: 0.3, settle: 22, speed: 0.04, grow: 20, nuclei: 3, most: 8, salt: 307 },
-  fern: { spacing: 0.55, settle: 10, speed: 0.08, grow: 9, nuclei: 2, most: 4, salt: 311 },
-  grass: { spacing: 0.22, settle: 5, speed: 0.15, grow: 5, nuclei: 3, most: 6, salt: 313 },
-  flower: { spacing: 0.3, settle: 9, speed: 0.1, grow: 4, nuclei: 2, most: 6, salt: 317 },
+  moss: { spacing: 0.09, settle: 5, speed: MOSS_SPREAD, grow: 5, nuclei: 4, most: 60, salt: 301 },
+  lichen: { spacing: 0.22, settle: 16, speed: 0.06, grow: 14, nuclei: 4, most: 16, salt: 307 },
+  fern: { spacing: 0.4, settle: 8, speed: 0.1, grow: 8, nuclei: 3, most: 6, salt: 311 },
+  grass: { spacing: 0.15, settle: 4, speed: 0.2, grow: 4, nuclei: 4, most: 12, salt: 313 },
+  flower: { spacing: 0.22, settle: 7, speed: 0.14, grow: 4, nuclei: 3, most: 10, salt: 317 },
 };
 /** A tile's side, in metres, and a storey: what a face's share of the most is reckoned against. */
 const TILE_M = 4;
@@ -217,7 +218,7 @@ function taken(k: Kind, f: GrowthFace, season: GrowthSeason): Taken[] {
   let most = Math.round(h.most * Math.max(0.5, (f.width * f.height) / (TILE_M * 3)) * (f.top ? 0.5 : 1));
   if (footOnly) most = Math.round(h.most * Math.max(0.5, f.width / TILE_M));
   // paving carries a third of a wall's: a few clumps in its joints
-  if (f.paving) most = Math.max(1, Math.round(most * 0.35));
+  if (f.paving) most = Math.max(1, Math.round(most * 0.6));
   const out: Array<Taken & { root: number }> = [];
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     const id = r * 1000 + c;
@@ -232,7 +233,7 @@ function taken(k: Kind, f: GrowthFace, season: GrowthSeason): Taken[] {
     if (!onStone(f, u, footOnly ? 0.02 : v)) continue;
     const s = suit(k, f, u, v, season);
     if (s <= 0.08) continue;
-    if (k === 'moss' && s < 0.25) continue;
+    if (k === 'moss' && s < 0.18) continue;
     let near = Infinity, root = 0;
     roots.forEach((p, i) => { const d = Math.hypot(p.u - u, p.v - v); if (d < near) { near = d; root = i; } });
     const reached = (1 - s) * h.settle + near / h.speed + 2.5 * H(f.seed, id, 9, h.salt);
@@ -240,8 +241,9 @@ function taken(k: Kind, f: GrowthFace, season: GrowthSeason): Taken[] {
     out.push({ u, v, grown: clamp01((f.days - reached) / h.grow), suit: s, id, root });
   }
   if (out.length <= most) return out;
-  // the most a face carries, shared between its colonies: each its best grown, in turn
-  const by = roots.map((_, i) => out.filter((t) => t.root === i).sort((a, b) => b.grown + b.suit - (a.grown + a.suit)));
+  // the most a face carries, shared between its colonies, each a spread of what it has reached (not only its heart)
+  const pick = (t: Taken): number => t.grown * 0.6 + t.suit * 0.4 + (f.paving ? 1.2 : 0.45) * H(t.id, f.seed, 13, h.salt);
+  const by = roots.map((_, i) => out.filter((t) => t.root === i).sort((a, b) => pick(b) - pick(a)));
   const kept: Taken[] = [];
   for (let k = 0; kept.length < most; k++) {
     let any = false;
@@ -267,9 +269,9 @@ const IVY_STEP = 0.08;
 export function ivyOn(f: GrowthFace): IvyStem[] {
   const o: IvyStem[] = [];
   if (!f.ivy || f.days <= 0 || (!f.climb && !f.hang)) return o;
-  const density = clamp01(-0.55 + 2.1 * (f.vigour ?? 0.5) + 0.3 * (1 - f.sun) + 0.25 * f.wet);
+  const density = clamp01(-0.3 + 2.1 * (f.vigour ?? 0.5) + 0.3 * (1 - f.sun) + 0.25 * f.wet);
   const low = f.height < 2.2;
-  const n = Math.round(density * (low ? 4 : 5) + (H(f.seed, 0, 1, 601) - 0.5) * 1.2);
+  const n = Math.round(density * (low ? 5 : 7) + (H(f.seed, 0, 1, 601) - 0.5) * 1.2);
   if (n <= 0) return o;
   const spread = ((low ? 0.15 : 0.13) + H(f.seed, 0, 2, 601) * 0.05) * (0.7 + 0.9 * density);
   const centre = 0.18 + H(f.seed, 0, 3, 601) * 0.64;
