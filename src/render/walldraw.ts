@@ -6,7 +6,7 @@ import { counterHeld, counterSeat, streetOf, COUNTER_HOLDS } from '../game/count
 import type { Game } from '../game/game';
 import { hingeKey } from '../game/gates';
 import { GLASS } from '../game/glasshouse';
-import { wallGreen, greenShows, GREEN_WET_REACH, panelOn, wetFrom, ivied, greenStart, GREEN_DAY } from '../game/greening';
+import { wallGreen, GREEN_WET_REACH, panelOn, wetFrom, ivied, greenStart, GREEN_DAY, GREEN_DAYS, panelGreenDays } from '../game/greening';
 import type { LightSource } from '../game/light';
 import { isRuneGate, gateMiddle, runeGateLit, RUNE_GATE_RISE, gateTiles } from '../game/runegate';
 import { hash2 } from '../world/noise';
@@ -17,7 +17,7 @@ import { type Motion, gatewayArch, drawGrooves, gatewayPicture, GATEWAY, gateway
 import { drawGlassWall } from './glasswall';
 import { drawObsidianWall } from './obsidianglass';
 import { UNITS_PER_TILE } from './iso';
-import { hashOf, type Keep, ivyLayout, vigour, PPM, strandPic } from './ivy';
+import { type Keep, vigour } from './ivy';
 import { growthPicture, seedOf, sunOf, type GrowthFace, type GrowthSeason } from './growth';
 import { seasonAt } from '../world/calendar';
 import { WINDOW, FENCE_GAP, DOOR, DOUBLE, BAY, ARCH, type Masonry } from './masonry';
@@ -2089,11 +2089,8 @@ export class WallPainter {
     }
     if (indoors) return;
     const kind = WALL_TYPE_BY_ID.get(wall.type);
-    // Turned from the sun, which stands in the south-east: a north or a west face is the shady one (`greenShows`).
-    const shade = ox + oy < 0 ? 1 : 0;
     const tx = wall.dir === 'h' ? wall.x : wall.x - (ox < 0 ? 1 : 0);
     const ty = wall.dir === 'h' ? wall.y - (oy < 0 ? 1 : 0) : wall.y;
-    const wet = this.wetness(tx, ty);
     const keep: Keep[] = [];
     switch (wall.type) {
       case 'arch': keep.push({ t0: ARCH.t0, t1: ARCH.t1, k0: 0, k1: 0.8 }); break;
@@ -2108,55 +2105,12 @@ export class WallPainter {
     }
     const low = !!kind?.low;
     const height = (WALL_HEIGHT * tall) / 10;
-    if (grownDays > 0) this.wallGrowth(wall, px, py, height, ox, oy, tx, ty, roofed, keep, grownDays, season);
-    const strands = ivyLayout({
-      seed: Math.floor(hashOf(wall.x, wall.y, wall.dir === 'h' ? 0 : 1, (ox + oy > 0 ? 1 : 0) + wall.level * 2) * 2 ** 31),
-      grown: greenShows(days, shade, wet),
-      // On an ivy wall panel's wall, as vigorous as ivy grows (`adorn.ts`): the panel is what it is planted on.
-      vigour: panelOn(this.r.game, wall) ? 1 : vigour(wall.x + (wall.dir === 'h' ? 0.5 : 0), wall.y + (wall.dir === 'v' ? 0.5 : 0)),
-      shade, wet, height,
-      top: low || !roofed,
-      ground: wall.level === 0,
-      below: wall.level > 0,
-      keep,
-    });
-    if (!strands.length) return;
-    const ctx = this.r.canvas.ctx;
-    /*
-     * And on a shop counter, never over its opening, its board or the awning
-     * over it: a strand rooted clear of `keep` still spreads its picture
-     * across them, so the face is cut to everything but that box.
-     */
-    const cutOut = wall.type === 'counter';
-    if (cutOut) this.counterCut({ px, py });
-    // The face's two axes on the screen: a metre along it, and a metre up it.
-    const ax = (px(1, 0) - px(0, 0)) / 4, ay = (py(1, 0) - py(0, 0)) / 4;
-    const kx = (px(0, 1) - px(0, 0)) / height, ky = (py(0, 1) - py(0, 0)) / height;
-    // A face that runs right to left on the screen takes its pictures the other way round, so their light stays on the left.
-    const flip = ax < 0 ? -1 : 1;
-    const a = (flip * ax) / PPM, b = (flip * ay) / PPM, c = -kx / PPM, d = -ky / PPM;
-    /*
-     * Each picture taken down once to about the size it is drawn at (`atSize`),
-     * by the larger of its two scales on the face: sixty-four pixels to the
-     * metre skewed straight down to a fraction of that costs several times the
-     * same blit at its own size.
-     */
-    const scale = Math.max(Math.hypot(a, b), Math.hypot(c, d));
-    // In device pixels: a close view on a sharp screen draws them at their own size or more, and takes them as they are.
-    const smaller = scale * this.r.canvas.dpr < 0.9;
-    for (const s of strands) {
-      const pic = strandPic(s.kind, s.v, s.stage, this.r.bloom);
-      if (!pic) continue;
-      const k = s.kind === 'hang' ? 1 : 0;
-      const ox0 = px(s.t, k), oy0 = py(s.t, k);
-      const img = smaller ? this.r.atSize(pic.img, pic.img.width * scale, pic.img.height * scale) : pic.img;
-      const sx = img.width / pic.img.width, sy = img.height / pic.img.height;
-      ctx.save();
-      ctx.transform(a / sx, b / sx, c / sy, d / sy, ox0 - a * pic.ax - c * pic.ay, oy0 - b * pic.ax - d * pic.ay);
-      ctx.drawImage(img, 0, 0);
-      ctx.restore();
-    }
-    if (cutOut) ctx.restore();
+    // what it has grown: its ivy, moss, lichen, ferns, grass and flowers (growth.ts); on an ivy wall panel's wall, its
+    // ivy as vigorous as ivy grows (`adorn.ts`), and on a wall of anything but stone that ivy alone
+    const panel = panelOn(this.r.game, wall);
+    const panelDays = panel ? (panel.setAt === undefined ? GREEN_DAYS : panelGreenDays(this.r.greenAt - panel.setAt)) : 0;
+    const faceDays = Math.max(grownDays, panelDays);
+    if (faceDays > 0) this.wallGrowth(wall, px, py, height, ox, oy, tx, ty, roofed, keep, faceDays, season, !!panel, low, grownDays <= 0);
   }
 
   /**
@@ -2168,7 +2122,8 @@ export class WallPainter {
    * laid over the face as the ivy is.
    */
   private wallGrowth(wall: Wall, px: (t: number, k: number, s?: number) => number, py: (t: number, k: number, s?: number) => number,
-    height: number, ox: number, oy: number, tx: number, ty: number, roofed: boolean, keep: Keep[], days: number, season: GrowthSeason): void {
+    height: number, ox: number, oy: number, tx: number, ty: number, roofed: boolean, keep: Keep[], days: number, season: GrowthSeason,
+    panel: boolean, low: boolean, ivyOnly: boolean): void {
     const bld = this.r.game.buildings;
     const sx = Math.sign(ox), sy = Math.sign(oy);
     // the tile beyond its own built on shuts it in an alley
@@ -2187,8 +2142,11 @@ export class WallPainter {
       width: 4, height, days, sun: sunOf(ox, oy) * alley, wet, foot: wall.level === 0, top: false, drip: covered,
       cornerA: cornerAt(wall.x, wall.y), cornerB: wall.dir === 'h' ? cornerAt(wall.x + 1, wall.y) : cornerAt(wall.x, wall.y + 1),
       keep, seed: seedOf(wall.x, wall.y, wall.level * 2 + sideBit, wall.dir === 'h' ? 53 : 59),
+      // its ivy: climbing from a foot on the ground, hanging from a head nothing stands on
+      ivy: true, climb: wall.level === 0, hang: low || !roofed, ivyOnly,
+      vigour: panel ? 1 : vigour(wall.x + (wall.dir === 'h' ? 0.5 : 0), wall.y + (wall.dir === 'v' ? 0.5 : 0)),
     };
-    const key = `side|${wall.x},${wall.y},${wall.level},${wall.dir},${sideBit}|${days}|${season}|${height.toFixed(2)}|${face.sun.toFixed(2)}|${wet.toFixed(2)}|${covered ? 1 : 0}|${face.cornerA}${face.cornerB}|${wall.type}`;
+    const key = `side|${wall.x},${wall.y},${wall.level},${wall.dir},${sideBit}|${days}|${season}|${height.toFixed(2)}|${face.sun.toFixed(2)}|${wet.toFixed(2)}|${covered ? 1 : 0}|${face.cornerA}${face.cornerB}|${wall.type}|${panel ? 1 : 0}${ivyOnly ? 1 : 0}|${face.vigour!.toFixed(2)}`;
     const pic = growthPicture(key, face, season);
     if (!pic) return;
     // the picture's top-left at the face's top-left, a metre of it a metre of the face

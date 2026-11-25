@@ -12,6 +12,7 @@ import { type SpiralFrame, type SpiralFlight, spiralShade, spiralPieces, spiralO
 import type { Sprite } from './sprites';
 import { stairStyle, LADDER } from './stairing';
 import { depthOf } from './view';
+import { growthPicture, seedOf, type GrowthFace, type GrowthSeason } from './growth';
 
 /** How much of a spiral staircase still planned is drawn: the kit's ghost of it. */
 const PLANNED_SPIRAL = 0.5;
@@ -27,6 +28,8 @@ export interface StairHost {
   painted(mat: MaterialDef, dye: string | undefined): MaterialDef;
   seeThroughCtx(box?: [number, number, number, number]): CanvasRenderingContext2D;
   take(kind: Entity['kind'], x: number, y: number, sx: number, sy: number, spr: Sprite | null): Entity;
+  /** What has grown on a stone flight out of doors on (x, y) (`growth.ts`): its whole days and how wet it is, the season; or null. */
+  growthAt(x: number, y: number): { days: number; wet: number; season: GrowthSeason } | null;
 }
 
 /**
@@ -438,6 +441,7 @@ export class StairPainter {
       line(P(t, s0, at(s0) + barW * 0.2), P(t, s1, at(s1) + barW * 0.2), ink(st.barHi, 1.1), lw(Math.max(0.8, barW * 0.35)));
       ctx.lineCap = 'butt';
     };
+    const grow = this.r.growthAt(x, y);
     /** One step: its riser where the camera sees it, and its tread. */
     const step = (i: number): void => {
       const sF = i / N, sB = (i + 1) / N, hb = h0 + i * rise, ht = hTop(i);
@@ -536,6 +540,21 @@ export class StairPainter {
       ctx.strokeStyle = C(st.line, treadLit, 0.4);
       ctx.lineWidth = lw(0.9);
       ctx.stroke();
+      // What has grown on a stone flight out of doors (growth.ts): over its tread, half trodden, as on the garden's steps.
+      if (grow && st.build === 'solid' && done) {
+        const gf: GrowthFace = {
+          width: (tHi - tLo) * 4, height: (sB - sN) * 4, days: grow.days, sun: 0.9, wet: grow.wet, foot: false, top: true, drip: false,
+          cornerA: 0, cornerB: 0, trodden: 0.5, seed: seedOf(x, y, floor.level * 32 + i, 101),
+        };
+        const pic = growthPicture(`flight|${x},${y},${floor.level},${i}|${grow.days}|${grow.season}|${grow.wet.toFixed(2)}`, gf, grow.season);
+        if (pic) {
+          const tl = P(tLo, sB, ht), tr = P(tHi, sB, ht), bl = P(tLo, sN, ht);
+          ctx.save();
+          ctx.transform((tr[0] - tl[0]) / pic.width, (tr[1] - tl[1]) / pic.width, (bl[0] - tl[0]) / pic.height, (bl[1] - tl[1]) / pic.height, tl[0], tl[1]);
+          ctx.drawImage(pic, 0, 0);
+          ctx.restore();
+        }
+      }
     };
     ctx.globalAlpha = box ? (done ? 1 : 0.45) : alpha * (done ? 1 : 0.45);
     ctx.lineJoin = 'round';

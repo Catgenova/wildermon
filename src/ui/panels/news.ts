@@ -1,5 +1,6 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { FIRST_TAME_SAYS } from '../../game/firsttame';
+import { IVY_CLIMB, IVY_HANG, MOSS_SPREAD, ROOTS_APART } from '../../render/growth';
 import { NEW_DAYS, newTitle } from '../../game/badges';
 import { MONSTER_GROWTH } from '../../render/monster-size';
 import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
@@ -296,7 +297,7 @@ import {
   LEGACY_POTS, legacyLiquid, PRIMARIES, pureDye, mixDye, sharesSaid, DYE_PARTS, DYE_RECIPE, RECIPE_STUFF, qlSaid,
 } from '../../game/dyestuffs';
 import { BOIL_DYE_RECIPE, BOIL_IN, BOIL_LITRES, boilCountPlain, DYEABLE_ITEMS, gramsOf, MAKE_DYE_RECIPE, recipeShares, SCRUB_TIME, SCRUB_TOOL, SCRUB_WIND, shareGrams } from '../../game/dyes';
-import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET } from '../../game/greening';
+import { GREEN_ACTIONS, GREEN_DAYS, GREEN_SHADE, GREEN_SUN, GREEN_WET, GREEN_WET_REACH } from '../../game/greening';
 import { BUCKET_LITRES, FURNITURE, WELL_HOLDS, WELL_TRICKLE, WELL_TRICKLE_QL } from '../../game/furniture';
 import { BAY_PAST_HEFT, BRIDGE_BILL_TIMES, BRIDGE_REACH, BRIDGES, CLEARANCE, END_SLOP, isMaterialBridge, PULL_REACH, RAMP_SLOPE, rampTiles, STALL_WIDTH, STONE_ARCH, THROWN, WAGON_WIDTH, WIDEST } from '../../game/bridges';
 import { AQUEDUCT, AQUEDUCT_MOTE_USE, aqMoteFed } from '../../game/aqueducts';
@@ -444,6 +445,18 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // What grows on old stone, as things of their own: replaces the ivy strands and every moss before it.
+  {
+    n: 700,
+    day: '2026-11-25',
+    lines: () => [
+      'Added: growth on old stone: ivy, moss, lichen, ferns, grass, wildflowers. On stone walls (faces, open tops), stone bridges, paving joints, garden steps, stone stairs out of doors, slab tops and sides.',
+      `Changed: replaces wall ivy strands, coping moss, paving joint moss, slab moss and stone bridge moss. Days since built, laid or scrubbed no longer stop at ${GREEN_DAYS}: it keeps growing.`,
+      `Added: more where damp or shaded: water within ${GREEN_WET_REACH} tiles, faces turned from the south-east, alleys, a wall's foot, drips under a covered head or a sill, inside corners. Little in the middle of open paving.`,
+      `Added: roots at up to 3 places a face, ${ROOTS_APART} m apart; moss spreads ${MOSS_SPREAD} m a day from them. Ivy climbs ${IVY_CLIMB} m a day from a foot on the ground, hangs ${IVY_HANG} m a day from an open head, branches, stops at openings; an ivy wall panel's wall at full vigour.`,
+      'Added: by season: spring fresh leaves and flowers, summer dry moss tips, autumn bronze ferns, straw grass, asters, winter dark moss, withered ferns, no flowers.',
+    ],
+  },
   // Glow and spirit forms: two more wild forms, a tenth as common as the colour form.
   {
     n: 699,

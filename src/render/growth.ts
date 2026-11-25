@@ -52,6 +52,17 @@ export interface GrowthFace {
   /** Its outline in metres (u, v), when it is not the whole rectangle. */
   outline?: ReadonlyArray<[number, number]>;
   seed: number;
+  /** Ivy takes on it (a wall's side): climbing from its foot, hanging from its open head; how vigorous the ground is (0 to 1). */
+  ivy?: boolean;
+  climb?: boolean;
+  hang?: boolean;
+  vigour?: number;
+  /** Paving: what grows keeps to its joints, every `joint` metres; how trodden it is (0 to 1), the middle of an open square the most. */
+  paving?: boolean;
+  joint?: number;
+  trodden?: number;
+  /** Ivy alone (an ivy wall panel's wall that is not of stone). */
+  ivyOnly?: boolean;
 }
 
 /* ---- the numbers -------------------------------------------------------------------------------------- */
@@ -120,7 +131,9 @@ function damp(f: GrowthFace, u: number, v: number): number {
   return clamp01(0.18 * f.wet + 0.4 * (1 - f.sun) + 0.55 * splash + 0.6 * drip + 0.45 * corner);
 }
 
-function suit(k: Kind, f: GrowthFace, u: number, v: number, season: GrowthSeason): number {
+const suit = (k: Kind, f: GrowthFace, u: number, v: number, season: GrowthSeason): number => suitHere(k, f, u, v, season) * (1 - 0.85 * (f.trodden ?? 0));
+
+function suitHere(k: Kind, f: GrowthFace, u: number, v: number, season: GrowthSeason): number {
   const d = damp(f, u, v);
   switch (k) {
     case 'moss': return clamp01((d - 0.22) / 0.6);
@@ -160,16 +173,21 @@ function onStone(f: GrowthFace, u: number, v: number): boolean {
 
 /* ---- how each kind spreads ----------------------------------------------------------------------------- */
 
+/** Metres at least between a kind's roots on a face, so it takes in more than one place (a wall's foot and its drips). */
+export const ROOTS_APART = 0.9;
+/** Metres a day ivy climbs from a foot, and hangs from an open head (at its most vigorous, times 1.4; at its least, 0.6). */
+export const IVY_CLIMB = 0.12, IVY_HANG = 0.09;
+/** Metres a day moss spreads out from where it took root. */
+export const MOSS_SPREAD = 0.05;
+
 interface Habit { spacing: number; settle: number; speed: number; grow: number; nuclei: number; most: number; salt: number }
 const HABITS: Record<Kind, Habit> = {
-  moss: { spacing: 0.1, settle: 6, speed: 0.05, grow: 6, nuclei: 3, most: 34, salt: 301 },
+  moss: { spacing: 0.1, settle: 6, speed: MOSS_SPREAD, grow: 6, nuclei: 3, most: 34, salt: 301 },
   lichen: { spacing: 0.3, settle: 22, speed: 0.04, grow: 20, nuclei: 3, most: 8, salt: 307 },
   fern: { spacing: 0.55, settle: 10, speed: 0.08, grow: 9, nuclei: 2, most: 4, salt: 311 },
   grass: { spacing: 0.22, settle: 5, speed: 0.15, grow: 5, nuclei: 3, most: 6, salt: 313 },
   flower: { spacing: 0.3, settle: 9, speed: 0.1, grow: 4, nuclei: 2, most: 6, salt: 317 },
 };
-/** Metres at least between a kind's roots on a face, so it takes in more than one place (a wall's foot and its drips). */
-const ROOTS_APART = 0.9;
 /** A tile's side, in metres, and a storey: what a face's share of the most is reckoned against. */
 const TILE_M = 4;
 
@@ -198,11 +216,19 @@ function taken(k: Kind, f: GrowthFace, season: GrowthSeason): Taken[] {
   if (!roots.length) return [];
   let most = Math.round(h.most * Math.max(0.5, (f.width * f.height) / (TILE_M * 3)) * (f.top ? 0.5 : 1));
   if (footOnly) most = Math.round(h.most * Math.max(0.5, f.width / TILE_M));
+  // paving carries a third of a wall's: a few clumps in its joints
+  if (f.paving) most = Math.max(1, Math.round(most * 0.35));
   const out: Array<Taken & { root: number }> = [];
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
     const id = r * 1000 + c;
-    const u = ((c + 0.15 + 0.7 * H(f.seed, id, 7, h.salt)) / cols) * f.width;
-    const v = footOnly ? 0 : ((r + 0.15 + 0.7 * H(f.seed, id, 8, h.salt)) / rows) * f.height;
+    let u = ((c + 0.15 + 0.7 * H(f.seed, id, 7, h.salt)) / cols) * f.width;
+    let v = footOnly ? 0 : ((r + 0.15 + 0.7 * H(f.seed, id, 8, h.salt)) / rows) * f.height;
+    // in paving, only in its joints: on the nearer of the joint lines either way
+    if (f.paving) {
+      const j = f.joint ?? 1;
+      const ju = Math.round(u / j) * j, jv = Math.round(v / j) * j;
+      if (Math.abs(u - ju) < Math.abs(v - jv)) u = Math.max(0.03, Math.min(f.width - 0.03, ju)); else v = Math.max(0.03, Math.min(f.height - 0.03, jv));
+    }
     if (!onStone(f, u, footOnly ? 0.02 : v)) continue;
     const s = suit(k, f, u, v, season);
     if (s <= 0.08) continue;
@@ -223,6 +249,123 @@ function taken(k: Kind, f: GrowthFace, season: GrowthSeason): Taken[] {
     if (!any) break;
   }
   return kept;
+}
+
+/* ---- ivy ----------------------------------------------------------------------------------------------- */
+
+/** A strand of ivy on a face: its points (u, v in metres) from its root, the main stem or a branch. */
+export interface IvyStem { pts: Array<[number, number]>; branch: boolean }
+const IVY_STEP = 0.08;
+
+/**
+ * The ivy on a face (as Unity's `Growth.IvyOn`): stems as many and as
+ * spread as the ground's vigour, the shade and the wet ask, rooted along its
+ * foot to climb or along its open head to hang, each from its own day; each
+ * grows a few centimetres a day, wandering, branching every so often,
+ * stopping short of an opening.
+ */
+export function ivyOn(f: GrowthFace): IvyStem[] {
+  const o: IvyStem[] = [];
+  if (!f.ivy || f.days <= 0 || (!f.climb && !f.hang)) return o;
+  const density = clamp01(-0.55 + 2.1 * (f.vigour ?? 0.5) + 0.3 * (1 - f.sun) + 0.25 * f.wet);
+  const low = f.height < 2.2;
+  const n = Math.round(density * (low ? 4 : 5) + (H(f.seed, 0, 1, 601) - 0.5) * 1.2);
+  if (n <= 0) return o;
+  const spread = ((low ? 0.15 : 0.13) + H(f.seed, 0, 2, 601) * 0.05) * (0.7 + 0.9 * density);
+  const centre = 0.18 + H(f.seed, 0, 3, 601) * 0.64;
+  for (let i = 0; i < n; i++) {
+    const rank = Math.abs(i - (n - 1) / 2) / Math.max(1, n / 2);
+    const t = Math.max(0.07, Math.min(0.93, centre + (i - (n - 1) / 2) * spread + (H(f.seed, i, 4, 601) - 0.5) * 0.05));
+    const hang = f.climb && f.hang ? (i + (H(f.seed, i, 5, 601) < 0.5 ? 0 : 1)) % 2 === 0 : !!f.hang;
+    const birth = (rank * 0.45 + H(f.seed, i, 6, 601) * 0.12 + (1 - density) * 0.2) * 10;
+    const rate = (hang ? IVY_HANG : IVY_CLIMB) * (0.6 + 0.8 * density);
+    let len = (f.days - birth) * rate;
+    if (len <= 0.05) continue;
+    let room = (hang ? 0.8 : 0.95) * f.height;
+    let blocked = false;
+    for (const k of f.keep ?? []) {
+      if (t + 0.06 < k.t0 || t - 0.06 > k.t1) continue;
+      if (hang) room = Math.min(room, (1 - k.k1) * f.height - 0.05);
+      else if (k.k0 <= 0.02) blocked = true;
+      else room = Math.min(room, k.k0 * f.height - 0.08);
+    }
+    if (blocked || room < 0.15) continue;
+    len = Math.min(len, room);
+    walk(o, f, i, t * f.width, hang ? f.height - 0.02 : 0.02, hang ? -1 : 1, 0, len, false);
+  }
+  return o;
+}
+
+function walk(into: IvyStem[], f: GrowthFace, no: number, u: number, v: number, way: number, lean: number, len: number, branch: boolean): void {
+  const s: IvyStem = { pts: [[u, v]], branch };
+  const steps = Math.floor(len / IVY_STEP);
+  let ang = lean;
+  for (let k = 1; k <= steps; k++) {
+    ang = Math.max(lean - 0.55, Math.min(lean + 0.55, ang + (H(f.seed, wrap(Math.imul(no, 97) + k), 7, 601) - 0.5) * 0.45));
+    u = Math.max(0.02, Math.min(f.width - 0.02, u + Math.sin(ang) * IVY_STEP));
+    v += way * Math.cos(ang) * IVY_STEP;
+    if (v < 0.01 || v > f.height - 0.01) break;
+    s.pts.push([u, v]);
+    if (!branch && k > 2 && k % 4 === 0 && H(f.seed, wrap(Math.imul(no, 97) + k), 8, 601) < 0.5) {
+      const side = H(f.seed, wrap(Math.imul(no, 97) + k), 9, 601) < 0.5 ? -1 : 1;
+      walk(into, f, wrap(Math.imul(no, 31) + k), u, v, way, side * 0.8, (steps - k) * IVY_STEP * 0.45, true);
+    }
+  }
+  if (s.pts.length > 1) into.push(s);
+}
+
+const IVY_OLD = [0.19, 0.36, 0.21], IVY_MID = [0.26, 0.47, 0.26], IVY_YOUNG = [0.46, 0.67, 0.33], IVY_STEM = [0.33, 0.27, 0.19];
+
+function ivyLeafColour(age: number, id: number, season: GrowthSeason): number[] {
+  let c = age > 0.5 ? mix(IVY_MID, IVY_OLD, (age - 0.5) * 2) : mix(IVY_YOUNG, IVY_MID, age * 2);
+  c = mix(c, c.map((x) => x * 0.88), H(id, 1, 0, 611));
+  switch (season) {
+    case 'spring': return age < 0.35 ? mix(c, [0.56, 0.76, 0.36], 0.5) : c;
+    case 'autumn': return H(id, 2, 0, 611) < 0.12 ? mix(c, [0.52, 0.28, 0.2], 0.6) : c;
+    case 'winter': return mix(c, [0.24, 0.26, 0.2], 0.35);
+    default: return c;
+  }
+}
+
+/** The ivy on a face, painted: each stem a thin line, a leaf at every step, alternate sides -- three lobes and a point, a vein down it. */
+function paintIvy(g: Ctx, f: GrowthFace, season: GrowthSeason): number {
+  const stems = ivyOn(f);
+  let si = 0;
+  for (const s of stems) {
+    si++;
+    g.strokeStyle = css(IVY_STEM);
+    g.lineWidth = s.branch ? 0.006 : 0.009;
+    g.lineCap = 'round';
+    g.beginPath();
+    s.pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
+    g.stroke();
+    const last = s.pts.length - 1;
+    s.pts.forEach(([x, y], k) => {
+      const [nx, ny] = k < last ? s.pts[k + 1] : [x + (x - s.pts[k - 1][0]), y + (y - s.pts[k - 1][1])];
+      const dl = Math.hypot(nx - x, ny - y) || 1;
+      const dx = (nx - x) / dl, dy = (ny - y) / dl;
+      const age = 1 - k / Math.max(1, last);
+      const id = wrap(f.seed + Math.imul(si, 1009) + k);
+      const side = k % 2 === 0 ? 1 : -1;
+      const turn = side * (0.8 + 0.4 * H(id, 3, 0, 611));
+      const lx = dx * Math.cos(turn) - dy * Math.sin(turn), ly = dx * Math.sin(turn) + dy * Math.cos(turn);
+      const size = (0.08 + 0.05 * H(id, 4, 0, 611)) * (0.6 + 0.4 * age) * (s.branch ? 0.85 : 1);
+      const col = ivyLeafColour(age, id, season);
+      // the leaf: a point and two side lobes round its middle, turned along (lx, ly)
+      const cx = x + lx * size * 0.55, cy = y + ly * size * 0.55;
+      const px = -ly, py = lx;
+      g.fillStyle = css(col);
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(cx + px * size * 0.7, cy + py * size * 0.7, x + lx * size * 1.1, y + ly * size * 1.1);
+      g.quadraticCurveTo(cx - px * size * 0.7, cy - py * size * 0.7, x, y);
+      g.fill();
+      g.strokeStyle = css(col.map((v) => v * 0.75));
+      g.lineWidth = size * 0.08;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + lx * size * 0.9, y + ly * size * 0.9); g.stroke();
+    });
+  }
+  return stems.length;
 }
 
 /* ---- the painting -------------------------------------------------------------------------------------- */
@@ -365,6 +508,7 @@ function flower(g: Ctx, u: number, v: number, size: number, id: number, season: 
 export function paintGrowth(g: Ctx, f: GrowthFace, season: GrowthSeason): number {
   if (f.days <= 0.5 || f.width < 0.05 || f.height < 0.05) return 0;
   let n = 0;
+  if (f.ivyOnly) return paintIvy(g, f, season);
   // lichen first, under the moss
   for (const t of taken('lichen', f, season)) n++, crust(g, t.u, t.v, (0.03 + 0.06 * t.suit) * (0.3 + 0.7 * t.grown), wrap(Math.imul(t.id, 37) + f.seed), f.sun, season);
   for (const t of taken('moss', f, season)) {
@@ -374,6 +518,8 @@ export function paintGrowth(g: Ctx, f: GrowthFace, season: GrowthSeason): number
     cushion(g, t.u, t.v, r, key, season);
     if (t.grown > 0.75 && H(key, 0, 0, 451) < 0.3) cushion(g, t.u + r * 1.1, t.v + r * (H(key, 1, 0, 451) - 0.5), r * 0.55, key + 7, season);
   }
+  // the ivy, over the moss
+  if (f.ivy) n += paintIvy(g, f, season);
   const above = f.top;
   for (const t of taken('fern', f, season)) n++, fern(g, t.u, t.v, (0.28 + 0.22 * t.suit) * (0.4 + 0.6 * t.grown), wrap(Math.imul(t.id, 41) + f.seed), season);
   for (const t of taken('grass', f, season)) n++, tuft(g, t.u, t.v, (0.1 + 0.12 * t.suit) * (0.4 + 0.6 * t.grown), wrap(Math.imul(t.id, 43) + f.seed), season, above);

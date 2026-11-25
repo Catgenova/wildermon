@@ -90,8 +90,9 @@ import { ARMOUR_STAND, WOVEN_RUG } from '../game/decordefs';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
 import { type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
-import { hashOf, mossStrip, PAVE_STAGES, pavingMoss, PPM, slabTopMoss } from './ivy';
-import { bridgeGreen, greenNow, greenShows, greenStart, GREEN_DAY, mossyBridge, mossyPiece, pavingGreen, pieceGreen, slabGreen } from '../game/greening';
+import { PAVE_STAGES } from './ivy';
+import { GROWTH_PPM, growthPicture, seedOf, sunOf, type GrowthFace, type GrowthSeason } from './growth';
+import { bridgeGreen, greenNow, greenShows, greenStart, GREEN_DAY, mossyBridge, mossyPiece, pieceGreen } from '../game/greening';
 import { ANVIL_SUBTILES, anvilCentre } from '../game/anvil';
 import { postCentre, postLeft, postLife } from '../game/posts';
 import { trapCentre } from '../game/traps';
@@ -1844,6 +1845,12 @@ export class Renderer {
   private stairHost(): StairHost {
     const r = this;
     return {
+      // a stone flight out of doors greens from when greening came in, by its wetness (growth.ts)
+      growthAt: (x: number, y: number) => {
+        if (r.game.buildings.buildingAt(x, y)) return null;
+        const days = Math.floor((r.greenAt - r.game.greenFrom) / GREEN_DAY);
+        return days > 0 ? { days, wet: r.walls.wetness(x, y), season: seasonAt(r.greenAt).season } : null;
+      },
       get camera() { return r.camera; },
       get canvas() { return r.canvas; },
       get cut() { return r.cut; },
@@ -3767,7 +3774,7 @@ export class Renderer {
       const road = cob.pave();
       const i = (((y % q) + q) % q) * q + (((x % q) + q) % q);
       this.laidOver(road[i], pts, rot, 'overlay');
-      if (lit) this.pavingMoss(road, q, i, x, y, pts, rot);
+      if (lit) this.pavingMoss(x, y, pts, rot);
       return;
     }
     // Slabs, laid as their stone splits and in the size it comes off the block in.
@@ -3776,7 +3783,7 @@ export class Renderer {
     const q = FLOOR_TILES;
     const i = (((y % q) + q) % q) * q + (((x % q) + q) % q);
     this.laidOver(tiles[i], pts, rot, 'overlay');
-    if (lit) this.pavingMoss(tiles, q, i, x, y, pts, rot);
+    if (lit) this.pavingMoss(x, y, pts, rot);
   }
 
   /**
@@ -3786,19 +3793,37 @@ export class Renderer {
    * than all at one pace. Laid over the paving picture of the same index, in
    * its own colour rather than in the ground's light and shade.
    */
-  private pavingMoss(pics: HTMLCanvasElement[], q: number, i: number, x: number, y: number, pts: Float64Array, rot: number): void {
-    const stage = this.mossStage(x, y);
-    if (stage < 0) return;
-    const moss = pavingMoss(pics, q, stage);
-    if (moss) this.laidOver(moss[i], pts, rot, 'source-over');
+  /** What a paved tile's growth is keyed by in the baked ground (`classMoss`): its whole days and the season, so it is laid again as either turns. */
+  private pavingKey(x: number, y: number): number {
+    const days = Math.floor((this.greenAt - greenStart(this.game.pavingSince.get(`${x},${y}`), this.game.greenFrom)) / GREEN_DAY);
+    return days <= 0 ? -1 : days * 4 + ['spring', 'summer', 'autumn', 'winter'].indexOf(seasonAt(this.greenAt).season);
   }
 
-  /** How far on the moss in a paved tile's joints is (`pavingMoss`), or -1 for none. */
-  private mossStage(x: number, y: number): number {
-    const days = pavingGreen(this.game, x, y, this.greenAt);
-    if (!days) return -1;
-    const g = greenShows(days, 0, this.walls.wetness(x, y));
-    return Math.max(0, Math.min(PAVE_STAGES, Math.round(g * PAVE_STAGES + (hashOf(x, y, 0, 5) - 0.5) * 1.6)));
+  private pavingMoss(x: number, y: number, pts: Float64Array, rot: number): void {
+    if (!PAVED.has(this.game.world.getTile(x, y))) return;
+    const days = Math.floor((this.greenAt - greenStart(this.game.pavingSince.get(`${x},${y}`), this.game.greenFrom)) / GREEN_DAY);
+    if (days <= 0) return;
+    const season = seasonAt(this.greenAt).season as GrowthSeason;
+    const bld = this.game.buildings;
+    const world = this.game.world;
+    const paved = (px: number, py: number): boolean => world.inBounds(px, py) && PAVED.has(world.getTile(px, py)) && !bld.buildingAt(px, py);
+    // trodden: paving all round it for two tiles, the middle of an open square
+    let edge = false;
+    for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && !paved(x + dx, y + dy)) { edge = true; break; }
+    let trodden = 0;
+    if (!edge) {
+      trodden = 1;
+      for (let dy = -2; dy <= 2 && trodden > 0.5; dy++) for (let dx = -2; dx <= 2; dx++) if ((Math.abs(dx) === 2 || Math.abs(dy) === 2) && !paved(x + dx, y + dy)) { trodden = 0.5; break; }
+    }
+    // shut from the sun by a building to its south or east
+    const shut = !!(bld.buildingAt(x + 1, y) || bld.buildingAt(x, y + 1) || bld.buildingAt(x + 1, y + 1));
+    const wet = this.walls.wetness(x, y);
+    const gf: GrowthFace = {
+      width: 4, height: 4, days, sun: shut ? 0.45 : 0.9, wet, foot: false, top: true, drip: false, cornerA: 0, cornerB: 0,
+      paving: true, joint: 1, trodden, seed: seedOf(x, y, 0, 83),
+    };
+    const pic = growthPicture(`pave|${x},${y}|${days}|${season}|${trodden}|${shut ? 1 : 0}|${wet.toFixed(2)}`, gf, season);
+    if (pic) this.laidOver(pic, pts, rot, 'source-over');
   }
 
   /**
@@ -4783,7 +4808,10 @@ export class Renderer {
         if (paved && !wet && !run && PAVED.has(t0)) this.paving(t0, x, y, world.viewData(x, y, lit), pts, paveRot, lit);
         // A flight of garden steps, built up the tile over its colour: see `steps.ts`.
         if (!wet && t0 === TileType.Steps) {
-          drawSteps({ ctx, cam, world, zoom, season: this.season, light: this.stepsLight, dpr: this.canvas.dpr }, x, y);
+          // what has grown on them: from when they were laid or scrubbed, as paving greens (growth.ts)
+          const stepDays = lit ? Math.floor((this.greenAt - greenStart(this.game.pavingSince.get(`${x},${y}`), this.game.greenFrom)) / GREEN_DAY) : 0;
+          drawSteps({ ctx, cam, world, zoom, season: this.season, light: this.stepsLight, dpr: this.canvas.dpr,
+            growth: stepDays > 0 ? { days: stepDays, wet: this.walls.wetness(x, y) } : undefined }, x, y);
         }
         /*
          * And the seam cut into the stone, where there is one; plain rock is
@@ -5490,7 +5518,7 @@ export class Renderer {
     let k = BAKED | (lit ? LIT : 0);
     // Only what stands on it or its borders: the shade of a wall nearby is cut to the tile (`groundShade`), and keeps the run going.
     if (this.structs.onAny(x, y) || this.hingeTiles.has(x * 65536 + y) || (lit && this.game.foundations.size > 0 && this.game.foundationAt(x, y))) k |= AFTER;
-    if (lit && gf.paved && PAVED.has(t0)) this.classMoss = this.mossStage(x, y);
+    if (lit && gf.paved && PAVED.has(t0)) this.classMoss = this.pavingKey(x, y);
     return k;
   }
 
@@ -10058,9 +10086,8 @@ export class Renderer {
      * scrubbed, a little further by water, as paving's is. On ground in sight
      * only, and not when the view is too far out to see a cushion.
      */
-    const days = lit && zoom >= 0.6 ? slabGreen(this.game, f, this.greenAt) ?? 0 : 0;
+    const days = lit && zoom >= 0.6 && foundationDone(f) ? Math.max(0, Math.floor((this.greenAt - greenStart(f.greenSince, this.game.greenFrom)) / GREEN_DAY)) : 0;
     const wet = days > 0 ? this.walls.wetness(x, y) : 0;
-    const grown = greenShows(days, 0, wet);
     for (let i = 0; i < 4; i++) {
       const j = (i + 1) % 4;
       const [nx, ny] = out[i];
@@ -10122,33 +10149,26 @@ export class Renderer {
         ctx.restore();
       }
       /*
-       * The moss on this face: cushions climbing from its foot along the
-       * ground line, and a row along its top edge with the damp run down from
-       * under it, more on a face turned from the sun in the south-east.
+       * What has grown on this face (growth.ts): moss, lichen, ferns at its
+       * foot along the ground line, as on a wall's, more on a face turned from
+       * the sun in the south-east; a picture of it laid over the face.
        */
-      if (grown > 0) {
-        // A north or a west face is the shady one, as a wall's is (`greenShows`).
-        const st = Math.round(greenShows(days, nx + ny < 0 ? 1 : 0, wet) * PAVE_STAGES);
-        const v = Math.floor(hashOf(x, y, i, 71) * 3);
-        const lip = mossStrip('lip', v, st), foot = mossStrip('foot', (v + 1) % 3, st);
-        if (lip || foot) {
-          // Picture px to the screen: along the face, and straight down it at a metre to the metre.
-          const up = (10 * HEIGHT_SCALE * zoom) / PPM;
+      if (days > 0) {
+        const hm = Math.max(0.1, (f.top - Math.min(c[i], c[j])) / 10);
+        const season = seasonAt(this.greenAt).season as GrowthSeason;
+        const gf: GrowthFace = {
+          width: 4, height: hm, days, sun: sunOf(nx, ny), wet, foot: true, top: false, drip: false, cornerA: 0, cornerB: 0,
+          seed: seedOf(x, y, i, 109),
+        };
+        const pic = growthPicture(`slab|${x},${y},${i}|${days}|${season}|${hm.toFixed(2)}|${wet.toFixed(2)}`, gf, season);
+        if (pic) {
+          // picture px to the screen: along the face, and straight down it at a metre to the metre
+          const down = (10 * HEIGHT_SCALE * zoom) / GROWTH_PPM;
           ctx.save();
           face();
           ctx.clip();
-          if (lip) {
-            ctx.save();
-            ctx.transform((px(j) - px(i)) / (4 * PPM), (py(j, f.top) - py(i, f.top)) / (4 * PPM), 0, up, px(i), py(i, f.top));
-            ctx.drawImage(lip, 0, 0);
-            ctx.restore();
-          }
-          if (foot) {
-            ctx.save();
-            ctx.transform((px(j) - px(i)) / (4 * PPM), (py(j, c[j]) - py(i, c[i])) / (4 * PPM), 0, up, px(i), py(i, c[i]) - foot.height * up);
-            ctx.drawImage(foot, 0, 0);
-            ctx.restore();
-          }
+          ctx.transform((px(j) - px(i)) / pic.width, (py(j, f.top) - py(i, f.top)) / pic.width, 0, down, px(i), py(i, f.top));
+          ctx.drawImage(pic, 0, 0);
           ctx.restore();
         }
       }
@@ -10189,9 +10209,16 @@ export class Renderer {
       if (paved) this.paving(t, x, y, data, quad, 0, lit);
       else {
         this.laidOver(concrete(), quad, 0, 'overlay');
-        // And moss in the margin tooled round a bare top.
-        const top = grown > 0 ? slabTopMoss(Math.round(grown * PAVE_STAGES)) : null;
-        if (top) this.laidOver(top, quad, 0, 'source-over');
+        // And what has grown on a bare top (growth.ts), as on any open top.
+        if (days > 0) {
+          const season = seasonAt(this.greenAt).season as GrowthSeason;
+          const gf: GrowthFace = {
+            width: 4, height: 4, days, sun: 0.9, wet, foot: false, top: true, drip: false, cornerA: 0, cornerB: 0, trodden: 0.3,
+            seed: seedOf(x, y, 0, 107),
+          };
+          const top = growthPicture(`slabtop|${x},${y}|${days}|${season}|${wet.toFixed(2)}`, gf, season);
+          if (top) this.laidOver(top, quad, 0, 'source-over');
+        }
       }
     }
     if (f.pool) {

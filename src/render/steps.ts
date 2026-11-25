@@ -31,6 +31,7 @@ import { TREE_DEFS, TileType, stepsFit, stepsKind, stepsTimber } from '../world/
 import { hash2 } from '../world/noise';
 import { stairStyle, type StairStyle } from './stairing';
 import { woodHex } from './furniture';
+import { growthPicture, seedOf, sunOf, type GrowthFace, type GrowthSeason } from './growth';
 
 type RGB = readonly [number, number, number];
 type Pt = [number, number];
@@ -177,6 +178,8 @@ export interface StepsView {
   light: (ux: number, uy: number) => number;
   /** Device pixels to a CSS pixel, which a flight is baked at. */
   dpr: number;
+  /** What has grown on a stone flight (`growth.ts`): its whole days since laid or scrubbed, and how wet it is; none, nothing. */
+  growth?: { days: number; wet: number };
 }
 
 /** What a flight is painted through: the camera, or the camera moved onto a canvas of the flight's own. */
@@ -196,6 +199,7 @@ interface Paint {
   zoom: number;
   season: Season;
   light: (ux: number, uy: number) => number;
+  growth?: { days: number; wet: number };
 }
 
 /**
@@ -236,7 +240,7 @@ export function drawSteps(o: StepsView, x: number, y: number): void {
   const f = flightAt(world, x, y);
   const c = world.corners(x, y, bakeCorners);
   const joins = (f.joins.foot ? 1 : 0) | (f.joins.head ? 2 : 0) | (f.joins.left ? 4 : 0) | (f.joins.right ? 8 : 0);
-  const key = `${x},${y}|${world.getData(x, y)}|${c[0]},${c[1]},${c[2]},${c[3]}|${joins}|${cam.rotation}|${zoom}|${o.dpr}|${o.season}`;
+  const key = `${x},${y}|${world.getData(x, y)}|${c[0]},${c[1]},${c[2]},${c[3]}|${joins}|${cam.rotation}|${zoom}|${o.dpr}|${o.season}|${o.growth?.days ?? 0}`;
   const ax = cam.worldToScreenX(x, y), ay = cam.worldToScreenY(x, y, 0);
   const k = o.zoom / zoom;
   let b = bakes.get(key);
@@ -290,7 +294,7 @@ function bake(o: StepsView, x: number, y: number, zoom: number, c: readonly numb
   canvas.height = Math.max(1, Math.ceil((y1 - y0) * o.dpr));
   const g = canvas.getContext('2d') as CanvasRenderingContext2D;
   g.setTransform(o.dpr, 0, 0, o.dpr, -x0 * o.dpr, -y0 * o.dpr);
-  paint({ ctx: g, cam: eye, world: o.world, zoom, season: o.season, light: o.light }, x, y);
+  paint({ ctx: g, cam: eye, world: o.world, zoom, season: o.season, light: o.light, growth: o.growth }, x, y);
   return { canvas, x0, y0, area: canvas.width * canvas.height };
 }
 
@@ -465,6 +469,32 @@ function paint(o: Paint, x: number, y: number): void {
     }
     // The arris along its front, where the light catches it.
     line(P(tL, s0 - NOSE, topL), P(tR, s0 - NOSE, topR), rgb(st.nose, treadLit * 1.05), 1.4);
+    // And what has grown on a stone step (growth.ts): over its tread, half trodden, and up its riser from the tread below.
+    if (!timber && o.growth && o.growth.days > 0) {
+      const season = o.season as GrowthSeason;
+      const g = o.growth;
+      const lay = (pic: HTMLCanvasElement, tl: Pt, tr: Pt, bl: Pt): void => {
+        ctx.save();
+        ctx.transform((tr[0] - tl[0]) / pic.width, (tr[1] - tl[1]) / pic.width, (bl[0] - tl[0]) / pic.height, (bl[1] - tl[1]) / pic.height, tl[0], tl[1]);
+        ctx.drawImage(pic, 0, 0);
+        ctx.restore();
+      };
+      const tread: GrowthFace = {
+        width: (tR - tL) * 4, height: (s1 - s0 + NOSE) * 4, days: g.days, sun: 0.9, wet: g.wet, foot: false, top: true, drip: false,
+        cornerA: 0, cornerB: 0, trodden: 0.5, seed: seedOf(x, y, i, 89),
+      };
+      const tp = growthPicture(`tread|${x},${y},${i}|${g.days}|${season}|${g.wet.toFixed(2)}`, tread, season);
+      if (tp) lay(tp, P(tL, s1, topL), P(tR, s1, topR), P(tL, s0 - NOSE, topL));
+      if (risersShow) {
+        const hm = Math.max(0.05, (topL - NOSE_H - baseL) / 10);
+        const riser: GrowthFace = {
+          width: (tR - tL) * 4, height: hm, days: g.days, sun: sunOf(-upX, -upY), wet: g.wet, foot: true, top: false, drip: false,
+          cornerA: 0, cornerB: 0, seed: seedOf(x, y, i, 97),
+        };
+        const rp = growthPicture(`riser|${x},${y},${i}|${g.days}|${season}|${g.wet.toFixed(2)}`, riser, season);
+        if (rp) lay(rp, P(tL, s0, topL - NOSE_H), P(tR, s0, topR - NOSE_H), P(tL, s0, baseL));
+      }
+    }
   };
 
   const depth = (t: number, s: number): number => {
