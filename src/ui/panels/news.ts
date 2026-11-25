@@ -1,6 +1,6 @@
 import { PICK_SLACK, PICK_SLACK_TOUCH } from '../../render/pickslack';
 import { FIRST_TAME_SAYS } from '../../game/firsttame';
-import { IVY_CLIMB, IVY_HANG, MOSS_SPREAD, ROOTS_APART } from '../../render/growth';
+import { IVY_CLIMB, IVY_HANG, LAST_STAGE, MOSS_SPREAD, ROOTS_APART, STAGE_DAYS } from '../../render/growth';
 import { NEW_DAYS, newTitle } from '../../game/badges';
 import { MONSTER_GROWTH } from '../../render/monster-size';
 import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
@@ -445,6 +445,17 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Overgrowth in stages: left long enough, walls, bridges and paving go under it.
+  {
+    n: 701,
+    day: '2026-11-25',
+    lines: () => [
+      `Added: ${LAST_STAGE + 1} stages of overgrowth, bare to wholly overgrown, by days since built, laid or scrubbed: ${STAGE_DAYS.join(', ')}.`,
+      'Added: from stage 5, moss sheets on tops and paving and ivy mats on wall faces, spreading and joining until the face is covered. From stage 9, shrubs on tops, in paving and at wall feet: autumn colours, bare in winter. From stage 11, a grass sward over paving.',
+      'Changed: up to 4 times the moss, lichen, ferns, grass and flowers by the last stage; ivy denser, more and larger leaves.',
+      'Changed: paving with a worn trail across it stays clear along it.',
+    ],
+  },
   // What grows on old stone, as things of their own: replaces the ivy strands and every moss before it.
   {
     n: 700,

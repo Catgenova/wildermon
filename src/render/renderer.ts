@@ -3815,6 +3815,8 @@ export class Renderer {
       trodden = 1;
       for (let dy = -2; dy <= 2 && trodden > 0.5; dy++) for (let dx = -2; dx <= 2; dx++) if ((Math.abs(dx) === 2 || Math.abs(dy) === 2) && !paved(x + dx, y + dy)) { trodden = 0.5; break; }
     }
+    // a worn path across it is paving in use: kept clear along it however long it has been laid
+    if (this.trailMaskAt(x, y, true)) trodden = Math.max(trodden, 0.9);
     // shut from the sun by a building to its south or east
     const shut = !!(bld.buildingAt(x + 1, y) || bld.buildingAt(x, y + 1) || bld.buildingAt(x + 1, y + 1));
     const wet = this.walls.wetness(x, y);
