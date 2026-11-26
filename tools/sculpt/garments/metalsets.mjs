@@ -238,40 +238,29 @@ function copperHelm(B) {
 }
 
 function copperMantle(B) {
-  const A = B.at, hang = lerp(A.spine1, A.pelvis, 0.35)[1];
-  // the bull hide: over the left shoulder and hung straight down the back to the hips, its foot clear of the back
-  const backZ = Math.min(...B.V.filter((p) => p[1] < A.chest[1] && p[1] > A.pelvis[1] - 0.6).map((p) => p[2])) - 0.42;
-  const cape = shell(B, {
-    sub: 2, hide: false,
-    keep: (i) => {
-      const p = B.V[i], n = B.N[i];
-      if (on(B, i, 'torso', 'shoulder', 'neck') < 0.6 || on(B, i, 'upperarm') > 0.02 || on(B, i, 'shoulder') > 0.5) return false;
-      if (y(p) > A.neck[1] + 0.05) return false;
-      // (as wide as the shoulder blades at the top, narrowing to the small of the back, its foot cut on the slant from the left)
-      const wide = Math.min(A.shoulder.l[0] * 0.76, A.shoulder.l[0] - 0.5) - 0.3 * A.shoulder.l[0] * smooth(A.chest[1], hang, y(p));
-      if (n[2] < 0.1) return y(p) > hang + 0.25 * (p[0] < 0 ? -p[0] : 0) && Math.abs(p[0]) < wide && n[2] < -0.2 + (y(p) > A.spine2[1] ? 0.3 : 0);
-      return p[0] > 0.3 && p[0] < wide && y(p) > A.chest[1] - 0.05;
-    },
-    off: ({ p, n }) => {
-      // (clear of the cuirass under it, and of its shoulder plates where it crosses the shoulder)
-      return copperCuirassOff(A, p) + 0.16 + 0.05 * clamp(-n[2]) + (Math.abs(p[0]) > 0.6 && y(p) > A.chest[1] ? 0.12 : 0);
-    },
-    // (below the shoulder blades the back's points let straight back onto a plane behind the body: it hangs, it does not cling)
-    move: ({ p, n }) => (n[2] >= 0.1 ? [0, 0, 0] : [0, 0, -smooth(A.chest[1] + 0.1, A.spine2[1] - 0.2, y(p)) * Math.max(0, p[2] - backZ) * 0.8]),
-    mat: ({ p }) => {
-      if (y(p) < hang + 0.2) return 'hideEdge';
+  const A = B.at, sx = A.shoulder.l[0];
+  // the bull hide: over the shoulders and hung down the back to the hips, its foot cut on the slant from the left, its
+  // hair dappled; a copper disc brooch on the left breast with a glowing ring
+  const hide = cloak(B, {
+    start: (x) => lerp([2.2, 0, 0], [1.15, 0, 0], smooth(0.75, 1.1, Math.abs(x)))[0],
+    wide: (s) => lerp([0.84 * sx, 0, 0], [0.62 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
+    over: [copperChest(B)],
+    off: () => 0.19, thick: 0.06,
+    hang: lerp(A.spine1, A.pelvis, 0.6)[1], folds: 3, fold: 0.06,
+    mat: (p, u, s) => {
+      if (s > 0.86 + 0.12 * u) return null;
+      if (s > 0.81 + 0.12 * u) return 'hideEdge';
       const h = Math.sin(p[0] * 3.1 + y(p) * 1.9) + 0.7 * Math.sin(p[0] * 1.7 - y(p) * 2.9 + 1.3);
       return h > 0.95 ? 'hideL' : 'hide';
     },
-    rim: 'hideEdge', thick: 0.06,
+    rim: 'hideEdge',
   });
-  // the brooch: a copper disc on the left breast, a glowing ring round its boss
   const chest = onBone(B, 'spine_03');
   const at = B.V.reduce((b, p, i) => (B.N[i][2] > 0.6 && Math.abs(p[0] - 0.55) < 0.25 && Math.abs(y(p) - (A.chest[1] + 0.35)) < 0.3 && p[2] > b[2] ? p : b), [0, 0, -9]);
   const o = add(at, [0, 0, 0.3]), place = { o, X: [1, 0, 0], Y: [0, 0, 1], Z: [0, -1, 0] };
   const disc = loft([ring(12, 0, 0.32, 0.32), ring(12, 0.06, 0.32, 0.32), ring(12, 0.07, 0.25, 0.25), ring(12, 0.07, 0.19, 0.19), ring(12, 0.08, 0.13, 0.13), ring(12, 0.14, 0.08, 0.08)],
     (c, i) => (i === 2 ? 'rune' : i === 3 ? 'patina' : i >= 4 ? 'cuS' : 'cu'), place, chest);
-  return merge(cape, disc);
+  return merge(hide, disc);
 }
 
 /* ==== iron: the early medieval foot soldier (the Norman and the Norseman) ========================================== */

@@ -458,6 +458,7 @@ export const NEWS: News[] = [
       'New: electrum plate armour drawn as a set of its own: tiara wound round the chin, scale corselet over a blue tunic, long purple coat-cape with a saffron border, patterned trousers with scaled knees, laced shoes.',
       'New: fire-tempered steel plate armour drawn as a set of its own: horned sallet, blackened gothic plate with glowing veins, ragged smoke-grey cloak with a burnt hem, pointed sabatons.',
       'New: adamantine, glimmersteel, mithril and seryll plate armour each drawn as a set of its own: dwarven plate with gilt knotwork; indigo plate with stars and a crescent cap; leaf-scaled elven plate with a winged helm; faceted sea-crystal plate with a spired crown.',
+      'Changed: the copper shawl\'s bull hide lies over both shoulders.',
     ],
   },
   // The metal sets: tin, zinc, lead, pewter, brass.
