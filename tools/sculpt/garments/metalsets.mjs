@@ -793,8 +793,8 @@ function furMantle(B) {
 
 /* ==== tin: the town militia ======================================================================================== */
 const TIN_MATS = {
-  tn: { c: '#a3a8ab', kind: 3 },
-  tnS: { c: '#676c70', kind: 3 },
+  tn: { c: '#868c90', kind: 3 },
+  tnS: { c: '#52575b', kind: 3 },
   rune: { c: '#7d8a8f', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
   jack: { c: '#a8873c', kind: 2 },
   jackD: { c: '#755d27', kind: 2 },
@@ -832,7 +832,7 @@ function tinChest(B) {
 
 function tinLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const hose = hips(B, { inner: 0.3, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'hoseW' : frac(y(p) * 1.4) < 0.08 ? 'hoseD' : 'hose'), rim: 'hoseD' });
+  const hose = hips(B, { inner: 0.3, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'hoseW' : frac(y(p) * 1.4) < 0.08 ? 'hoseD' : 'hose'), rim: (m) => (m === 'hoseW' ? 'hoseW' : 'hoseD') });
   const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: () => 'hose', rim: 'hoseD' });
   // the knee cops: tin, a glowing rim round each
   const cops = shins(B, {
@@ -879,7 +879,7 @@ function tinMantle(B) {
   // a short hooded cape, drab wool, to the shoulder blades' foot, its hood lying at the back
   const cloth = cloak(B, {
     start: (x) => lerp([2.1, 0, 0], [1.0, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.92 * sx, 0, 0], [0.7 * sx, 0, 0], smooth(0.2, 0.6, s))[0],
+    wide: (s) => lerp([0.82 * sx, 0, 0], [0.62 * sx, 0, 0], smooth(0.15, 0.55, s))[0],
     over: [tinChest(B)],
     off: () => 0.18, thick: 0.04,
     hang: A.spine2[1] - 0.2, rowsDown: 5, folds: 7, fold: 0.06,
@@ -896,16 +896,16 @@ function tinMantle(B) {
 
 /* ==== zinc: the sapper (the siege engineer) ======================================================================= */
 const ZINC_MATS = {
-  zn: { c: '#8c9ba6', kind: 3 },
-  znS: { c: '#56626b', kind: 3 },
+  zn: { c: '#76858f', kind: 3 },
+  znS: { c: '#48535b', kind: 3 },
   rivet: { c: '#c9d2d8', kind: 3 },
   rune: { c: '#5f8da0', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
   lens: { c: '#3b5560', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
   coat: { c: '#6b4a31', kind: 2 },
   coatD: { c: '#44301f', kind: 2 },
-  canvas: { c: '#8a7f62', kind: 2 },
-  canvasD: { c: '#5f5742', kind: 2 },
-  canvasW: { c: '#8a7f63', kind: 2 },
+  canvas: { c: '#5c5a3c', kind: 2 },
+  canvasD: { c: '#3f3e29', kind: 2 },
+  canvasW: { c: '#5c5a3d', kind: 2 },
   oil: { c: '#2f4a4a', kind: 2 },
   oilD: { c: '#1f3333', kind: 2 },
   leatherD: { c: '#33241a', kind: 2 },
@@ -938,7 +938,7 @@ function zincChest(B) {
 
 function zincLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const trousers = hips(B, { inner: 0.3, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'canvasW' : frac(y(p) * 1.3) < 0.07 ? 'canvasD' : 'canvas'), rim: 'canvasD' });
+  const trousers = hips(B, { inner: 0.3, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'canvasW' : frac(y(p) * 1.3) < 0.07 ? 'canvasD' : 'canvas'), rim: (m) => (m === 'canvasW' ? 'canvasW' : 'canvasD') });
   const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: () => 'canvas', rim: 'canvasD' });
   // a zinc plate strapped over each thigh's front, and the knee: a glowing rivet line down each
   const plates = shell(B, {
@@ -991,7 +991,7 @@ function zincMantle(B) {
   // an oilskin capelet over the shoulders, to the chest's foot behind, a zinc buckle with a glowing stud
   const cloth = cloak(B, {
     start: (x) => lerp([2.1, 0, 0], [0.95, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.95 * sx, 0, 0], [0.72 * sx, 0, 0], smooth(0.2, 0.6, s))[0],
+    wide: (s) => lerp([0.86 * sx, 0, 0], [0.64 * sx, 0, 0], smooth(0.15, 0.55, s))[0],
     over: [zincChest(B)],
     off: () => 0.17, thick: 0.04,
     hang: A.spine2[1] - 0.45, rowsDown: 6, folds: 8, fold: 0.05,
@@ -1024,13 +1024,14 @@ function leadChest(B) {
   const band = (yy) => (A.chest[1] + 0.6 - yy) / ((A.chest[1] + 0.6 - (waist - 0.55)) / 3);
   const coat = torso(B, {
     from: waist - 0.55,
-    off: (p) => 0.24 + 0.05 * frac(band(y(p))) + (p[2] > 0 ? 0.05 * Math.max(0, 1 - Math.abs(p[0]) / 0.9) : 0),
+    // (thinner down the sides, where the arms pass)
+    off: (p, n) => (0.24 + 0.05 * frac(band(y(p))) + (p[2] > 0 ? 0.05 * Math.max(0, 1 - Math.abs(p[0]) / 0.9) : 0)) * (1 - 0.45 * smooth(0.5, 0.85, Math.abs(n[0])) * smooth(waist - 0.2, A.chest[1] - 0.3, y(p))),
     mat: (p) => { const f = frac(band(y(p))); if (f > 0.93) return 'rune'; if (f > 0.85) return 'pbS'; return Math.abs(p[0]) < 0.05 && p[2] > 0 ? 'pbS' : 'pb'; },
     rim: 'pbS',
     caps: { off: () => 0.2, mat: () => 'pbS' },
   });
   // great round pauldrons, a raised rim
-  const pauldrons = shoulders(B, { from: -0.4, to: 0.45, off: (t) => 0.42 - 0.12 * smooth(0.25, 0.45, t), mat: (t) => (t > 0.36 ? 'pbL' : t < -0.3 ? 'pbS' : 'pb') });
+  const pauldrons = shoulders(B, { from: -0.35, to: 0.36, off: (t) => 0.34 + 0.03 * smooth(-0.35, 0.1, t) - 0.06 * smooth(0.15, 0.36, t), mat: (t) => (t > 0.29 ? 'pbL' : t < -0.3 ? 'pbS' : 'pb') });
   const arms = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.13), mat: (u, p, n) => (n[0] * Math.sign(p[0]) < -0.3 ? 'gamD' : frac(u.t * 4) < 0.1 ? 'pbS' : 'pb') });
   const vamb = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.15 + (f.t < 0.12 ? 0.07 : 0), mat: (f) => (f.t > 0.86 ? 'rune' : f.t < 0.12 ? 'pbL' : frac(f.t * 4) < 0.1 ? 'pbS' : 'pb') });
   return merge(coat, pauldrons, arms, vamb);
@@ -1061,11 +1062,15 @@ function leadBoots(B) {
 }
 
 function leadHelm(B) {
-  const browTh = browTheta(B);
+  const browTh = browTheta(B), c = headCentre(B), keep = headPts(B);
+  let H = 0, R = 0;
+  B.V.forEach((p, i) => { if (!keep(i)) return; const v = sub(p, c); H = Math.max(H, v[1]); R = Math.max(R, Math.hypot(v[0], v[2])); });
+  H += 0.2; R += 0.14;
   // a great helm: flat-topped, its sides straight down to the shoulders, a cross slit before the eyes, breaths below
   return helm(B, {
-    rim: 'pbS', down: 2.15,
-    margin: ({ th, r }) => 0.12 + 0.28 * Math.max(0, Math.sin(th)) * smooth(0.2, 1.2, th) + 0.25 * Math.max(0, 1 - th / 0.5),
+    rim: 'pbS', down: 2.05,
+    // (out to a cylinder round the head, its crown flat: the head's own reach up and out, measured, and a hand more)
+    margin: ({ th, r }) => Math.max(0.12, Math.min(R / Math.max(0.05, Math.sin(th)), th < Math.PI / 2 ? H / Math.max(0.05, Math.cos(th)) : 9) - r),
     mat: (d, { th, ph }) => {
       const s = fromFront(ph);
       if (Math.abs(th - (browTh + 0.12)) < 0.035 && s < 0.7) return null;
@@ -1083,7 +1088,7 @@ function leadMantle(B) {
   // a heavy tabard-cloak, dark red, a pale tower down its middle, to below the seat
   const cloth = cloak(B, {
     start: (x) => lerp([2.1, 0, 0], [1.15, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.9 * sx, 0, 0], [0.72 * sx, 0, 0], smooth(0.1, 0.55, s))[0],
+    wide: (s) => lerp([0.84 * sx, 0, 0], [0.66 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
     over: [leadChest(B)],
     off: () => 0.2, thick: 0.06,
     hang: lerp(A.spine1, A.pelvis, 0.9)[1], folds: 3, fold: 0.06,
@@ -1139,7 +1144,7 @@ function pewterChest(B) {
 
 function pewterLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const hose = hips(B, { inner: 0.3, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'woolW' : 'woolD'), rim: 'woolD' });
+  const hose = hips(B, { inner: 0.3, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'woolW' : 'woolD'), rim: (m) => (m === 'woolW' ? 'woolW' : 'woolD') });
   // the hose below the knee, cross-tied, a pewter boss at each knee with a glowing rim
   const calves = shins(B, { from: -0.1, to: 0.9, round: 2.7, off: (g) => (g.t < 0.12 ? 0.13 + 0.05 * Math.cos(g.a) : 0.08), mat: (g, p) => { if (g.t < 0.12 && Math.abs(g.a) < 0.9) return g.t < -0.06 || g.t > 0.08 ? 'rune' : 'pw'; if (g.t < 0.2 && Math.abs(g.a) > 1.7) return null; return frac(g.t * 7 + g.a * 0.4) < 0.12 || frac(g.t * 7 - g.a * 0.4) < 0.12 ? 'leatherD' : 'woolD'; }, rim: 'woolD' });
   return { P: merge(hose, calves), dropAt: (f) => f.mat === 'woolW' };
@@ -1180,8 +1185,8 @@ function pewterMantle(B) {
   const A = B.at, sx = A.shoulder.l[0];
   // the long pilgrim's cloak, dark wool, its hood lying down the back; a pewter clasp on the right shoulder
   const cloth = cloak(B, {
-    start: (x) => lerp([2.1, 0, 0], [1.1, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.9 * sx, 0, 0], [0.72 * sx, 0, 0], smooth(0.1, 0.55, s))[0],
+    start: (x) => lerp([2.2, 0, 0], [1.15, 0, 0], smooth(0.75, 1.1, Math.abs(x)))[0],
+    wide: (s) => lerp([0.82 * sx, 0, 0], [0.68 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
     over: [pewterChest(B)],
     off: () => 0.18, thick: 0.05,
     hang: lerp(A.spine1, A.pelvis, 0.95)[1], folds: 6, fold: 0.13,
@@ -1198,8 +1203,8 @@ function pewterMantle(B) {
 
 /* ==== brass: the clockwork artificer ============================================================================== */
 const BRASS_MATS = {
-  br: { c: '#b8913e', kind: 3 },
-  brS: { c: '#74581f', kind: 3 },
+  br: { c: '#9c7a36', kind: 3 },
+  brS: { c: '#5a4419', kind: 3 },
   cu: { c: '#9a5a32', kind: 3 },
   rune: { c: '#7d6a40', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
   lens: { c: '#3d4b52', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
@@ -1275,7 +1280,7 @@ function brassHelm(B) {
   const browTh = browTheta(B);
   // a domed brass helm, closed, a round glowing lens before each eye, copper ribs, a ridge of rivets
   return helm(B, {
-    rim: 'brS', down: 2.15,
+    rim: 'brS', down: 2.05,
     margin: ({ th, ph }) => { const s = fromFront(ph); return 0.12 + 0.1 * Math.max(0, 1 - th / 0.9) + (Math.hypot(th - (browTh + 0.15), Math.abs(s) - 0.3) < 0.14 ? 0.07 : 0); },
     mat: (d, { th, ph }) => {
       const s = fromFront(ph), e = Math.hypot(th - (browTh + 0.15), s - 0.3);

@@ -18,9 +18,14 @@ import { SET as COPPER } from '../../src/sculpt/metalcopper';
 import { SET as IRON } from '../../src/sculpt/metaliron';
 import { SET as BRONZE } from '../../src/sculpt/metalbronze';
 import { SET as STEEL } from '../../src/sculpt/metalsteel';
+import { SET as TIN } from '../../src/sculpt/metaltin';
+import { SET as ZINC } from '../../src/sculpt/metalzinc';
+import { SET as LEAD } from '../../src/sculpt/metallead';
+import { SET as PEWTER } from '../../src/sculpt/metalpewter';
+import { SET as BRASS } from '../../src/sculpt/metalbrass';
 import { check, finish } from './harness';
 
-const SETS = { copper: COPPER, iron: IRON, bronze: BRONZE, steel: STEEL } as const;
+const SETS = { copper: COPPER, iron: IRON, bronze: BRONZE, steel: STEEL, tin: TIN, zinc: ZINC, lead: LEAD, pewter: PEWTER, brass: BRASS } as const;
 const PIECES = { helm: ['head', 'helm'], chest: ['chest', 'plate_breastplate'], mantle: ['shawl', 'plate_shawl'], legs: ['legs', 'plate_legs'], boots: ['feet', 'plate_boots'] } as const;
 
 // every element has a glow, and every enchantment's is its first mote's element's

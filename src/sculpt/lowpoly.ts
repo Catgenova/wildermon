@@ -1591,6 +1591,11 @@ const METAL_SETS: Readonly<Record<string, () => Promise<MetalSetModule>>> = {
   iron: () => import('./metaliron') as unknown as Promise<MetalSetModule>,
   bronze: () => import('./metalbronze') as unknown as Promise<MetalSetModule>,
   steel: () => import('./metalsteel') as unknown as Promise<MetalSetModule>,
+  tin: () => import('./metaltin') as unknown as Promise<MetalSetModule>,
+  zinc: () => import('./metalzinc') as unknown as Promise<MetalSetModule>,
+  lead: () => import('./metallead') as unknown as Promise<MetalSetModule>,
+  pewter: () => import('./metalpewter') as unknown as Promise<MetalSetModule>,
+  brass: () => import('./metalbrass') as unknown as Promise<MetalSetModule>,
 };
 /** The metals whose sets are in, and each one asked for while it comes. */
 const METAL_IN = new Set<string>(), METAL_ASKED = new Map<string, Promise<void>>();

@@ -449,6 +449,18 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // The metal sets: tin, zinc, lead, pewter, brass.
+  {
+    n: 713,
+    day: '2026-11-26',
+    lines: () => [
+      'New: tin plate armour drawn as a set of its own: kettle hat, quilted jack under a tin breastplate, hooded short cape, hose with knee cops, toe-capped boots.',
+      'New: zinc plate armour drawn as a set of its own: riveted skullcap with goggles, work coat with zinc panels and tool belt, oilskin capelet, canvas trousers with thigh and knee plates, buckled work boots.',
+      'New: lead plate armour drawn as a set of its own: flat-topped great helm, banded slab cuirass with great round pauldrons, red tabard-cloak, thick greaves with knee bosses, broad sabatons.',
+      'New: pewter plate armour drawn as a set of its own: pilgrim hat with a scallop badge, wool tunic with scrip strap and badge, long hooded cloak, cross-tied hose with knee bosses, buckled boots.',
+      'New: brass plate armour drawn as a set of its own: closed helm with lens visors, segmented cuirass with a gear on the breast, coat-tail cape, knee joints and splints, plated boots with ankle gears.',
+    ],
+  },
   // Fur: a new armour class between leather and chain.
   {
     n: 712,

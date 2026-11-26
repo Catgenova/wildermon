@@ -163,7 +163,9 @@ export function shell(B, o) {
       if (edgeN.get(key) !== 1) continue;
       open.add(S.bv[a - base]); open.add(S.bv[b - base]);
       const ia = inn(a), ib = inn(b);
-      P.F.push({ v: [b, a, ia], mat: o.rim ?? f.mat }, { v: [b, ia, ib], mat: o.rim ?? f.mat });
+      // (a rim given as a function: its material from the face it closes, so it goes where that face goes)
+      const rm = typeof o.rim === 'function' ? o.rim(f.mat) : o.rim ?? f.mat;
+      P.F.push({ v: [b, a, ia], mat: rm }, { v: [b, ia, ib], mat: rm });
     }
   } else for (const f of kept) for (let j = 0; j < 3; j++) { const a = f.v[j], b = f.v[(j + 1) % 3], key = a < b ? `${a},${b}` : `${b},${a}`; if (edgeN.get(key) === 1) { open.add(S.bv[a - base]); open.add(S.bv[b - base]); } }
   // the body's polygons under it whole, none of whose points is at its edge, left out
