@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Copper rebuilt piece by piece (tools/sculpt/garments/kit/copper.mjs).
+  {
+    n: 718,
+    day: '2026-11-26',
+    lines: () => [
+      'Changed: copper armour redrawn as a Bronze Age bull-cult set: a boar\'s-tusk helm with a copper brow band and a red horsehair plume; a woad tunic under a three-disc copper cuirass; spiral armlets and wire-bound bracers; linen leg-wraps under a woad kilt, shaped greaves; curled-toe boots.',
+      'Changed: the copper shawl is a bull-hide capelet with a copper crescent collar, two spiral brooches and a pair of bull horns.',
+      'Changed: enchanted copper lights its chest disc rings, the crescent\'s arcs, the brooch spirals and the brow wave.',
+    ],
+  },
   // Steel rebuilt piece by piece as separate plates (tools/sculpt/garments/steel.mjs, platekit.mjs).
   {
     n: 717,
