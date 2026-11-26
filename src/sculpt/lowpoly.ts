@@ -1567,6 +1567,7 @@ type MetalSetModule = { SET: Record<MetalSetPiece, { male: GarmentAsset; female:
 /** Each metal with a set of its own, and how its chunk is asked for. */
 const METAL_SETS: Readonly<Record<string, () => Promise<MetalSetModule>>> = {
   copper: () => import('./metalcopper') as unknown as Promise<MetalSetModule>,
+  iron: () => import('./metaliron') as unknown as Promise<MetalSetModule>,
 };
 /** The metals whose sets are in, and each one asked for while it comes. */
 const METAL_IN = new Set<string>(), METAL_ASKED = new Map<string, Promise<void>>();

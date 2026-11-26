@@ -5,7 +5,8 @@
 //     the set worn whole (or the gear given), both bodies, the hair off: each piece's triangles crossing the body's (less
 //     what the pieces hide) and every other piece's, in the idle over its loop (12 moments), the walk (16), a fight (the long
 //     sword's overhead swing, every 0.1 s of a two-second go) and work at the bench (every 0.1 s); and each piece's longest
-//     edge stretched against its rest (tearing: an edge more than STRETCH times its rest length).
+//     edge stretched against its rest (tearing: an edge lengthened more than STRETCH, or than the body's own skin is in
+//     that clip where that is more).
 //   Exits 1 when a piece crosses the body or another piece in the idle or the walk, or tears anywhere.
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
@@ -69,6 +70,7 @@ for (const who of opt('who', 'male,female').split(',')) {
     // (each edge's rest length, from the bake's own rest points)
     if (!rest) rest = parts.map(([, TT]) => TT.map((t) => t.v.map((a, j) => { const c = t.v[(j + 1) % 3]; return Math.hypot(V[a * 17] - V[c * 17], V[a * 17 + 1] - V[c * 17 + 1], V[a * 17 + 2] - V[c * 17 + 2]); })));
     const out = {};
+    { let m = 0; parts[0][1].forEach((t, ti) => t.v.forEach((a, j) => { const c = t.v[(j + 1) % 3]; m = Math.max(m, Math.hypot(P[a][0] - P[c][0], P[a][1] - P[c][1], P[a][2] - P[c][2]) - rest[0][ti][j]); })); out['body:stretch'] = +m.toFixed(2); }
     for (let k = 1; k < parts.length; k++) {
       for (let j = 0; j < k; j++) {
         const pairs = crossPairs(P, parts[k][1], P, parts[j][1]), d = pairs.length;
@@ -83,11 +85,13 @@ for (const who of opt('who', 'male,female').split(',')) {
             const key = `${mat}@${bone}`; hist.set(key, (hist.get(key) ?? 0) + 1);
           }
           const ex = [...new Set(pairs.slice(0, 60).map(([ti]) => { const v = [0, 1, 2].map((q) => A.tris[ti * 4 + q]); return v.reduce((acc, vi) => acc.map((x, c) => x + A.verts[vi * 3 + c] / 3), [0, 0, 0]).map((x) => x.toFixed(1)).join(','); }))].slice(0, 6);
-          console.log('  where', `${parts[k][0]}×${parts[j][0]}`, JSON.stringify([...hist].sort((a, b) => b[1] - a[1]).slice(0, 8)), 'at rest', ex.join(' '));
+          const other = [...new Set(pairs.slice(0, 40).map(([, tj]) => { const t = parts[j][1][tj]; const c = t.v.reduce((acc, vi) => acc.map((x, cc) => x + V[vi * 17 + cc] / 3), [0, 0, 0]); const w = [0, 1, 2, 3].map((q) => `${body.bones[V[t.v[0] * 17 + 7 + q]]?.name}:${V[t.v[0] * 17 + 11 + q].toFixed(2)}`).filter((x) => !x.endsWith(':0.00')); return `${c.map((x) => x.toFixed(1)).join(',')}[${w.join(' ')}]`; }))].slice(0, 4);
+          console.log('  where', `${parts[k][0]}×${parts[j][0]}`, JSON.stringify([...hist].sort((a, b) => b[1] - a[1]).slice(0, 8)), 'at rest', ex.join(' '), process.env.WHERE === '2' ? `\n    the other's: ${other.join(' ')}` : '');
         }
       }
-      let most = 0;
-      parts[k][1].forEach((t, ti) => t.v.forEach((a, j) => { const c = t.v[(j + 1) % 3], L = Math.hypot(P[a][0] - P[c][0], P[a][1] - P[c][1], P[a][2] - P[c][2]), r = rest[k][ti][j]; most = Math.max(most, L - r); }));
+      let most = 0, mostAt = null;
+      parts[k][1].forEach((t, ti) => t.v.forEach((a, j) => { const c = t.v[(j + 1) % 3], L = Math.hypot(P[a][0] - P[c][0], P[a][1] - P[c][1], P[a][2] - P[c][2]), r = rest[k][ti][j]; if (L - r > most) { most = L - r; mostAt = [a, c, ti]; } }));
+      if (process.env.WHERE && most > STRETCH && mostAt) { const [a, c, ti] = mostAt, A = worn[k - 1][1]; console.log('  torn', parts[k][0], most.toFixed(2), 'rest', [a, c].map((v) => [0, 1, 2].map((q) => V[v * 17 + q].toFixed(1)).join(',') + '[' + [0, 1, 2, 3].map((q) => `${body.bones[V[v * 17 + 7 + q]]?.name}:${V[v * 17 + 11 + q].toFixed(2)}`).filter((x) => !x.endsWith(':0.00')).join(' ') + ']').join(' – '), A.mats[A.polys[A.tris[ti * 4 + 3]][1]]); }
       out[`${parts[k][0]}:stretch`] = +most.toFixed(2);
     }
     return out;
@@ -110,7 +114,8 @@ for (const who of opt('who', 'male,female').split(',')) {
   if (clips.has('fight')) for (let k = 0; k <= 20; k++) addR('fight', run({ phase: 0, moving: false, working: true, job: 'attack_creature', act: { t: k * 0.1, length: 2 } }));
   if (clips.has('work')) for (let k = 0; k <= 20; k++) addR('work', run({ phase: 0, moving: false, working: true, job: 'make_scale_cuirass', act: { t: k * 0.1, length: 2 } }));
   for (const [clip, r] of Object.entries(R)) {
-    const torn = Object.entries(r.stretch).filter(([, x]) => x > STRETCH);
+    // (a shell carrying the body's own weights stretches where the skin under it does: a tear is more than that)
+    const torn = Object.entries(r.stretch).filter(([k, x]) => k !== 'body' && x > Math.max(STRETCH, r.stretch.body + 0.05));
     console.log(who, clip.padEnd(5), `${r.crossed}/${r.frames} frames crossing`, JSON.stringify(r.worst), 'stretch', JSON.stringify(r.stretch));
     if ((clip === 'idle' || clip === 'walk') && r.crossed) fail = true;
     if (torn.length) fail = true;

@@ -88,7 +88,11 @@ export function part() { return { V: [], N: [], W: [], F: [], hides: new Set(), 
 const pnMid = (a, b, na, nb) => {
   const w1 = dot(sub(b, a), na), w2 = dot(sub(a, b), nb);
   const b210 = mul(sub(add(mul(a, 2), b), mul(na, w1)), 1 / 3), b120 = mul(sub(add(mul(b, 2), a), mul(nb, w2)), 1 / 3);
-  return mul(add(add(a, b), mul(add(b210, b120), 3)), 1 / 8);
+  const pn = mul(add(add(a, b), mul(add(b210, b120), 3)), 1 / 8);
+  // (out from the straight edge where the surface bulges, never in from it where it is hollow: a hollow's flat body
+  // triangle would stand in front of the shell)
+  const lin = mul(add(a, b), 0.5), n = unit(add(na, nb));
+  return add(lin, mul(n, Math.max(0, dot(sub(pn, lin), n))));
 };
 const mixW = (ws) => {
   const m = new Map();
@@ -344,16 +348,27 @@ const frac = (x) => x - Math.floor(x);
  * the top of the arm, its back corners kept low (they cross the trapezius as the neck turns), its collar raised all
  * round. `off(p, n)` is added to the collar's rise; `mat(p, n)` its material.
  */
+/** How far the torso piece's collar rises off the body at a point (`torso`): a cape reckons what it covers with it. */
+export const collarRise = (A, p) => { const neckCut = neckCutOf(A); return yOf(p) > neckCut - 0.05 && Math.abs(p[0]) < 0.75 ? 0.06 : 0.12 * smooth(neckCut - 0.35, neckCut + 0.1, yOf(p)); };
+/** Whether a body point is the shoulder's top (`shoulderCaps`): the arm's outer and upper side near the joint, the neck's side of the trapezius, never the armpit. */
+const capRule = (B, i, o = {}) => { const p = B.V[i]; const a = armAt(B, p); return on(B, i, 'shoulder', 'upperarm', 'torso') > 0.6 && (on(B, i, 'shoulder') > 0.08 || on(B, i, 'upperarm') > 0.02) && a.up.t < (o.to ?? 0.15) && Math.abs(p[0]) > (o.inner ?? 0.2) * B.at.shoulder.l[0] && yOf(p) > B.at.chest[1] + 0.2 && yOf(p) < neckCutOf(B.at) + 0.1 && on(B, i, 'neck', 'head') < 0.2 && dot(B.N[i], unit([Math.sign(p[0]), 0.35, 0])) > (o.outer ?? -0.15) && !(Math.abs(p[0]) > 0.62 * B.at.shoulder.l[0] && yOf(p) < B.at.chest[1] + 0.75 && !(B.N[i][2] > 0.5 && yOf(p) > B.at.chest[1] + 0.3)); };
 export function torso(B, o) {
   const A = B.at, neckCut = neckCutOf(A);
+  // (the pectoral's outer edge, in front of and behind the armpit below the caps: the coat thinned there toward the arm)
+  const side = (i) => { const p = B.V[i]; return on(B, i, 'shoulder') < 0.4 && yOf(p) < A.chest[1] + 0.75 && Math.abs(p[0]) < 0.85 * A.shoulder.l[0] && Math.abs(B.N[i][2]) > 0.55; };
+  const own = (i) => { const p = B.V[i]; const mid = Math.abs(p[0]) < (o.mid ?? 0.6) * A.shoulder.l[0]; return on(B, i, 'torso', 'shoulder', 'neck') > 0.55 && (on(B, i, 'upperarm') < 0.02 || (mid && on(B, i, 'upperarm') < 0.25)) && (on(B, i, 'shoulder') < 0.12 || mid || side(i)) && yOf(p) > o.from - 0.05 && yOf(p) < neckCut + (Math.abs(p[0]) > 0.5 ? (B.N[i][2] < -0.3 && Math.abs(p[0]) > 0.6 ? 0.02 : 0.3) : 0.12) && (!o.keep || o.keep(i)); };
+  // (with `caps`, the shoulders' tops in the same shell, so no body triangle between the two is left uncovered)
+  const cap = (i) => !!o.caps && !own(i) && capRule(B, i, o.caps);
   return shell(B, {
     sub: o.sub ?? 2,
-    keep: (i) => { const p = B.V[i]; return on(B, i, 'torso', 'shoulder', 'neck') > 0.55 && on(B, i, 'upperarm') < 0.02 && on(B, i, 'shoulder') < 0.12 && yOf(p) > o.from - 0.05 && yOf(p) < neckCut + (Math.abs(p[0]) > 0.5 ? (B.N[i][2] < -0.3 && Math.abs(p[0]) > 0.6 ? 0.02 : 0.4) : 0.12) && (!o.keep || o.keep(i)); },
-    off: ({ p, n }) => {
+    keep: (i) => own(i) || cap(i),
+    off: ({ p, n, bv }) => {
+      if (cap(bv)) return o.caps.off(p, n);
+      const thin = 1 - 0.6 * smooth(0.06, 0.3, B.share(bv, 'shoulder'));
       const collar = yOf(p) > neckCut - 0.05 && Math.abs(p[0]) < 0.75 ? 0.06 : 0.12 * smooth(neckCut - 0.35, neckCut + 0.1, yOf(p));
-      return o.off(p, n) + (o.collar ?? 1) * collar;
+      return thin * o.off(p, n) + (o.collar ?? 1) * collar;
     },
-    mat: ({ p, n }) => o.mat(p, n),
+    mat: ({ p, n, bv }) => (cap(bv) ? o.caps.mat(p, n) : o.mat(p, n)),
     rim: o.rim, thick: o.thick ?? 0.08,
   });
 }
@@ -371,8 +386,13 @@ export function shoulders(B, o) {
 export function upperArms(B, o) {
   return shell(B, {
     sub: o.sub ?? 1,
-    keep: (i) => { const p = B.V[i]; const t = armAt(B, p).up.t; return on(B, i, 'upperarm', 'shoulder') > 0.5 && t > (o.from ?? 0.12) && t < (o.to ?? 0.6) && Math.abs(p[0]) > 0.5 * B.at.shoulder.l[0] && !(t < 0.4 && dot(B.N[i], [Math.sign(p[0]), 0, 0]) < -0.2); },
-    off: ({ p }) => o.off(armAt(B, p).up.t, p),
+    keep: (i) => {
+      const p = B.V[i]; const t = armAt(B, p).up.t;
+      // (with \`pit\`, the armpit's front fold as well, under the shoulder's front: the sleeve's own seam there)
+      if (o.pit && on(B, i, 'shoulder', 'upperarm') > 0.3 && on(B, i, 'neck') < 0.05 && B.N[i][2] > 0.45 && Math.abs(p[0]) > 0.75 * B.at.shoulder.l[0] && yOf(p) < B.at.shoulder.l[1] && yOf(p) > B.at.chest[1] + 0.2) return true;
+      // (the elbow's own points, on the forearm's bones, counted in where a sleeve comes down to it)
+      return on(B, i, 'upperarm', 'shoulder') + (t > 0.7 ? on(B, i, 'forearm') : 0) > 0.5 && t > (o.from ?? 0.12) && t < (o.to ?? 0.6) && Math.abs(p[0]) > 0.5 * B.at.shoulder.l[0] && !(t < 0.4 && dot(B.N[i], [Math.sign(p[0]), 0, 0]) < (o.inner ?? -0.2) && B.N[i][2] < (o.innerZ ?? 9) && !(o.faces && Math.abs(B.N[i][2]) > o.faces)); },
+    off: ({ p, n }) => o.off(armAt(B, p).up.t, p, n),
     mat: ({ p, n }) => o.mat(armAt(B, p).up, p, n),
     rim: o.rim, thick: o.thick ?? 0.04,
   });
@@ -392,7 +412,7 @@ export function hips(B, o) {
   const A = B.at;
   return shell(B, {
     sub: o.sub ?? 1, hide: o.hide,
-    keep: (i) => { const p = B.V[i], s = p[0] >= 0 ? 'l' : 'r'; const inner = dot(B.N[i], [-Math.sign(p[0]), 0, 0]); return on(B, i, 'thigh', 'torso') > 0.6 && on(B, i, 'calf') < 0.3 && yOf(p) < o.top && yOf(p) > o.foot(s) - 0.05 && !(inner > 0.35 && yOf(p) < A.hip[s][1] + 0.1) && !(inner > -0.05 && yOf(p) < A.hip[s][1] - 0.35) && !(Math.abs(p[0]) < 0.32 && yOf(p) < A.hip[s][1] - 0.1); },
+    keep: (i) => { const p = B.V[i], s = p[0] >= 0 ? 'l' : 'r'; const inner = dot(B.N[i], [-Math.sign(p[0]), 0, 0]); return on(B, i, 'thigh', 'torso') > 0.6 && on(B, i, 'calf') < 0.3 && yOf(p) < o.top && yOf(p) > o.foot(s) - 0.05 && !(inner > 0.35 && yOf(p) < A.hip[s][1] + 0.1) && !(inner > (o.inner ?? -0.05) && yOf(p) < A.hip[s][1] - 0.35) && !(Math.abs(p[0]) < 0.32 && yOf(p) < A.hip[s][1] - 0.1); },
     off: ({ p }) => o.off(p),
     mat: ({ p, n }) => o.mat(p, n),
     rim: o.rim, thick: o.thick ?? 0.04,
@@ -437,7 +457,7 @@ export function cape(B, o) {
       if (n[2] < 0.1) return yOf(p) > hang + (o.slant ? o.slant(p) : 0) && Math.abs(p[0]) < wide && n[2] < -0.2 + (yOf(p) > A.spine2[1] ? 0.3 : 0);
       return Math.abs(p[0]) < wide && yOf(p) > (o.front ?? A.chest[1] - 0.05) && (o.frontSide ? o.frontSide(p[0]) : true);
     },
-    off: ({ p, n }) => o.under(p) + 0.16 + 0.05 * clamp(-n[2]) + (Math.abs(p[0]) > 0.6 && yOf(p) > A.chest[1] ? 0.12 : 0),
+    off: ({ p, n }) => o.under(p) + collarRise(A, p) + 0.16 + 0.05 * clamp(-n[2]) + (Math.abs(p[0]) > 0.6 && yOf(p) > A.chest[1] ? 0.12 : 0),
     move: ({ p, n }) => (n[2] >= 0.1 ? [0, 0, 0] : [0, 0, -smooth(A.chest[1] + 0.1, A.spine2[1] - 0.2, yOf(p)) * Math.max(0, p[2] - backZ) * 0.8]),
     mat: ({ p, n }) => o.mat(p, n),
     rim: o.rim, thick: o.thick ?? 0.06,
@@ -465,3 +485,107 @@ export function helm(B, o) {
   return P;
 }
 export { frac };
+/**
+ * The top of each shoulder, between the torso piece (which stops short of the joint) and the arm: what a gambeson, a
+ * tunic or a coat has there, under any shoulder plate. The arm's outer and upper side down to `to` along the upper arm,
+ * the neck's side of the trapezius, never the armpit.
+ */
+export function shoulderCaps(B, o) {
+  return shell(B, {
+    sub: 2,
+    keep: (i) => { const p = B.V[i]; const a = armAt(B, p); return on(B, i, 'shoulder', 'upperarm', 'torso') > 0.6 && (on(B, i, 'shoulder') > 0.08 || on(B, i, 'upperarm') > 0.02) && a.up.t < (o.to ?? 0.15) && Math.abs(p[0]) > (o.inner ?? 0.2) * B.at.shoulder.l[0] && yOf(p) > B.at.chest[1] + 0.2 && yOf(p) < neckCutOf(B.at) + 0.1 && on(B, i, 'neck', 'head') < 0.2 && dot(B.N[i], unit([Math.sign(p[0]), 0.35, 0])) > (o.outer ?? -0.15); },
+    off: ({ p, n }) => o.off(p, n),
+    mat: ({ p, n }) => o.mat(p, n),
+    rim: o.rim, thick: o.thick ?? 0.04,
+  });
+}
+
+/**
+ * A cloak: a sheet over the shoulders and down the back, two layers with their edges closed. Each of its `cols` columns
+ * (across, to `wide(s)` either side, s nought at the top and one at the hem) follows the body's outline in that column's
+ * upright slice: from `start(x)` (radians from the front, up over the shoulder) to straight back, as far out as the body's
+ * torso, neck and shoulders reach that way and `off(p)` more (`p` the body's point there), smoothed and never pulled in;
+ * then straight down to `hang`, never nearer the back (or the seat) than `off` more. Its points carry the body's weights
+ * at the nearest point of the torso and the shoulders (on the hanging part, of the torso alone). Faces in `mat(p, u, s)`
+ * (u across, -1 to 1), its edges and its inside in `rim`.
+ */
+export function cloak(B, o) {
+  const A = B.at, cols = o.cols ?? 24, top = o.rowsTop ?? 10, down = o.rowsDown ?? 10, thick = o.thick ?? 0.05;
+  const cy = A.chest[1] - 0.2, cz = 0;
+  const ok = (i) => on(B, i, 'head', 'upperarm', 'forearm', 'hand', 'thigh', 'calf', 'foot') < 0.1 && on(B, i, 'neck') < 0.1;
+  const torsoOnly = (i) => on(B, i, 'torso') > 0.95;
+  const pts = B.V.map((p, i) => [p, i]).filter(([, i]) => ok(i));
+  // (and the points of what it is worn over, \`over\`: the chest piece, but for its arms)
+  const armShare = (w, p) => w.reduce((t, [b, x]) => t + (['forearm', 'hand', 'head'].includes(B.partOf.get(b)) || (B.partOf.get(b) === 'upperarm' && p[1] < A.shoulder.l[1] - 0.5) ? x : 0), 0);
+  for (const Q of o.over ?? []) Q.V.forEach((p, k) => { if (armShare(Q.W[k], p) < 0.1) pts.push([p, -1]); });
+  /** The body's outline in the slice at x, the way (dy, dz) from the slice's centre: the farthest point, and its distance. */
+  const reach = (x, a) => {
+    const d = [Math.sin(a), Math.cos(a)];
+    let r = 0, at = -1, bp = null;
+    for (const [p, i] of pts) {
+      if (Math.abs(p[0] - x) > 0.22) continue;
+      const v = [p[1] - cy, p[2] - cz], L = Math.hypot(v[0], v[1]); if (L < 1e-6) continue;
+      const k = (v[0] * d[0] + v[1] * d[1]) / L;
+      if (k > Math.cos(0.22) && L * k > r) { r = L * k; at = i; bp = p; }
+    }
+    return { r, at: at >= 0 || !bp ? at : nearestOf(B.V, bp, ok) };
+  };
+  const P = part();
+  const put = (p, n, w) => { P.V.push(p); P.N.push(n); P.W.push(w); return P.V.length - 1; };
+  // (the yoke's rows at the same angles in every column, from the first column's start to straight back; a column's
+  // cells before its own start left out)
+  const a0 = Math.min(...[...Array(cols + 1).keys()].map((j) => o.start((-1 + (2 * j) / cols) * o.wide(0))));
+  const angle = (i) => a0 + (Math.PI - a0) * (i / top);
+  const grid = [];
+  for (let j = 0; j <= cols; j++) {
+    const u = -1 + (2 * j) / cols, x0 = u * o.wide(0), col = [];
+    const R = [];
+    for (let i = 0; i <= top; i++) { const a = angle(i); R.push({ x: x0, a, ...reach(x0, a), s: i / (top + down) }); }
+    // (smoothed out along the column, never in)
+    for (let pass = 0; pass < 3; pass++) for (let i = 1; i < top; i++) R[i].r = Math.max(R[i].r, (R[i - 1].r + R[i].r + R[i + 1].r) / 3);
+    for (const q of R) {
+      const d = [0, Math.sin(q.a), Math.cos(q.a)];
+      const base = q.at >= 0 ? B.V[q.at] : [q.x, cy, cz];
+      const p = [q.x, cy + d[1] * q.r, cz + d[2] * q.r];
+      col.push({ p: add(p, mul(d, o.off(base))), n: d, w: B.W[q.at >= 0 ? q.at : nearestOf(B.V, p, ok)], u, s: q.s, a: q.a, on: q.a >= o.start(x0) - 1e-9 });
+    }
+    // straight down the back
+    const last = col[col.length - 1];
+    for (let i = 1; i <= down; i++) {
+      const s = (top + i) / (top + down), x = u * o.wide(s), y = last.p[1] + (o.hang - last.p[1]) * (i / down);
+      let z = last.p[2] - (o.flare ?? 0.15) * (i / down);
+      for (const [p] of pts) if (Math.abs(p[0] - x) < 0.3 && Math.abs(p[1] - y) < 0.3 && p[2] < 0) z = Math.min(z, p[2] - o.off(p));
+      // (its folds: \`folds\` across, \`fold\` deep at the hem, out from the back only)
+      const fz = (o.fold ?? 0) * (0.5 + 0.5 * Math.cos(u * Math.PI * (o.folds ?? 0))) * (i / down);
+      col.push({ p: [x, y, z], fz, n: [0, 0, -1], w: B.W[nearestOf(B.V, [x, y, z + o.off([x, y, z]) + 0.3], torsoOnly)], u, s, on: true });
+    }
+    grid.push(col);
+  }
+  // (the hanging part kept from folding back in under the shoulder: each row no nearer than the one above)
+  for (const col of grid) for (let i = top + 1; i < col.length; i++) col[i].p[2] = Math.min(col[i].p[2], col[i - 1].p[2]);
+  for (const col of grid) for (const q of col) if (q.fz) q.p[2] -= q.fz;
+  const O = grid.map((col) => col.map((q) => put(q.p, q.n, q.w)));
+  const I = grid.map((col) => col.map((q) => put(sub(q.p, mul(q.n, thick)), q.n, q.w)));
+  const tri = (t, n, m) => { const nn = cross(sub(P.V[t[1]], P.V[t[0]]), sub(P.V[t[2]], P.V[t[0]])); const v = dot(nn, n) < 0 ? [t[0], t[2], t[1]] : t; P.F.push({ v, mat: m }); return v; };
+  const outer = [];
+  const nOf = (j, i) => grid[j][i].n;
+  for (let j = 0; j < cols; j++) for (let i = 0; i + 1 < grid[j].length; i++) {
+    if (!grid[j][i].on || !grid[j + 1][i].on) continue;
+    const n = unit(add(add(nOf(j, i), nOf(j + 1, i)), add(nOf(j, i + 1), nOf(j + 1, i + 1))));
+    const c = mul(add(add(P.V[O[j][i]], P.V[O[j + 1][i]]), add(P.V[O[j][i + 1]], P.V[O[j + 1][i + 1]])), 0.25);
+    const u = -1 + (2 * (j + 0.5)) / cols, s = (i + 0.5) / (grid[j].length - 1), m = o.mat(c, u, s);
+    outer.push({ v: tri([O[j][i], O[j + 1][i], O[j + 1][i + 1]], n, m), n }, { v: tri([O[j][i], O[j + 1][i + 1], O[j][i + 1]], n, m), n });
+    tri([I[j][i], I[j + 1][i], I[j + 1][i + 1]], mul(n, -1), o.rim); tri([I[j][i], I[j + 1][i + 1], I[j][i + 1]], mul(n, -1), o.rim);
+  }
+  // the open edges closed, outer to inner
+  const innerOf = new Map(O.flatMap((col, j) => col.map((v, i) => [v, I[j][i]])));
+  const edgeN = new Map();
+  for (const f of outer) for (let k = 0; k < 3; k++) { const a = f.v[k], b = f.v[(k + 1) % 3], key = a < b ? `${a},${b}` : `${b},${a}`; edgeN.set(key, (edgeN.get(key) ?? 0) + 1); }
+  for (const f of outer) for (let k = 0; k < 3; k++) {
+    const a = f.v[k], b = f.v[(k + 1) % 3], key = a < b ? `${a},${b}` : `${b},${a}`;
+    if (edgeN.get(key) !== 1) continue;
+    const ia = innerOf.get(a), ib = innerOf.get(b);
+    P.F.push({ v: [b, a, ia], mat: o.rim }, { v: [b, ia, ib], mat: o.rim });
+  }
+  return P;
+}
