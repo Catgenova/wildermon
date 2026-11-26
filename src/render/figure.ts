@@ -2429,6 +2429,8 @@ export interface FigurePose {
     metal?: Partial<Record<PlatePiece, string>>;
     /** The dye each cloth or leather piece is dyed (`GearPiece.dye`, `#rrggbb`): its fabric or leather drawn in it (`src/sculpt/lowpoly.ts` dyeMat). */
     dye?: Partial<Record<DyedPiece, string>>;
+    /** Each enchanted piece's glow (`GearPiece.glow`, `#rrggbb`), by its key in `enchanted`: its glowing parts drawn in it. */
+    glow?: Partial<Record<string, string>>;
   };
   /**
    * A spell part way through being cast: which, and how far through it, nought to one. What it does to the body
@@ -6612,7 +6614,7 @@ const STEP: Partial<Record<GearSlot, number>> = { head: 0.1, shawl: -0.07, legs:
 
 /** What a body has on, as a string: a kept drawing of it is drawn again when this changes. */
 export const gearKey = (g?: GearLook): string =>
-  g ? DRESSED.map((s) => { const p = g[s]; return p ? `${p.id}:${p.rare ?? 0}:${p.material ?? ''}:${p.dye ?? ''}` : ''; }).join(',') : '';
+  g ? DRESSED.map((s) => { const p = g[s]; return p ? `${p.id}:${p.rare ?? 0}:${p.material ?? ''}:${p.dye ?? ''}:${p.enchanted ? p.glow ?? 1 : ''}` : ''; }).join(',') : '';
 /** Whether anything on a body is rare enough to shine. */
 export const gearShines = (g?: GearLook): boolean => !!g && DRESSED.some((s) => (g[s]?.rare ?? 0) > 0);
 

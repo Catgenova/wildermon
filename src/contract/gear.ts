@@ -13,6 +13,8 @@ export interface GearPiece {
   dye?: string;
   /** Enchanted: a sculpted figure's sword drawn with its engraving lit. */
   enchanted?: boolean;
+  /** An enchanted piece's glow, as `#rrggbb`: its enchantment's element's colour (`enchantGlow`). None, the set's own. */
+  glow?: string;
 }
 /** The places on a body a piece is worn. */
 export type GearSlot = 'head' | 'chest' | 'shawl' | 'legs' | 'feet' | 'weapon' | 'offhand' | 'belt' | 'jewel';

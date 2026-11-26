@@ -550,7 +550,7 @@ export { type Pick } from './picking';
 // After the rest: the game's tables are read as these load (`plinth.ts`).
 import { drawPlinthRunes, plinthNight } from './plinth';
 import { plinthBusy } from '../game/plinth';
-import { ENCHANTERS_PLINTH } from '../game/enchant';
+import { ENCHANTERS_PLINTH, enchantGlow } from '../game/enchant';
 
 /** The face and shade an anvil of a metal is drawn in: its own (`anvilTone`), or else its ore's. */
 function anvilColours(metal: string): [string, string] {
@@ -964,7 +964,13 @@ const FIELD_TILT_MOST = 0.45;
 function enchantedFrom(gear: GearLook | undefined, enchantOf: (slot: GearSlot) => unknown): GearLook | undefined {
   if (!gear) return gear;
   const out: GearLook = { ...gear };
-  for (const slot of Object.keys(gear) as GearSlot[]) { const p = out[slot]; if (p && enchantOf(slot)) out[slot] = { ...p, enchanted: true }; }
+  for (const slot of Object.keys(gear) as GearSlot[]) {
+    const p = out[slot], e = enchantOf(slot);
+    if (!p || !e) continue;
+    // (its glow its enchantment's element's colour)
+    const glow = enchantGlow((e as { id?: string }).id);
+    out[slot] = { ...p, enchanted: true, ...(glow ? { glow } : {}) };
+  }
   return out;
 }
 

@@ -64,7 +64,7 @@ export function drawPropAlone(ctx: CanvasRenderingContext2D | null, sx: number, 
 export const glDraws = (): boolean => !!glContext();
 export { SCULPT_FX } from './fxmarks';
 import { bakedAt, built, forgetBuilt, proportionsOf, sculptScene, type Built } from './index';
-import { hasLowBody, lowPropDraw, lowPropIds, lowScene } from './lowpoly';
+import { hasLowBody, lowGen, lowPropDraw, lowPropIds, lowScene } from './lowpoly';
 import { onScreen, viewOf } from '../render/figure';
 import type { GearPiece } from '../contract/gear';
 import type { SculptDraw } from './gl';
@@ -98,7 +98,7 @@ let pumping = false;
 const lookKey = (l: Look): string => `${l.gender}|${l.skin}|${l.hair}|${l.hairColour}|${l.hairBright}`;
 
 /** Steps whenever a bake lands or a look goes, so pictures kept of bodies know to be made again. */
-export const sculptGen = (): number => gen;
+export const sculptGen = (): number => gen + lowGen();
 
 /** What the sculpted bodies hold: looks kept, bakes among them, their bytes, and bakes still to do. */
 export function sculptMemory(): { looks: number; bakes: number; bytes: number; queued: number } {

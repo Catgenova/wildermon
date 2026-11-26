@@ -3653,5 +3653,11 @@
     "title": "A skill has something open at its start",
     "shard": 5,
     "why": "Reported: stone bricks (the Guiding Light's step) refused at stonecutting 1, and nothing trained stonecutting below its whetstone at 5; milling and glassblowing the same. The sweep after: restoration (the old pot at 10) and enchanting (every Formula 20+) could never be trained. Every gated skill has a gate open at its start, or names the open action that trains it."
+  },
+  {
+    "file": "supabase/test/metalsets.ts",
+    "title": "Each metal its own set, its glow its enchantment's colour",
+    "shard": 4,
+    "why": "Asked for: armour that looks different for each metal (copper first; silver is the plate set), each piece with a glowing section for when it is enchanted, the glow taking the enchantment's colour. Each set's pieces load on demand, the plate set drawn until they are in."
   }
 ]

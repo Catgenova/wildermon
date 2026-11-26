@@ -322,6 +322,16 @@ export const ICE_WEAPON_ENCHANTS: readonly string[] = ENCHANTMENT_LIST.filter((e
  */
 export const SECOND_FIGURE: Partial<Record<EnchantEffect, number>> = { mend: NETMENDER_WEAR };
 export const ENCHANTMENTS: Record<string, EnchantmentDef> = Object.fromEntries(ENCHANTMENT_LIST.map((e) => [e.id, e]));
+
+/** What an enchanted piece glows, by the element of the first mote its enchantment is written with (`EnchantmentDef.mote`). */
+export const ELEMENT_GLOW: Readonly<Record<string, string>> = {
+  earth: '#f0b45a', wind: '#e2f6ff', fire: '#ff8a34', ice: '#a6e6ff', dark: '#b27cff', light: '#fff1b8', water: '#5cb8ff', life: '#9ee86c',
+};
+/** The glow of a piece holding the enchantment `id`: its element's (`ELEMENT_GLOW`); none for one not known. */
+export const enchantGlow = (id: string | undefined): string | undefined => {
+  const e = id ? ENCHANTMENTS[id] : undefined;
+  return e ? ELEMENT_GLOW[e.mote.replace(/_mote$/, '')] : undefined;
+};
 export const EMBERBRAND = 'emberbrand';
 export const RAZOREDGE = 'razoredge';
 export const CONCUSSION = 'concussion';

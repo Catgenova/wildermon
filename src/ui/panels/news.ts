@@ -447,6 +447,15 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // The metal sets: copper first, the glow by enchantment.
+  {
+    n: 708,
+    day: '2026-11-26',
+    lines: () => [
+      'New: copper plate armour drawn as a set of its own: helm, chest & arms, shawl, leggings and boots. Silver keeps the plate set\'s.',
+      'Changed: an enchanted piece of armour glows in its enchantment\'s element\'s colour.',
+    ],
+  },
   // Ivy's stems counted the same on both clients.
   {
     n: 707,
