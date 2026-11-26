@@ -6,8 +6,10 @@
 //     the body under it, every point pushed out along its normal by as much as the piece says there (raised bands,
 //     plates, a flare: `off`), each point carrying the body's own weights there. Its open edges are turned back to the
 //     skin (a rim), and the body's polygons it covers whole are left out under it (`hides`), so no skin shows through.
-//   * a hung piece (`hang`): a strip or a panel laid from points on a shell and hung down from them (a skirt's strips, a
-//     cape), each row carrying the weights of the body point it hangs over.
+//   * a hung piece (`hang`): a strip or a panel laid from points on a shell and hung down from them (a skirt's strips),
+//     each row carrying the weights of the body point it hangs over.
+//   * a cloak (`cloak`): a shawl laid over the shoulders on one grid of angles round the body and the pieces under it,
+//     hung straight down in two closed layers with outward folds, carrying the torso's weights.
 //   * a rigid piece (`rigid`): a solid made in a bone's frame (a crest, a disc, a boss), on that bone alone.
 //
 // Materials are named; `plate` and `shade` are drawn in the piece's metal (src/sculpt/lowpoly.ts plateMat), `rune` is a
@@ -438,32 +440,6 @@ export function feet(B, o) {
   const P = shell(B, { sub: 2, keep: keepB, off: ({ p, n }) => 0.075 + (n[1] < -0.6 ? 0.04 : 0) + o.off(p, n, top), mat: ({ p, n }) => (n[1] < -0.55 ? o.sole ?? 'sole' : o.mat(p, n, top)), rim: o.rim, thick: o.thick ?? 0.04 });
   P.soles = P.V.map((_, i) => i).filter((i) => P.V[i][1] < A.floor + 0.12);
   return P;
-}
-/**
- * A cape: from the shoulders' top down the back to `hang` (a height), as wide as `wide(y)` (never past the shoulder
- * joint less a margin), let straight back onto a plane behind the body below the shoulder blades; over the front of the
- * shoulders to `front` (a height) where `frontSide(x)` allows. `under(p)` is how far out what it covers is (the chest piece
- * it goes over); `rim` its edge, `thick` its edge's thickness.
- */
-export function cape(B, o) {
-  const A = B.at, hang = o.hang;
-  const backZ = Math.min(...B.V.filter((p) => p[1] < A.chest[1] && p[1] > A.pelvis[1] - 0.6).map((p) => p[2])) - (o.clear ?? 0.42);
-  const most = Math.min(A.shoulder.l[0] * 0.76, A.shoulder.l[0] - 0.5);
-  return shell(B, {
-    sub: 2, hide: false,
-    keep: (i) => {
-      const p = B.V[i], n = B.N[i];
-      if (on(B, i, 'torso', 'shoulder', 'neck') < 0.6 || on(B, i, 'upperarm') > 0.02 || on(B, i, 'shoulder') > 0.5) return false;
-      if (yOf(p) > A.neck[1] + 0.05) return false;
-      const wide = Math.min(most, o.wide ? o.wide(yOf(p), most) : most - 0.3 * A.shoulder.l[0] * smooth(A.chest[1], hang, yOf(p)));
-      if (n[2] < 0.1) return yOf(p) > hang + (o.slant ? o.slant(p) : 0) && Math.abs(p[0]) < wide && n[2] < -0.2 + (yOf(p) > A.spine2[1] ? 0.3 : 0);
-      return Math.abs(p[0]) < wide && yOf(p) > (o.front ?? A.chest[1] - 0.05) && (o.frontSide ? o.frontSide(p[0]) : true);
-    },
-    off: ({ p, n }) => o.under(p) + collarRise(A, p) + 0.16 + 0.05 * clamp(-n[2]) + (Math.abs(p[0]) > 0.6 && yOf(p) > A.chest[1] ? 0.12 : 0),
-    move: ({ p, n }) => (n[2] >= 0.1 ? [0, 0, 0] : [0, 0, -smooth(A.chest[1] + 0.1, A.spine2[1] - 0.2, yOf(p)) * Math.max(0, p[2] - backZ) * 0.8]),
-    mat: ({ p, n }) => o.mat(p, n),
-    rim: o.rim, thick: o.thick ?? 0.06,
-  });
 }
 /** A disc (a brooch, a boss) on the chest at `at` facing out along `toward`, rigid on spine_03: rings of radius and height, each its material. */
 export function disc(B, at, toward, rings) {

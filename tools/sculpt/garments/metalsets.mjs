@@ -6,7 +6,7 @@
 //     writes src/sculpt/assets/lowmetal<set><piece>-<who>.json for helm, chest, mantle, legs and boots.
 import { writeFileSync } from 'node:fs';
 import {
-  browTheta, cape, chestFront, cloak, disc, feet, forearms, fromFront, helm, hips, shins, shoulderCaps, shoulders, torso, upperArms, waistOf as waistAt,
+  browTheta, chestFront, cloak, disc, feet, forearms, fromFront, helm, hips, shins, shoulderCaps, shoulders, torso, upperArms, waistOf as waistAt,
 } from './metalkit.mjs';
 import {
   add, assetOf, bodyOf, browsOf, dome, clamp, cross, dot, frameOf, len, lerp, likeBody, limbAt, loft, merge, mul, onBone, ring, shell, smooth, sub, unit,
