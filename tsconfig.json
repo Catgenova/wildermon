@@ -4,6 +4,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    // (a mesh's <name>.d.json.ts beside it, written with it, read for its type: inferring one from every number in the
+    // armour sets' meshes took more memory than CI's Node has)
+    "allowArbitraryExtensions": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": [],
     "strict": true,

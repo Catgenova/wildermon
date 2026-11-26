@@ -449,6 +449,15 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // The metal sets' trousers closed round the thigh, lead's greaves round the calf and its gorget.
+  {
+    n: 715,
+    day: '2026-11-26',
+    lines: () => [
+      'Fixed: every metal set\'s and the fur set\'s trousers cover the back and inside of the thigh down to the knee.',
+      'Changed: lead greaves close round the back of the calf; the lead cuirass has a gorget up the back of the neck; the lead great helm\'s eye slit and breaths are edged in dark metal.',
+    ],
+  },
   // The metal sets: gold, electrum, fire-tempered steel; the moonmetals.
   {
     n: 714,

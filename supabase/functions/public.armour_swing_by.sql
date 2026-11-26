@@ -5,5 +5,5 @@ CREATE OR REPLACE FUNCTION public.armour_swing_by(p_cls text)
  LANGUAGE sql
  IMMUTABLE
 AS $function$
-  select coalesce(case p_cls when 'cloth' then 0.5 when 'leather' then 0.5 when 'chain' then 1 when 'scale' then 1 when 'obsidian' then 1 when 'plate' then 1.25 end, 1)::double precision
+  select coalesce(case p_cls when 'cloth' then 0.5 when 'leather' then 0.5 when 'fur' then 0.75 when 'chain' then 1 when 'scale' then 1 when 'obsidian' then 1 when 'plate' then 1.25 end, 1)::double precision
 $function$

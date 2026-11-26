@@ -8,6 +8,7 @@ AS $function$
   select coalesce(case p_cls
     when 'cloth' then case p_kind when 'cut' then 0.8 when 'pierce' then 1 when 'crush' then 1.2 when 'bite' then 1 when 'burn' then 1 end
     when 'leather' then case p_kind when 'cut' then 1 when 'pierce' then 0.85 when 'crush' then 1.1 when 'bite' then 1 when 'burn' then 1 end
+    when 'fur' then case p_kind when 'cut' then 1 when 'pierce' then 0.85 when 'crush' then 1.2 when 'bite' then 1.2 when 'burn' then 0.75 end
     when 'chain' then case p_kind when 'cut' then 1.25 when 'pierce' then 0.75 when 'crush' then 0.7 when 'bite' then 1.1 when 'burn' then 1 end
     when 'plate' then case p_kind when 'cut' then 1.15 when 'pierce' then 1.1 when 'crush' then 0.85 when 'bite' then 1.1 when 'burn' then 1 end
     when 'scale' then case p_kind when 'cut' then 1.15 when 'pierce' then 0.9 when 'crush' then 1 when 'bite' then 1 when 'burn' then 1.25 end
