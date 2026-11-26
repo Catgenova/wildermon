@@ -407,6 +407,8 @@ jobs:
         env:
           # A check that cannot open a browser here fails rather than passes.
           BOOT_CHECK_STRICT: '1'
+          # (the typecheck's: the meshes the game imports weigh on it; Node's default heap is less than the runner has)
+          NODE_OPTIONS: --max-old-space-size=6144
         run: |
           # The join refuses a build the deploy did not hand over, unless the
           # island has none, it was retired within the hour, it is of a later

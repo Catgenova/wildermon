@@ -35,6 +35,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # (the typecheck's: the meshes the game imports weigh on it; Node's default heap is less than the runner has)
+          NODE_OPTIONS: --max-old-space-size=6144
       - name: Commit the rebuilt site if it changed
         run: |
           if git diff --quiet -- index.html account.html wildermon.html assets manifest.webmanifest icons; then
