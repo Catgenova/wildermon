@@ -246,7 +246,7 @@ export const likeBody = (B, ok = () => true) => (p) => B.W[nearestOf(B.V, p, ok)
 
 /**
  * The garment asset (src/sculpt/lowpoly.ts GarmentAsset) of a built part: its faces as triangle polygons in its materials
- * (`MATS`: name -> { c, kind, lit? }), the faces from `dropFrom` (a face index) on left out under a chest piece.
+ * (`MATS`: name -> { c, kind, lit? }; a face three corners or four), the faces from `dropFrom` (a face index) on left out under a chest piece.
  */
 export function assetOf(B, P, MATS, { built = 'node tools/sculpt/garments/metalsets.mjs', dropAt } = {}) {
   const names = Object.keys(MATS).filter((n) => P.F.some((f) => f.mat === n));
@@ -258,7 +258,9 @@ export function assetOf(B, P, MATS, { built = 'node tools/sculpt/garments/metals
     if (dropAt && dropFrom === undefined && dropAt(f)) dropFrom = polys.length;
     const pi = polys.length;
     polys.push([f.v, names.indexOf(f.mat)]);
-    tris.push(...f.v, pi);
+    // (a quad, the plate kit's: one polygon, one shade, as two triangles)
+    if (f.v.length === 4) tris.push(f.v[0], f.v[1], f.v[2], pi, f.v[0], f.v[2], f.v[3], pi);
+    else tris.push(...f.v, pi);
   }
   const r5 = (x) => +x.toFixed(5), hex = (h) => [1, 3, 5].map((i) => +(parseInt(h.slice(i, i + 2), 16) / 255).toFixed(4));
   return {

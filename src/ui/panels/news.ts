@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Steel rebuilt piece by piece as separate plates (tools/sculpt/garments/steel.mjs, platekit.mjs).
+  {
+    n: 717,
+    day: '2026-11-26',
+    lines: () => [
+      'Changed: steel plate armour redrawn as a Milanese harness of separate plates: an armet with a sight, a comb and a plume; a breastplate with a pointed placard, faulds and tassets; uneven pauldrons with standing haute-pieces; fan couters; winged poleyns; shaped greaves; pointed sabatons.',
+      'Changed: the steel shawl is a blue velvet half-mantle lined in crimson, folded down the back, with a star and a steel brooch.',
+      'Changed: enchanted steel lights its visor sight, the placard line, the stars and brooch gem, and a line down each shin.',
+    ],
+  },
   // The metal sets' and the fur set's trousers up over the hips; the front of the crotch.
   {
     n: 716,
