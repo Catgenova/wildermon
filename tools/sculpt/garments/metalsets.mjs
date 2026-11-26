@@ -1310,10 +1310,549 @@ function brassMantle(B) {
   return merge(cloth, pin);
 }
 
+/* ==== gold: the royal guard ======================================================================================== */
+const GOLD_MATS = {
+  au: { c: '#d0a43a', kind: 3 },
+  auS: { c: '#86651b', kind: 3 },
+  rune: { c: '#a3803a', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  red: { c: '#9b1f23', kind: 2 },
+  redD: { c: '#651417', kind: 2 },
+  redW: { c: '#9b1f24', kind: 2 },
+  white: { c: '#e6e0d4', kind: 2 },
+  whiteD: { c: '#b9b2a4', kind: 2 },
+  ermine: { c: '#1f1b1a', kind: 2 },
+  sole: { c: '#2a1f18', kind: 2 },
+};
+
+function goldChest(B) {
+  const A = B.at, waist = waistOf(A);
+  // a fluted gold breastplate over a red velvet doublet; a glowing line round the breastplate's neck and foot
+  const plate = (p) => p[2] > -0.05 && y(p) > waist - 0.05 && y(p) < A.chest[1] + 0.62;
+  const coat = torso(B, {
+    from: waist - 0.5,
+    off: (p) => 0.13 + (plate(p) ? 0.1 + 0.02 * Math.cos(p[0] * 14) : 0) + 0.05 * smooth(waist, waist - 0.45, y(p)),
+    mat: (p) => {
+      if (plate(p)) { if (y(p) < waist + 0.07 || y(p) > A.chest[1] + 0.54) return 'rune'; return Math.cos(p[0] * 14) < -0.7 ? 'auS' : 'au'; }
+      return y(p) < waist - 0.42 ? 'au' : frac(y(p) * 2.5) < 0.06 ? 'redD' : 'red';
+    },
+    rim: 'auS',
+    caps: { off: () => 0.17, mat: () => 'red' },
+  });
+  // puffed sleeves slashed red over white, gold bands at the shoulder and the elbow; gold cuffs
+  const sleeves = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.1 + 0.06 * Math.sin(Math.PI * clamp(t)) ), mat: (u) => (u.t < 0.05 || u.t > 0.92 ? 'au' : frac(u.a * 1.3) < 0.3 ? 'white' : 'red') });
+  const cuffs = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.1 + (f.t > 0.78 ? 0.04 : 0), mat: (f) => (f.t > 0.86 ? 'rune' : f.t > 0.78 ? 'au' : 'red') });
+  return merge(coat, sleeves, cuffs);
+}
+
+function goldLegs(B) {
+  const A = B.at, waist = waistOf(A);
+  // hose striped red and white, gold knee cops with a glowing rim
+  const hose = hips(B, { inner: 0.3, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'redW' : frac(roundTorso(p) / (2 * Math.PI) * 10 + (p[0] > 0 ? 0.5 : 0)) < 0.5 ? 'red' : 'white'), rim: (m) => (m === 'redW' ? 'redW' : 'redD') });
+  const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: (g) => (frac(g.a / (2 * Math.PI) * 8) < 0.5 ? 'red' : 'white'), rim: 'redD' });
+  const cops = shins(B, { from: -0.18, to: 0.16, round: 1.4, off: (g) => 0.16 + 0.07 * Math.cos(g.a) * (1 - Math.abs(g.t) * 4), mat: (g) => (g.t < -0.13 || g.t > 0.12 ? 'rune' : Math.abs(g.a) > 1.2 ? 'auS' : 'au'), rim: 'auS' });
+  return { P: merge(hose, calves, cops), dropAt: (f) => f.mat === 'redW' };
+}
+
+function goldBoots(B) {
+  const A = B.at;
+  // white leather boots to the calf, a gold cuff over a glowing band, a gold toe
+  return feet(B, {
+    up: 0.95,
+    off: (p, n, top) => (y(p) > top - 0.18 ? 0.05 : 0),
+    mat: (p, n, top) => {
+      const s = p[0] >= 0 ? 'l' : 'r';
+      if (y(p) > top - 0.18) return 'au';
+      if (y(p) > top - 0.27) return 'rune';
+      if (p[2] > A.ball[s][2] + 0.25) return 'au';
+      return 'white';
+    },
+    rim: 'whiteD',
+  });
+}
+
+function goldHelm(B) {
+  const browTh = browTheta(B);
+  // a gilded burgonet: a high comb front to back, a peak over the eyes, cheek pieces, a white plume from its crown
+  const P = helm(B, {
+    rim: 'auS', down: 2.2,
+    margin: ({ th, ph }) => { const s = fromFront(ph), mid = Math.min(s, Math.PI - s); return 0.11 + (th < 1.3 && mid < 0.1 ? 0.28 * (1 - mid / 0.1) * Math.min(1, (1.3 - th) / 0.4) : 0) + (Math.abs(th - browTh + 0.02) < 0.12 && s < 0.9 ? 0.18 * smooth(browTh - 0.14, browTh + 0.1, th) : 0); },
+    mat: (d, { th, ph }) => {
+      const s = fromFront(ph), mid = Math.min(s, Math.PI - s);
+      if (th > browTh + 0.1 && s < 0.85) return null;
+      if (th < 1.3 && mid < 0.1) return 'auS';
+      if (Math.abs(th - (browTh - 0.12)) < 0.04) return 'rune';
+      return frac(ph / (Math.PI / 6)) < 0.04 ? 'auS' : 'au';
+    },
+  });
+  const head = onBone(B, 'head');
+  const top = P.V.reduce((b, p) => (p[1] > b[1] ? p : b), [0, -99, 0]);
+  const plume = [];
+  for (let k = 0; k < 5; k++) {
+    const sx = (k - 2) * 0.07, base = add(top, [sx, 0.05, -0.1]), long = 1 - Math.abs(k - 2) * 0.12;
+    const path = [[0, 0, 0], [0, 0.35, -0.15], [0, 0.45, -0.55], [0, 0.2, -0.95], [0, -0.25, -1.15]].map((q) => [q[0] + sx * (q[2] < 0 ? -q[2] : 0), q[1] * long, q[2] * long]);
+    const rings = path.map((q, j) => { const w = 0.12 * (1 - j / 5) + 0.04; return [add(q, [-w, 0, 0]), add(q, [0, w * 0.8, 0]), add(q, [w, 0, 0]), add(q, [0, -w * 0.5, 0])]; });
+    plume.push(loft(rings, (cc, i) => (i >= 3 ? 'whiteD' : 'white'), { o: base, X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] }, head));
+  }
+  return merge(P, ...plume);
+}
+
+function goldMantle(B) {
+  const A = B.at, sx = A.shoulder.l[0];
+  // the royal cape: red, an ermine collar over the shoulders, gold-edged; a gold clasp with a glowing stone
+  const cloth = cloak(B, {
+    start: (x) => lerp([2.1, 0, 0], [1.15, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
+    wide: (s) => lerp([0.84 * sx, 0, 0], [0.68 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
+    over: [goldChest(B)],
+    off: () => 0.2, thick: 0.05,
+    hang: lerp(A.spine1, A.pelvis, 0.95)[1], folds: 6, fold: 0.13,
+    mat: (p, u, s) => { if (s < 0.3) return frac(u * 7 + s * 13) < 0.08 && frac(s * 11) < 0.3 ? 'ermine' : 'white'; if (s > 0.96 || Math.abs(u) > 0.95) return 'au'; return 'red'; },
+    rim: 'redD',
+  });
+  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.25).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
+  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], [[0.22, 0, 'auS'], [0.22, 0.05, 'au'], [0.14, 0.06, 'rune'], [0.09, 0.1, 'au']]);
+  return merge(cloth, pin);
+}
+
+/* ==== electrum: the Immortal (the Achaemenid guard) ================================================================ */
+const ELECTRUM_MATS = {
+  el: { c: '#c5bd93', kind: 3 },
+  elS: { c: '#7e774f', kind: 3 },
+  rune: { c: '#8f8a6a', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  blue: { c: '#2f4f86', kind: 2 },
+  blueD: { c: '#1f355c', kind: 2 },
+  saffron: { c: '#d09a35', kind: 2 },
+  purple: { c: '#5b2c5e', kind: 2 },
+  purpleD: { c: '#3b1c3d', kind: 2 },
+  purpleW: { c: '#5b2c5f', kind: 2 },
+  cloth: { c: '#e2d9bf', kind: 2 },
+  clothD: { c: '#b3a98c', kind: 2 },
+  tan: { c: '#b58a4f', kind: 2 },
+  tanD: { c: '#7a5a32', kind: 2 },
+  sole: { c: '#2b2018', kind: 2 },
+};
+/** A coat of scales: rows of rounded scales, each row half a scale over from the one above, the edge of each darker. */
+const scales = (p, a = 'el', b = 'elS', k = 6.5) => { const row = Math.floor(y(p) * k), u = frac(p[0] * k * 0.9 + (row % 2) * 0.5 + p[2] * 2), v = frac(y(p) * k); return v < 0.18 || Math.hypot(u - 0.5, v - 0.2) > 0.62 ? b : a; };
+
+function electrumChest(B) {
+  const A = B.at, waist = waistOf(A);
+  // a scale corselet to the hips over a blue tunic, a saffron band at its foot with a glowing line
+  const coat = torso(B, {
+    from: waist - 0.6,
+    off: (p) => 0.15 + 0.06 * smooth(waist, waist - 0.55, y(p)),
+    mat: (p) => {
+      if (y(p) < waist - 0.45) return y(p) < waist - 0.52 ? 'saffron' : 'rune';
+      if (y(p) < waist - 0.05) return frac(p[0] * 4) < 0.5 ? 'blue' : 'blueD';
+      return scales(p);
+    },
+    rim: 'elS',
+    caps: { off: () => 0.16, mat: (p) => scales(p) },
+  });
+  // the tunic's long sleeves, blue with saffron bands, electrum cuffs with a glowing line
+  const sleeves = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.1), mat: (u) => (frac(u.t * 4) < 0.12 ? 'saffron' : 'blue') });
+  const cuffs = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.1 + (f.t > 0.75 ? 0.03 : 0), mat: (f) => (f.t > 0.75 ? (Math.abs(f.t - 0.84) < 0.03 ? 'rune' : 'el') : frac(f.t * 4) < 0.12 ? 'saffron' : 'blue') });
+  return merge(coat, sleeves, cuffs);
+}
+
+function electrumLegs(B) {
+  const A = B.at, waist = waistOf(A);
+  // trousers in purple, a lozenge pattern down them; electrum scales over the knees with a glowing line
+  const trousers = hips(B, { inner: 0.3, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'purpleW' : (frac((p[0] + y(p)) * 2.5) < 0.05 || frac((p[0] - y(p)) * 2.5) < 0.05) ? 'saffron' : 'purple'), rim: (m) => (m === 'purpleW' ? 'purpleW' : 'purpleD') });
+  const calves = shins(B, { from: 0.12, to: 0.88, round: 3.2, off: () => 0.07, mat: () => 'purple', rim: 'purpleD' });
+  const knees = shins(B, { from: -0.16, to: 0.2, round: 1.5, off: () => 0.14, mat: (g, p) => (g.t < -0.1 ? 'rune' : scales(p)), rim: 'elS' });
+  return { P: merge(trousers, calves, knees), dropAt: (f) => f.mat === 'purpleW' };
+}
+
+function electrumBoots(B) {
+  const A = B.at;
+  // soft tan shoes, laced across the instep, an electrum toe, a glowing band at the ankle
+  return feet(B, {
+    up: 0.55,
+    off: (p, n, top) => 0.0,
+    mat: (p, n, top) => {
+      const s = p[0] >= 0 ? 'l' : 'r';
+      if (y(p) > top - 0.1) return 'rune';
+      if (p[2] > A.ball[s][2] + 0.25) return 'el';
+      if (frac((p[2] - A.ankle[s][2]) * 4) < 0.15 && y(p) > A.floor + 0.2) return 'tanD';
+      return 'tan';
+    },
+    rim: 'tanD',
+  });
+}
+
+function electrumHelm(B) {
+  const browTh = browTheta(B);
+  // the tiara: a soft felt cap rising to a rounded crown, its cloth wound down round the cheeks and the chin, an electrum
+  // band at the brow with a glowing line
+  return helm(B, {
+    rim: 'clothD', down: 2.2,
+    margin: ({ th }) => 0.13 + 0.3 * Math.max(0, 1 - th / 0.9),
+    mat: (d, { th, ph }) => {
+      const s = fromFront(ph);
+      if (th > browTh && s < 0.75 && th < browTh + 0.62) return null;
+      if (th > browTh - 0.18 && th < browTh) return Math.abs(th - (browTh - 0.09)) < 0.055 ? 'rune' : 'el';
+      return frac(ph * 3 / Math.PI + th * 2) < 0.1 ? 'clothD' : 'cloth';
+    },
+  });
+}
+
+function electrumMantle(B) {
+  const A = B.at, sx = A.shoulder.l[0];
+  // the kandys: a long purple coat worn over the shoulders, its sleeves empty, a saffron border of rosettes; an
+  // electrum clasp
+  const cloth = cloak(B, {
+    start: (x) => lerp([2.1, 0, 0], [1.0, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
+    wide: (s) => lerp([0.84 * sx, 0, 0], [0.7 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
+    over: [electrumChest(B)],
+    off: () => 0.19, thick: 0.05,
+    hang: lerp(A.spine1, A.pelvis, 1.0)[1], folds: 7, fold: 0.12,
+    mat: (p, u, s) => (s > 0.9 || Math.abs(u) > 0.88 ? (frac(u * 9 + s * 9) < 0.3 ? 'saffron' : 'purpleD') : 'purple'),
+    rim: 'purpleD',
+  });
+  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.25).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
+  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], [[0.2, 0, 'elS'], [0.2, 0.05, 'el'], [0.13, 0.06, 'rune'], [0.07, 0.09, 'el']]);
+  return merge(cloth, pin);
+}
+
+/* ==== fire-tempered steel: the ember knight ======================================================================== */
+const FIRESTEEL_MATS = {
+  fs: { c: '#3d3735', kind: 3 },
+  fsS: { c: '#221e1d', kind: 3 },
+  fsL: { c: '#5c5250', kind: 3 },
+  vein: { c: '#7a2b12', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  rune: { c: '#8a3a17', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  smoke: { c: '#3a3433', kind: 2 },
+  smokeD: { c: '#221d1c', kind: 2 },
+  ash: { c: '#5a2a1a', kind: 2 },
+  ashD: { c: '#3c1c12', kind: 2 },
+  ashW: { c: '#5a2a1b', kind: 2 },
+  sole: { c: '#1d1715', kind: 2 },
+};
+/** The fire still in the steel: veins wandering over the plate, as cooled cracks. */
+const veins = (p) => { const h = Math.sin(p[0] * 9.3 + Math.sin(y(p) * 4.1) * 1.8) + Math.sin(y(p) * 7.7 + p[2] * 5.3 + Math.cos(p[0] * 3.1)); return Math.abs(h) < 0.09; };
+
+function firesteelChest(B) {
+  const A = B.at, waist = waistOf(A);
+  // gothic plate, blackened, fluted, its fire showing in veins; a pointed plackart; faulds below the waist
+  const coat = torso(B, {
+    from: waist - 0.55,
+    off: (p) => 0.18 + (p[2] > 0 ? 0.04 * Math.max(0, 1 - Math.abs(p[0]) / 0.3) : 0) + 0.02 * Math.cos(p[0] * 11) + (y(p) <= waist - 0.05 ? 0.06 + 0.03 * frac((waist - 0.05 - y(p)) / 0.17) : 0),
+    mat: (p) => { if (veins(p)) return 'vein'; if (y(p) <= waist - 0.05) return frac((waist - 0.05 - y(p)) / 0.17) > 0.82 ? 'fsS' : 'fs'; if (p[2] > 0 && Math.abs(Math.abs(p[0]) - (A.chest[1] - y(p)) * 0.5) < 0.04 && y(p) < A.chest[1]) return 'rune'; return Math.cos(p[0] * 11) < -0.8 ? 'fsS' : 'fs'; },
+    rim: 'fsS',
+    caps: { off: () => 0.14, mat: () => 'fsS' },
+  });
+  // swept, spiked pauldrons; rerebraces; couters; gauntlet cuffs, all veined
+  const pauldrons = shoulders(B, { from: -0.35, to: 0.36, off: (t) => 0.32 + 0.04 * frac((t + 0.35) / 0.18), mat: (t, p) => (veins(p) ? 'vein' : frac((t + 0.35) / 0.18) > 0.82 ? 'fsS' : 'fsL') });
+  const rere = upperArms(B, { from: -0.35, to: 0.85, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.12), mat: (u, p) => (veins(p) ? 'vein' : frac(u.t * 5) < 0.12 ? 'fsS' : 'fs') });
+  const vamb = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.12 + (f.t < 0.15 ? 0.08 * Math.max(0, 1 - Math.abs(f.t) / 0.15) : 0) + (f.t > 0.82 ? 0.05 : 0), mat: (f, p) => (f.t > 0.82 ? (f.t > 0.88 ? 'fsS' : 'rune') : veins(p) ? 'vein' : 'fs') });
+  return merge(coat, pauldrons, rere, vamb);
+}
+
+function firesteelLegs(B) {
+  const A = B.at, waist = waistOf(A);
+  const hose = hips(B, { inner: 0.3, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'ashW' : 'ash'), rim: (m) => (m === 'ashW' ? 'ashW' : 'ashD') });
+  const cuisse = shell(B, {
+    sub: 2,
+    keep: (i) => { const p = B.V[i], s = p[0] >= 0 ? 'l' : 'r'; const g = legAt(B, p).thigh; return on(B, i, 'thigh') > 0.6 && g.t > 0.2 && g.t < 0.95 && dot(B.N[i], [Math.sign(p[0]) * 0.6, 0, 0.8]) > -0.1 && !(Math.abs(p[0]) < 0.32 && y(p) < A.hip[s][1] - 0.1); },
+    off: ({ p }) => 0.24 + 0.03 * smooth(0.6, 0.95, legAt(B, p).thigh.t),
+    mat: ({ p }) => (veins(p) ? 'vein' : 'fs'),
+    rim: 'fsS', thick: 0.05,
+  });
+  const greaves = shins(B, {
+    from: -0.2, to: 0.9, round: 3.0,
+    off: (g, p) => (g.t < 0.12 ? (-g.a * Math.sign(p[0]) < -0.6 ? 0.15 : 0.22 + 0.06 * Math.cos(g.a)) + (-g.a * Math.sign(p[0]) > 0.9 && g.t < 0.06 ? 0.1 : 0) : 0.14),
+    mat: (g, p) => { if (g.t < 0.16 && -g.a * Math.sign(p[0]) < -0.8) return null; if (g.t < 0.12) return Math.abs(g.t) > 0.1 ? 'rune' : 'fsL'; if (veins(p)) return 'vein'; return Math.abs(g.a) < 0.04 ? 'fsS' : 'fs'; },
+    rim: 'fsS',
+  });
+  return { P: merge(hose, cuisse, greaves), dropAt: (f) => f.mat === 'ashW' };
+}
+
+function firesteelBoots(B) {
+  const A = B.at;
+  // pointed gothic sabatons, lamed, a glowing band at the ankle
+  return feet(B, {
+    up: 0.6,
+    off: (p, n, top) => { const s = p[0] >= 0 ? 'l' : 'r'; return 0.05 + 0.02 * frac((p[2] - A.ankle[s][2]) * 3.5) + 0.12 * smooth(A.ball[s][2], A.ball[s][2] + 0.6, p[2]) * (n[1] > -0.3 ? 1 : 0); },
+    mat: (p, n, top) => { const s = p[0] >= 0 ? 'l' : 'r'; if (y(p) > top - 0.12) return 'fsS'; if (y(p) > top - 0.22) return 'rune'; if (n[1] < -0.3) return 'ashD'; return frac((p[2] - A.ankle[s][2]) * 3.5) > 0.82 ? 'fsS' : 'fs'; },
+    rim: 'fsS',
+  });
+}
+
+function firesteelHelm(B) {
+  const browTh = browTheta(B);
+  // a sallet with a long tail behind and two short horns swept back, its visor slit glowing
+  const P = helm(B, {
+    rim: 'fsS', down: 2.15,
+    margin: ({ th, ph }) => { const s = fromFront(ph); return 0.12 + (s > 2.2 ? 0.25 * smooth(1.5, 2.1, th) : 0) + 0.06 * Math.max(0, 1 - th / 0.8); },
+    mat: (d, { th, ph, p }) => {
+      const s = fromFront(ph);
+      if (Math.abs(th - (browTh + 0.1)) < 0.035 && s < 0.75) return 'rune';
+      if (veins(p)) return 'vein';
+      return th > 2.0 ? 'fsS' : 'fs';
+    },
+  });
+  const head = onBone(B, 'head');
+  const c = headCentre(B);
+  const horn = (side) => loft([ring(8, 0, 0.14, 0.14), ring(8, 0.25, 0.1, 0.1), ring(8, 0.5, 0.06, 0.06), ring(8, 0.72, 0.015, 0.015)], (cc, i) => (i >= 2 ? 'fsL' : 'fsS'),
+    { o: add(c, [side * 0.75, 0.75, 0.1]), X: [1, 0, 0], Y: unit([side * 0.55, 0.6, -0.6]), Z: unit(cross([1, 0, 0], unit([side * 0.55, 0.6, -0.6]))) }, head);
+  return merge(P, horn(1), horn(-1));
+}
+
+function firesteelMantle(B) {
+  const A = B.at, sx = A.shoulder.l[0];
+  // a ragged cloak, smoke-grey, its hem burnt and glowing at the edges; a blackened clasp
+  const cloth = cloak(B, {
+    start: (x) => lerp([2.2, 0, 0], [1.15, 0, 0], smooth(0.75, 1.1, Math.abs(x)))[0],
+    wide: (s) => lerp([0.84 * sx, 0, 0], [0.68 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
+    over: [firesteelChest(B)],
+    off: () => 0.19, thick: 0.05,
+    hang: lerp(A.spine1, A.pelvis, 0.95)[1], folds: 6, fold: 0.13,
+    mat: (p, u, s) => { const tear = 0.86 + 0.1 * Math.abs(Math.sin(u * 17)); if (s > tear) return null; if (s > tear - 0.05) return 'rune'; return frac(s * 5 + u * 0.7) < 0.06 ? 'smokeD' : 'smoke'; },
+    rim: 'smokeD',
+  });
+  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.25).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
+  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], [[0.2, 0, 'fsS'], [0.2, 0.05, 'fs'], [0.12, 0.06, 'rune'], [0.06, 0.09, 'fsL']]);
+  return merge(cloth, pin);
+}
+
+/* ==== the moonmetals' shared makings ============================================================================== */
+/** A full harness of plate on the kit's components, in a set's own materials and patterns: a moonmetal's base. */
+function moonChest(B, o) {
+  const A = B.at, waist = waistOf(A);
+  const coat = torso(B, {
+    from: waist - 0.55,
+    off: (p, n) => 0.17 + (o.bulge ? o.bulge(p) : 0) + (y(p) <= waist - 0.05 ? 0.06 + 0.03 * frac((waist - 0.05 - y(p)) / 0.17) : 0),
+    mat: (p) => (y(p) <= waist - 0.05 ? (frac((waist - 0.05 - y(p)) / 0.17) > 0.82 ? o.dark : o.skirt ? o.skirt(p) : o.metal) : o.chest(p)),
+    rim: o.dark,
+    caps: { off: () => 0.14, mat: () => o.dark },
+  });
+  const pauldrons = shoulders(B, { from: -0.35, to: 0.36, off: (t) => 0.31 + 0.04 * frac((t + 0.35) / 0.18), mat: (t, p) => (o.shoulder ? o.shoulder(t, p) : frac((t + 0.35) / 0.18) > 0.82 ? o.dark : o.metal) });
+  const rere = upperArms(B, { from: -0.35, to: 0.85, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.12), mat: (u, p, n) => (n[0] * Math.sign(p[0]) < -0.3 ? o.dark : o.arm ? o.arm(u.t, p) : frac(u.t * 5) < 0.12 ? o.dark : o.metal) });
+  const vamb = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.12 + (f.t < 0.15 ? 0.07 * Math.max(0, 1 - Math.abs(f.t) / 0.15) : 0) + (f.t > 0.82 ? 0.04 : 0), mat: (f, p) => (f.t > 0.82 ? (f.t > 0.88 ? o.dark : 'rune') : o.arm ? o.arm(f.t + 1, p) : o.metal) });
+  return merge(coat, pauldrons, rere, vamb);
+}
+function moonLegs(B, o) {
+  const A = B.at, waist = waistOf(A);
+  const hose = hips(B, { inner: 0.3, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? o.underW : o.under), rim: (m) => (m === o.underW ? o.underW : o.underD) });
+  const cuisse = shell(B, {
+    sub: 2,
+    keep: (i) => { const p = B.V[i], s = p[0] >= 0 ? 'l' : 'r'; const g = legAt(B, p).thigh; return on(B, i, 'thigh') > 0.6 && g.t > 0.2 && g.t < 0.95 && dot(B.N[i], [Math.sign(p[0]) * 0.6, 0, 0.8]) > -0.1 && !(Math.abs(p[0]) < 0.32 && y(p) < A.hip[s][1] - 0.1); },
+    off: ({ p }) => 0.24 + 0.03 * smooth(0.6, 0.95, legAt(B, p).thigh.t),
+    mat: ({ p }) => (o.thigh ? o.thigh(p) : o.metal),
+    rim: o.dark, thick: 0.05,
+  });
+  const greaves = shins(B, {
+    from: -0.2, to: 0.9, round: 3.0,
+    off: (g, p) => (g.t < 0.12 ? (-g.a * Math.sign(p[0]) < -0.6 ? 0.15 : 0.22 + 0.06 * Math.cos(g.a)) + (-g.a * Math.sign(p[0]) > 0.9 && g.t < 0.06 ? 0.08 : 0) : 0.14),
+    mat: (g, p) => { if (g.t < 0.16 && -g.a * Math.sign(p[0]) < -0.8) return null; if (g.t < 0.12) return Math.abs(g.t) > 0.1 ? 'rune' : o.light ?? o.metal; if (g.t < 0.16) return o.dark; return o.shin ? o.shin(g, p) : o.metal; },
+    rim: o.dark,
+  });
+  return { P: merge(hose, cuisse, greaves), dropAt: (f) => f.mat === o.underW };
+}
+function moonBoots(B, o) {
+  const A = B.at;
+  return feet(B, {
+    up: o.up ?? 0.65,
+    off: (p, n, top) => { const s = p[0] >= 0 ? 'l' : 'r'; return 0.05 + 0.02 * frac((p[2] - A.ankle[s][2]) * 3.5) + (o.point ? 0.1 * smooth(A.ball[s][2], A.ball[s][2] + 0.6, p[2]) * (n[1] > -0.3 ? 1 : 0) : 0); },
+    mat: (p, n, top) => { const s = p[0] >= 0 ? 'l' : 'r'; if (y(p) > top - 0.12) return o.dark; if (y(p) > top - 0.22) return 'rune'; if (n[1] < -0.3) return o.sole ?? 'sole'; return o.foot ? o.foot(p, s) : frac((p[2] - A.ankle[s][2]) * 3.5) > 0.82 ? o.dark : o.metal; },
+    rim: o.dark,
+  });
+}
+function moonMantle(B, chest, o) {
+  const A = B.at, sx = A.shoulder.l[0];
+  const cloth = cloak(B, {
+    start: o.start ?? ((x) => lerp([2.2, 0, 0], [1.15, 0, 0], smooth(0.75, 1.1, Math.abs(x)))[0]),
+    wide: o.wide ?? ((s) => lerp([0.84 * sx, 0, 0], [0.68 * sx, 0, 0], smooth(0.1, 0.5, s))[0]),
+    over: [chest],
+    off: () => 0.19, thick: 0.05,
+    hang: o.hang ?? lerp(A.spine1, A.pelvis, 0.95)[1], folds: o.folds ?? 6, fold: o.fold ?? 0.13, rowsDown: o.rowsDown,
+    mat: o.mat, rim: o.rim,
+  });
+  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.25).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
+  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], o.pin);
+  return merge(cloth, pin);
+}
+
+/* ==== adamantine: the dwarven hold-guard =========================================================================== */
+const ADAMANTINE_MATS = {
+  ad: { c: '#3d4a43', kind: 3 },
+  adS: { c: '#202824', kind: 3 },
+  adL: { c: '#5b6b62', kind: 3 },
+  gilt: { c: '#c49a3a', kind: 3 },
+  rune: { c: '#7a6a3a', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  wool: { c: '#4a2a22', kind: 2 },
+  woolD: { c: '#2f1b16', kind: 2 },
+  woolW: { c: '#4a2a23', kind: 2 },
+  hide: { c: '#4b3a2c', kind: 2 },
+  hideD: { c: '#2e231a', kind: 2 },
+  sole: { c: '#1f1813', kind: 2 },
+};
+/** Knotwork in gilt: lines at angles over the plate, every so often a knot. */
+const knot = (p, k = 3) => frac((p[0] + y(p)) * k) < 0.07 || frac((p[0] - y(p)) * k) < 0.07;
+const adOpts = { metal: 'ad', dark: 'adS', light: 'adL', under: 'wool', underD: 'woolD', underW: 'woolW',
+  chest: (p) => (Math.abs(p[0]) < 0.06 && p[2] > 0 ? 'gilt' : knot(p) && p[2] > 0 ? 'gilt' : 'ad'), bulge: (p) => (p[2] > 0 ? 0.04 * Math.max(0, 1 - Math.abs(p[0]) / 0.6) : 0),
+  shoulder: (t, p) => (frac((t + 0.35) / 0.18) > 0.82 ? 'gilt' : 'ad'), thigh: (p) => (knot(p, 2.5) ? 'gilt' : 'ad'), shin: (g, p) => (Math.abs(g.a) < 0.05 ? 'gilt' : 'ad') };
+const adamantineChest = (B) => moonChest(B, adOpts);
+const adamantineLegs = (B) => moonLegs(B, adOpts);
+const adamantineBoots = (B) => moonBoots(B, { ...adOpts, up: 0.8, foot: (p, s) => (p[2] > B.at.ball[s][2] + 0.2 ? 'gilt' : 'ad') });
+function adamantineHelm(B) {
+  const browTh = browTheta(B);
+  // a round dwarven helm, a heavy brow ridge in gilt with a glowing rune line, a broad nasal and cheek guards
+  return helm(B, {
+    rim: 'adS', down: 2.2,
+    margin: ({ th, ph }) => { const s = fromFront(ph); return 0.13 + (Math.abs(th - (browTh - 0.08)) < 0.1 && s < 1.4 ? 0.07 : 0); },
+    mat: (d, { th, ph }) => {
+      const s = fromFront(ph);
+      if (th > browTh && s < 0.9 && !(s < 0.14 && th < browTh + 0.55) && !(s > 0.55 && th > browTh + 0.25)) return null;
+      if (Math.abs(th - (browTh - 0.08)) < 0.1 && s < 1.4) return Math.abs(th - (browTh - 0.08)) < 0.06 ? 'rune' : 'gilt';
+      if (s < 0.14 && th > browTh) return 'gilt';
+      return frac(ph / (Math.PI / 4)) < 0.04 ? 'adS' : 'ad';
+    },
+  });
+}
+const adamantineMantle = (B) => moonMantle(B, adamantineChest(B), {
+  hang: lerp(B.at.spine1, B.at.pelvis, 0.85)[1], folds: 4, fold: 0.08,
+  mat: (p, u, s) => (s < 0.22 ? 'hide' : s > 0.9 ? (frac(u * 8) < 0.5 ? 'gilt' : 'woolD') : 'wool'), rim: 'woolD',
+  pin: [[0.24, 0, 'adS'], [0.24, 0.06, 'gilt'], [0.16, 0.07, 'rune'], [0.09, 0.1, 'gilt']],
+});
+
+/* ==== glimmersteel: the starlit duellist =========================================================================== */
+const GLIMMERSTEEL_MATS = {
+  gl: { c: '#3b4170', kind: 3 },
+  glS: { c: '#22264a', kind: 3 },
+  star: { c: '#e8ecff', kind: 3 },
+  rune: { c: '#6a70a8', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  night: { c: '#1d2240', kind: 2 },
+  nightD: { c: '#11142a', kind: 2 },
+  nightW: { c: '#1d2241', kind: 2 },
+  silk: { c: '#cfd3e8', kind: 2 },
+  boot: { c: '#2a2430', kind: 2 },
+  sole: { c: '#16121a', kind: 2 },
+};
+/** Stars scattered over the metal: a few points in each patch. */
+const starAt = (p) => { const h = Math.sin(p[0] * 41.3 + y(p) * 17.1) * Math.sin(y(p) * 37.7 - p[2] * 29.3) * Math.sin(p[2] * 23.9 + p[0] * 11.7); return h > 0.78; };
+const glOpts = { metal: 'gl', dark: 'glS', light: 'star', under: 'night', underD: 'nightD', underW: 'nightW',
+  chest: (p) => (starAt(p) ? 'star' : 'gl'),
+  skirt: (p) => (starAt(p) ? 'star' : 'gl'), thigh: (p) => (starAt(p) ? 'star' : 'gl'), shin: (g, p) => (starAt(p) ? 'star' : 'gl'), arm: (t, p) => (starAt(p) ? 'star' : 'gl') };
+const glimmersteelChest = (B) => moonChest(B, glOpts);
+const glimmersteelLegs = (B) => moonLegs(B, glOpts);
+const glimmersteelBoots = (B) => moonBoots(B, { ...glOpts, up: 0.7, foot: (p, s) => (p[2] > B.at.ball[s][2] + 0.2 ? 'gl' : 'boot') });
+function glimmersteelHelm(B) {
+  const browTh = browTheta(B);
+  // an open cap close over the skull, a crescent standing at the brow, its inner edge glowing; stars over the cap
+  const P = helm(B, {
+    rim: 'glS', down: 2.05,
+    margin: () => 0.1,
+    mat: (d, { th, ph, p }) => { const s = fromFront(ph); if (th > browTh - 0.05 && s < 1.0) return null; return starAt(p) ? 'star' : th > browTh - 0.15 ? 'glS' : 'gl'; },
+  });
+  const head = onBone(B, 'head'), c = headCentre(B);
+  const pts = [...Array(9).keys()].map((k) => { const a = -1.1 + (2.2 * k) / 8; return [Math.sin(a) * 0.38, Math.cos(a) * 0.38 - 0.1, 0]; });
+  const crescent = loft(pts.map((q, k) => { const w = 0.07 * Math.cos((k / 8 - 0.5) * Math.PI) + 0.015; return [add(q, [0, 0, -0.04]), add(q, [0, 0, 0.04]), add(q, [0, w, 0.04]), add(q, [0, w, -0.04])]; }),
+    (cc, i) => (i === 4 ? 'rune' : 'star'), { o: add(c, [0, 1.05, 0.75]), X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] }, head, { closed: true });
+  return merge(P, crescent);
+}
+// (a half-cape over the left shoulder only, as a duellist wears it)
+// (a short cape to the small of the back, its hem cut on the slant, a silk edge)
+const glimmersteelMantle = (B) => moonMantle(B, glimmersteelChest(B), {
+  hang: lerp(B.at.spine1, B.at.pelvis, 0.6)[1], folds: 5, fold: 0.1,
+  mat: (p, u, s) => (s > 0.78 + 0.14 * u ? null : s > 0.72 + 0.14 * u || Math.abs(u) > 0.94 ? 'silk' : starAt(p) ? 'star' : 'night'), rim: 'nightD',
+  pin: [[0.18, 0, 'glS'], [0.18, 0.05, 'gl'], [0.11, 0.06, 'rune'], [0.06, 0.08, 'star']],
+});
+
+/* ==== mithril: the elven warden ===================================================================================== */
+const MITHRIL_MATS = {
+  mi: { c: '#a4b3c2', kind: 3 },
+  miS: { c: '#5d6b7a', kind: 3 },
+  miL: { c: '#dfe8ef', kind: 3 },
+  rune: { c: '#8ea6b8', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  leaf: { c: '#4f6a4a', kind: 2 },
+  leafD: { c: '#34482f', kind: 2 },
+  leafW: { c: '#4f6a4b', kind: 2 },
+  cloak: { c: '#5d6e5a', kind: 2 },
+  cloakD: { c: '#3d4a3b', kind: 2 },
+  sole: { c: '#22261e', kind: 2 },
+};
+/** Leaf scales: pointed leaves overlapping down the plate, each with its midrib. */
+const leafAt = (p, k = 3.6) => { const row = Math.floor(y(p) * k), u = frac(p[0] * k * 0.7 + (row % 2) * 0.5 + p[2]), v = frac(y(p) * k); if (Math.abs(u - 0.5) < 0.04 && v > 0.25) return 'miS'; return Math.abs(u - 0.5) > 0.5 * v + 0.05 ? 'miS' : 'mi'; };
+const miOpts = { metal: 'mi', dark: 'miS', light: 'miL', under: 'leaf', underD: 'leafD', underW: 'leafW',
+  chest: (p) => leafAt(p), skirt: (p) => leafAt(p, 4.5), thigh: (p) => leafAt(p, 4), shin: (g, p) => leafAt(p, 4), arm: (t, p) => (t > 1 ? 'mi' : leafAt(p, 4)),
+  shoulder: (t, p) => leafAt(p, 4.5) };
+const mithrilChest = (B) => moonChest(B, miOpts);
+const mithrilLegs = (B) => moonLegs(B, miOpts);
+const mithrilBoots = (B) => moonBoots(B, { ...miOpts, up: 0.7, point: true, foot: (p, s) => (y(p) > B.at.ankle[s][1] + 0.3 ? leafAt(p, 4.5) : 'mi') });
+function mithrilHelm(B) {
+  const browTh = browTheta(B);
+  // a tall helm drawn up to a leaf's point, open-faced, swept wings over the ears, a glowing vine round the brow
+  return helm(B, {
+    rim: 'miS', down: 2.05,
+    margin: ({ th, ph }) => { const s = fromFront(ph); const wing = Math.exp(-(((th - 1.35) / 0.25) ** 2) - (((s - 1.5) / 0.3) ** 2)); return 0.1 + 0.38 * Math.max(0, 1 - th / 0.85) ** 1.5 + 0.35 * wing; },
+    mat: (d, { th, ph }) => {
+      const s = fromFront(ph);
+      if (th > browTh + 0.05 && s < 1.0) return null;
+      if (Math.abs(th - (browTh - 0.05)) < 0.045 && s < 1.3) return 'rune';
+      const wing = Math.exp(-(((th - 1.35) / 0.25) ** 2) - (((s - 1.5) / 0.3) ** 2));
+      if (wing > 0.4) return frac(th * 9) < 0.2 ? 'miS' : 'miL';
+      return frac(ph / (Math.PI / 2) + 0.5) < 0.04 ? 'miS' : 'mi';
+    },
+  });
+}
+const mithrilMantle = (B) => moonMantle(B, mithrilChest(B), {
+  hang: lerp(B.at.spine1, B.at.pelvis, 1.0)[1], folds: 8, fold: 0.15,
+  mat: (p, u, s) => (s > 0.94 ? 'leafD' : frac(s * 6 + Math.abs(u) * 2) < 0.05 ? 'cloakD' : 'cloak'), rim: 'cloakD',
+  pin: [[0.2, 0, 'miS'], [0.2, 0.05, 'mi'], [0.13, 0.06, 'rune'], [0.07, 0.09, 'miL']],
+});
+
+/* ==== seryll: the tide-warden (sea crystal) ========================================================================= */
+const SERYLL_MATS = {
+  se: { c: '#3fa6a4', kind: 3 },
+  seS: { c: '#1d5c5e', kind: 3 },
+  seL: { c: '#9fe0d8', kind: 3 },
+  rune: { c: '#4f8f9a', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  coral: { c: '#d0705a', kind: 2 },
+  sea: { c: '#1f4a5a', kind: 2 },
+  seaD: { c: '#13303c', kind: 2 },
+  seaW: { c: '#1f4a5b', kind: 2 },
+  foam: { c: '#d8ece8', kind: 2 },
+  sole: { c: '#102026', kind: 2 },
+};
+/** Crystal facets: the plate broken into angled planes, light and dark. */
+const facet = (p, k = 2.4) => { const a = Math.floor(p[0] * k + y(p) * k * 0.6), b = Math.floor(p[0] * k * 0.6 - y(p) * k + p[2] * 2); const h = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; const f = h - Math.floor(h); return f > 0.85 ? 'seL' : f < 0.15 ? 'seS' : 'se'; };
+const seOpts = { metal: 'se', dark: 'seS', light: 'seL', under: 'sea', underD: 'seaD', underW: 'seaW',
+  chest: (p) => facet(p), skirt: (p) => facet(p, 3.5), thigh: (p) => facet(p, 3), shin: (g, p) => facet(p, 3), arm: (t, p) => facet(p, 3), shoulder: (t, p) => facet(p, 3.5) };
+const seryllChest = (B) => moonChest(B, seOpts);
+const seryllLegs = (B) => moonLegs(B, seOpts);
+const seryllBoots = (B) => moonBoots(B, { ...seOpts, up: 0.75, foot: (p) => facet(p, 3.5) });
+function seryllHelm(B) {
+  const browTh = browTheta(B);
+  // a crown of crystal spires rising from the helm, open-faced, a glowing line of sea-glass at the brow
+  return helm(B, {
+    rim: 'seS', down: 2.05,
+    margin: ({ th, ph }) => { const s = fromFront(ph); const spire = Math.max(0, Math.cos(ph * 7)) ** 6 * Math.max(0, 1 - Math.abs(th - 0.85) / 0.4); return 0.11 + 0.4 * spire * (s < 2.6 ? 1 : 0.5); },
+    mat: (d, { th, ph, p }) => {
+      const s = fromFront(ph);
+      if (th > browTh + 0.05 && s < 1.0) return null;
+      if (Math.abs(th - (browTh - 0.05)) < 0.045 && s < 1.3) return 'rune';
+      const spire = Math.max(0, Math.cos(ph * 7)) ** 6 * Math.max(0, 1 - Math.abs(th - 0.85) / 0.4);
+      return spire > 0.3 ? 'seL' : facet(p, 3.5);
+    },
+  });
+}
+const seryllMantle = (B) => moonMantle(B, seryllChest(B), {
+  hang: lerp(B.at.spine1, B.at.pelvis, 0.95)[1], folds: 7, fold: 0.14,
+  mat: (p, u, s) => { const crest = 0.9 + 0.05 * Math.sin(u * 14); if (s > crest + 0.05) return null; if (s > crest) return 'foam'; return s > 0.6 ? 'sea' : 'seaD'; }, rim: 'seaD',
+  pin: [[0.2, 0, 'seS'], [0.2, 0.05, 'se'], [0.13, 0.06, 'rune'], [0.07, 0.1, 'seL']],
+});
+
 /* ==== the sets ===================================================================================================== */
 const SETS = {
   copper: { MATS: COPPER_MATS, helm: copperHelm, chest: copperChest, mantle: copperMantle, legs: copperLegs, boots: copperBoots },
   iron: { MATS: IRON_MATS, helm: ironHelm, chest: ironChest, mantle: ironMantle, legs: ironLegs, boots: ironBoots },
+  adamantine: { MATS: ADAMANTINE_MATS, helm: adamantineHelm, chest: adamantineChest, mantle: adamantineMantle, legs: adamantineLegs, boots: adamantineBoots },
+  glimmersteel: { MATS: GLIMMERSTEEL_MATS, helm: glimmersteelHelm, chest: glimmersteelChest, mantle: glimmersteelMantle, legs: glimmersteelLegs, boots: glimmersteelBoots },
+  mithril: { MATS: MITHRIL_MATS, helm: mithrilHelm, chest: mithrilChest, mantle: mithrilMantle, legs: mithrilLegs, boots: mithrilBoots },
+  seryll: { MATS: SERYLL_MATS, helm: seryllHelm, chest: seryllChest, mantle: seryllMantle, legs: seryllLegs, boots: seryllBoots },
+  gold: { MATS: GOLD_MATS, helm: goldHelm, chest: goldChest, mantle: goldMantle, legs: goldLegs, boots: goldBoots },
+  electrum: { MATS: ELECTRUM_MATS, helm: electrumHelm, chest: electrumChest, mantle: electrumMantle, legs: electrumLegs, boots: electrumBoots },
+  firesteel: { MATS: FIRESTEEL_MATS, helm: firesteelHelm, chest: firesteelChest, mantle: firesteelMantle, legs: firesteelLegs, boots: firesteelBoots },
   brass: { MATS: BRASS_MATS, helm: brassHelm, chest: brassChest, mantle: brassMantle, legs: brassLegs, boots: brassBoots },
   pewter: { MATS: PEWTER_MATS, helm: pewterHelm, chest: pewterChest, mantle: pewterMantle, legs: pewterLegs, boots: pewterBoots },
   lead: { MATS: LEAD_MATS, helm: leadHelm, chest: leadChest, mantle: leadMantle, legs: leadLegs, boots: leadBoots },

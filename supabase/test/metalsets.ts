@@ -23,9 +23,16 @@ import { SET as ZINC } from '../../src/sculpt/metalzinc';
 import { SET as LEAD } from '../../src/sculpt/metallead';
 import { SET as PEWTER } from '../../src/sculpt/metalpewter';
 import { SET as BRASS } from '../../src/sculpt/metalbrass';
+import { SET as GOLD } from '../../src/sculpt/metalgold';
+import { SET as ELECTRUM } from '../../src/sculpt/metalelectrum';
+import { SET as FIRESTEEL } from '../../src/sculpt/metalfiresteel';
+import { SET as ADAMANTINE } from '../../src/sculpt/metaladamantine';
+import { SET as GLIMMERSTEEL } from '../../src/sculpt/metalglimmersteel';
+import { SET as MITHRIL } from '../../src/sculpt/metalmithril';
+import { SET as SERYLL } from '../../src/sculpt/metalseryll';
 import { check, finish } from './harness';
 
-const SETS = { copper: COPPER, iron: IRON, bronze: BRONZE, steel: STEEL, tin: TIN, zinc: ZINC, lead: LEAD, pewter: PEWTER, brass: BRASS } as const;
+const SETS = { copper: COPPER, iron: IRON, bronze: BRONZE, steel: STEEL, tin: TIN, zinc: ZINC, lead: LEAD, pewter: PEWTER, brass: BRASS, gold: GOLD, electrum: ELECTRUM, firesteel: FIRESTEEL, adamantine: ADAMANTINE, glimmersteel: GLIMMERSTEEL, mithril: MITHRIL, seryll: SERYLL } as const;
 const PIECES = { helm: ['head', 'helm'], chest: ['chest', 'plate_breastplate'], mantle: ['shawl', 'plate_shawl'], legs: ['legs', 'plate_legs'], boots: ['feet', 'plate_boots'] } as const;
 
 // every element has a glow, and every enchantment's is its first mote's element's
@@ -52,6 +59,12 @@ for (const [m, set] of Object.entries(SETS)) {
     }
   });
   void set;
+}
+// a piece names its metal as the game does (\`Iron\`, \`Fire-tempered steel\`): drawn in that metal's set as by its id
+{
+  const look = { ...DEFAULT_LOOK, gender: 'man' as const, hair: 'none', beard: 'none' };
+  const tris = (material: string) => lowScene({ facing: 0, swimming: false, look, gear: { chest: { id: 'plate_breastplate', material } }, phase: 0, moving: false, working: false }).baked.nTris;
+  check('a piece of Fire-tempered steel is drawn in the firesteel set, of Iron in the iron set', tris('Fire-tempered steel') === tris('firesteel') && tris('Iron') === tris('iron') && tris('Fire-tempered steel') !== tris('Iron'), `${tris('Fire-tempered steel')} ${tris('firesteel')} ${tris('Iron')}`);
 }
 // an enchanted piece's glow reaches the outfit by its enchantment key
 const o = outfitOf({ chest: { id: 'plate_breastplate', material: 'copper', enchanted: true, glow: '#ff8a34' }, legs: { id: 'plate_legs', material: 'copper' } });

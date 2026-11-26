@@ -449,6 +449,17 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // The metal sets: gold, electrum, fire-tempered steel; the moonmetals.
+  {
+    n: 714,
+    day: '2026-11-26',
+    lines: () => [
+      'New: gold plate armour drawn as a set of its own: plumed burgonet, fluted gold breastplate over a red doublet with slashed sleeves, red cape with an ermine collar, striped hose with gold knee cops, white boots.',
+      'New: electrum plate armour drawn as a set of its own: tiara wound round the chin, scale corselet over a blue tunic, long purple coat-cape with a saffron border, patterned trousers with scaled knees, laced shoes.',
+      'New: fire-tempered steel plate armour drawn as a set of its own: horned sallet, blackened gothic plate with glowing veins, ragged smoke-grey cloak with a burnt hem, pointed sabatons.',
+      'New: adamantine, glimmersteel, mithril and seryll plate armour each drawn as a set of its own: dwarven plate with gilt knotwork; indigo plate with stars and a crescent cap; leaf-scaled elven plate with a winged helm; faceted sea-crystal plate with a spired crown.',
+    ],
+  },
   // The metal sets: tin, zinc, lead, pewter, brass.
   {
     n: 713,

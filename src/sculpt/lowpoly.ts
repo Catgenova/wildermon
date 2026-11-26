@@ -293,6 +293,7 @@ import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
 import { BARREL, BUST_GLASS, BUST_GLASS_K, BUST_STONE, BUST_STONE_K, MANNEQUIN_WOOD, DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, seatOf, viewOf, woodTone, type ChainPiece, type FigurePose, type FurPiece, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
 import { DEFAULT_LOOK, type Look } from '../game/look';
 import { ANCIENT_SWORD } from '../game/gear';
+import { METALS } from '../game/metal';
 import { STRIDE, type Baked } from './bake';
 import { M, bodyMaterials } from './models/body';
 import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, type Proportions } from './rig';
@@ -1596,6 +1597,13 @@ const METAL_SETS: Readonly<Record<string, () => Promise<MetalSetModule>>> = {
   lead: () => import('./metallead') as unknown as Promise<MetalSetModule>,
   pewter: () => import('./metalpewter') as unknown as Promise<MetalSetModule>,
   brass: () => import('./metalbrass') as unknown as Promise<MetalSetModule>,
+  gold: () => import('./metalgold') as unknown as Promise<MetalSetModule>,
+  electrum: () => import('./metalelectrum') as unknown as Promise<MetalSetModule>,
+  firesteel: () => import('./metalfiresteel') as unknown as Promise<MetalSetModule>,
+  adamantine: () => import('./metaladamantine') as unknown as Promise<MetalSetModule>,
+  glimmersteel: () => import('./metalglimmersteel') as unknown as Promise<MetalSetModule>,
+  mithril: () => import('./metalmithril') as unknown as Promise<MetalSetModule>,
+  seryll: () => import('./metalseryll') as unknown as Promise<MetalSetModule>,
 };
 /** The metals whose sets are in, and each one asked for while it comes. */
 const METAL_IN = new Set<string>(), METAL_ASKED = new Map<string, Promise<void>>();
@@ -1605,8 +1613,10 @@ export const lowGen = (): number => LOW_GEN;
 /** A body with nothing on (a metal set's piece before its set is in): no vertices, on the body's bones. */
 const EMPTY = (who: 'male' | 'female'): GarmentAsset => ({ who, base: 59, mats: [], colours: [], verts: [], polys: [], tris: [], weights: [], bones: [] });
 /** The metal a plate piece is worn in, by id (`copper`), when it has a set of its own: asked for if it is not in yet, and nothing until it is. */
+/** A metal's set's key from what a piece names it by, its name or its id (\`Fire-tempered steel\`, \`firesteel\`). */
+const METAL_KEY = new Map(METALS.flatMap((m) => [[m.name.toLowerCase(), m.id], [m.id, m.id]]));
 function metalOn(pose: FigurePose, piece: MetalSetPiece): string | undefined {
-  const m = pose.outfit?.metal?.[piece]?.toLowerCase();
+  const named = pose.outfit?.metal?.[piece]?.toLowerCase(), m = named && METAL_KEY.get(named);
   if (!m || !METAL_SETS[m]) return undefined;
   if (METAL_IN.has(m)) return m;
   void lowLoadMetal(m);
