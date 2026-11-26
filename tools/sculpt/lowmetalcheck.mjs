@@ -26,17 +26,20 @@ const TS = await import('data:text/javascript;base64,' + Buffer.from(b.outputFil
 const json = (f) => JSON.parse(readFileSync(new URL(f, `file://${ROOT}`), 'utf8'));
 const set = opt('set', 'copper');
 const SLOT = { helm: 'head', chest: 'chest', mantle: 'shawl', legs: 'legs', boots: 'feet' };
-const ID = { helm: 'helm', chest: 'plate_breastplate', mantle: 'plate_shawl', legs: 'plate_legs', boots: 'plate_boots' };
+// (the fur set: its own items, no metal, its own files: \`lowfur<piece>\`)
+const FUR = set === 'fur';
+const ID = FUR ? { helm: 'fur_hood', chest: 'fur_vest', mantle: 'fur_cloak', legs: 'fur_leggings', boots: 'fur_boots' } : { helm: 'helm', chest: 'plate_breastplate', mantle: 'plate_shawl', legs: 'plate_legs', boots: 'plate_boots' };
+const FILE = FUR ? 'lowfur' : `lowmetal${set}`;
 const pieces = opt('pieces', 'helm,chest,mantle,legs,boots').split(',');
-const gear = { ...Object.fromEntries(pieces.map((p) => [SLOT[p], { id: ID[p], material: set }])), ...JSON.parse(opt('with', '{}')) };
-await TS.lowLoadMetal(set);
+const gear = { ...Object.fromEntries(pieces.map((p) => [SLOT[p], FUR ? { id: ID[p] } : { id: ID[p], material: set }])), ...JSON.parse(opt('with', '{}')) };
+if (!FUR) await TS.lowLoadMetal(set);
 const outfit = TS.outfitOf(gear);
 /** Whether a piece's faces from dropFrom on are left out (the leggings' waist under a chest piece). */
-const dropped = (piece) => piece === 'legs' && !!(outfit.plateChest || outfit.leatherChest || outfit.chainChest || outfit.scaleChest || outfit.obsidianChest);
+const dropped = (piece) => piece === 'legs' && !!(outfit.plateChest || outfit.leatherChest || outfit.chainChest || outfit.scaleChest || outfit.obsidianChest || outfit.furChest);
 let fail = false;
 for (const who of opt('who', 'male,female').split(',')) {
   const body = json(`src/sculpt/assets/low${who}.json`);
-  const worn = pieces.map((p) => [p, json(`src/sculpt/assets/lowmetal${set}${p}-${who}.json`)]);
+  const worn = pieces.map((p) => [p, json(`src/sculpt/assets/${FILE}${p}-${who}.json`)]);
   const hidden = new Set(worn.flatMap(([, A]) => A.hides ?? []));
   for (const [piece, parent] of body.split ?? []) if (hidden.has(parent)) hidden.add(piece);
   const look = { ...TS.DEFAULT_LOOK, gender: who === 'male' ? 'man' : 'woman', hair: 'none', beard: 'none' };

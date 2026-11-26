@@ -3659,5 +3659,11 @@
     "title": "Each metal its own set, its glow its enchantment's colour",
     "shard": 4,
     "why": "Asked for: armour that looks different for each metal (copper first; silver is the plate set), each piece with a glowing section for when it is enchanted, the glow taking the enchantment's colour. Each set's pieces load on demand, the plate set drawn until they are in."
+  },
+  {
+    "file": "supabase/test/furgear.ts",
+    "title": "The fur set, on both sides",
+    "shard": 4,
+    "why": "Asked for: \"a new armor type and models for Fur armor type\", fur between leather and chain, each piece with a glowing section for when it is enchanted. The five pieces, their class between leather and chain in soak, burden and swing weight, what each blow does to it, each recipe (fur on leather, an awl, leatherworking) and how it is improved the same on both sides; a fur vest refused without an awl and stitched on the island; each piece drawn on both bodies with a glow lit only when enchanted."
   }
 ]

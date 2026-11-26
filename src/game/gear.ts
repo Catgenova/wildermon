@@ -74,7 +74,7 @@ export const HIT_LOCATIONS: Array<[HitPart, number]> = [
   ['feet', 0.12],
 ];
 
-export type ArmourClass = 'cloth' | 'leather' | 'chain' | 'plate' | 'scale' | 'obsidian';
+export type ArmourClass = 'cloth' | 'leather' | 'fur' | 'chain' | 'plate' | 'scale' | 'obsidian';
 
 export interface ArmourClassDef {
   id: ArmourClass;
@@ -90,6 +90,8 @@ export interface ArmourClassDef {
 export const ARMOUR_CLASSES: Record<ArmourClass, ArmourClassDef> = {
   cloth: { id: 'cloth', name: 'Cloth', skill: 'cloth_armour', soak: 0.16, burden: 0.01 },
   leather: { id: 'leather', name: 'Leather', skill: 'leather_armour', soak: 0.3, burden: 0.05 },
+  // Fur (`make_fur_*`): pelts on a leather backing, between leather and chain in soak and burden.
+  fur: { id: 'fur', name: 'Fur', skill: 'leather_armour', soak: 0.38, burden: 0.09 },
   chain: { id: 'chain', name: 'Chain', skill: 'chain_armour', soak: 0.46, burden: 0.14 },
   plate: { id: 'plate', name: 'Plate', skill: 'plate_armour', soak: 0.62, burden: 0.26 },
   // Dragon scale: what a dragon was wearing, riveted onto a leather backing.
@@ -133,6 +135,11 @@ export const ARMOUR: ArmourDef[] = [
   armour('leather_shawl', 'shawl', 'leather'),
   armour('leather_trousers', 'legs', 'leather'),
   armour('leather_boots', 'feet', 'leather'),
+  armour('fur_hood', 'head', 'fur'),
+  armour('fur_vest', 'chest', 'fur'),
+  armour('fur_cloak', 'shawl', 'fur'),
+  armour('fur_leggings', 'legs', 'fur'),
+  armour('fur_boots', 'feet', 'fur'),
   armour('chain_coif', 'head', 'chain'),
   armour('chain_hauberk', 'chest', 'chain'),
   armour('chain_shawl', 'shawl', 'chain'),

@@ -136,7 +136,7 @@ export function improvableDef(id: string): { material: MaterialDef; skill: strin
     if (armour.cls === 'obsidian') return { material: MATERIALS.obsidian, skill: 'platesmithing' };
     if (armour.cls === 'scale') return { material: MATERIALS.scale, skill: 'leatherworking' };
     if (armour.cls === 'cloth') return { material: MATERIALS.cloth, skill: 'tailoring' };
-    if (armour.cls === 'leather') return { material: MATERIALS.leather, skill: 'leatherworking' };
+    if (armour.cls === 'leather' || armour.cls === 'fur') return { material: MATERIALS.leather, skill: 'leatherworking' };
     return { material: MATERIALS.metal, skill: armour.cls === 'chain' ? 'chainsmithing' : 'platesmithing' };
   }
   if (id === 'wooden_shield') return { material: MATERIALS.wood, skill: 'carpentry' };

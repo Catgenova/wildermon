@@ -190,6 +190,17 @@ import MALE_OBSIDIAN_BOOTS from './assets/lowobsidianboots-male.json';
 import FEMALE_OBSIDIAN_BOOTS from './assets/lowobsidianboots-female.json';
 import MALE_OBSIDIAN_HELM from './assets/lowobsidianhelm-male.json';
 import FEMALE_OBSIDIAN_HELM from './assets/lowobsidianhelm-female.json';
+// the fur set (tools/sculpt/garments/metalsets.mjs fur: pelts on leather)
+import MALE_FUR_HELM from './assets/lowfurhelm-male.json';
+import FEMALE_FUR_HELM from './assets/lowfurhelm-female.json';
+import MALE_FUR_CHEST from './assets/lowfurchest-male.json';
+import FEMALE_FUR_CHEST from './assets/lowfurchest-female.json';
+import MALE_FUR_SHAWL from './assets/lowfurmantle-male.json';
+import FEMALE_FUR_SHAWL from './assets/lowfurmantle-female.json';
+import MALE_FUR_LEGS from './assets/lowfurlegs-male.json';
+import FEMALE_FUR_LEGS from './assets/lowfurlegs-female.json';
+import MALE_FUR_BOOTS from './assets/lowfurboots-male.json';
+import FEMALE_FUR_BOOTS from './assets/lowfurboots-female.json';
 import LONG_SWORD from './assets/long_sword.json';
 import WARHAMMER from './assets/warhammer.json';
 import PICKAXE from './assets/pickaxe.json';
@@ -279,7 +290,7 @@ import OBSIDIAN_THROWING_AXE from './assets/obsidian_throwing_axe.json';
 import HAIR_ASSET from './assets/lowhair.json';
 import MALE_LIGHT from '../../tools/sculpt/lowlight-male.json';
 import FEMALE_LIGHT from '../../tools/sculpt/lowlight-female.json';
-import { BARREL, BUST_GLASS, BUST_GLASS_K, BUST_STONE, BUST_STONE_K, MANNEQUIN_WOOD, DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, seatOf, viewOf, woodTone, type ChainPiece, type FigurePose, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
+import { BARREL, BUST_GLASS, BUST_GLASS_K, BUST_STONE, BUST_STONE_K, MANNEQUIN_WOOD, DRAGON_SCALE, gemTone, isMetalTone, metalShades, sculptRig, seatOf, viewOf, woodTone, type ChainPiece, type FigurePose, type FurPiece, type DyedPiece, type GearPiece, type PlatePiece, type Rig } from '../render/figure';
 import { DEFAULT_LOOK, type Look } from '../game/look';
 import { ANCIENT_SWORD } from '../game/gear';
 import { STRIDE, type Baked } from './bake';
@@ -1364,7 +1375,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments0: readonly Ga
 }
 
 type OutfitKey = 'hood' | 'tunic' | 'shawl' | 'trousers' | 'boots' | 'plateChest' | 'plateMantle' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'leatherChest' | 'leatherShawl' | 'leatherLegs' | 'leatherBoots' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots'
-  | 'obsidianHelm' | 'obsidianChest' | 'obsidianShawl' | 'obsidianLegs' | 'obsidianBoots';
+  | 'obsidianHelm' | 'obsidianChest' | 'obsidianShawl' | 'obsidianLegs' | 'obsidianBoots' | FurPiece;
 type EnchantKey = keyof NonNullable<NonNullable<FigurePose['outfit']>['enchanted']>;
 /**
  * The sculpted piece each worn item is drawn as (`outfitOf`): its wear switch, its enchantment's, and for plate and chain
@@ -1406,6 +1417,12 @@ const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; p
   obsidian_shawl: { key: 'obsidianShawl', ench: 'obsidianShawl' },
   obsidian_leggings: { key: 'obsidianLegs', ench: 'obsidianLegs' },
   obsidian_boots: { key: 'obsidianBoots', ench: 'obsidianBoots' },
+  // the fur set: its own pelts
+  fur_hood: { key: 'furHood', ench: 'furHood' },
+  fur_vest: { key: 'furChest', ench: 'furChest' },
+  fur_cloak: { key: 'furShawl', ench: 'furShawl' },
+  fur_leggings: { key: 'furLegs', ench: 'furLegs' },
+  fur_boots: { key: 'furBoots', ench: 'furBoots' },
 };
 /**
  * The shawls drawn as a garment of their own: worn over whatever chest piece is worn (`armourChest`: each its copy fitted
@@ -1413,7 +1430,7 @@ const ITEM_PIECES: Readonly<Record<string, { key: OutfitKey; ench: EnchantKey; p
  * shawl item whose piece is not one of these is drawn as its set's chest & arms, and gives way to a chest piece of
  * another set.
  */
-const SHAWL_GARMENTS: ReadonlySet<OutfitKey> = new Set<OutfitKey>(['shawl', 'leatherShawl', 'plateMantle', 'scaleShawl', 'chainShawl', 'obsidianShawl']);
+const SHAWL_GARMENTS: ReadonlySet<OutfitKey> = new Set<OutfitKey>(['shawl', 'leatherShawl', 'plateMantle', 'scaleShawl', 'chainShawl', 'obsidianShawl', 'furShawl']);
 /**
  * What a figure has equipped (`FigurePose.gear`) as its outfit: each worn piece's sculpted garment, enchanted when it is,
  * plate in its metal. The first outfit's tunic, trousers and boots stay under what does not replace them; its shawl is
@@ -1462,10 +1479,10 @@ const wearsShawl = (pose: FigurePose): boolean => pose.outfit?.shawl ?? true;
  * tunic.
  */
 const armourFit = (pose: FigurePose): 'slim' | 'full' | undefined =>
-  o(pose).plateChest || o(pose).scaleChest || o(pose).obsidianChest || o(pose).leatherChest ? 'full' : o(pose).chainChest ? 'slim' : undefined;
+  o(pose).plateChest || o(pose).scaleChest || o(pose).obsidianChest || o(pose).leatherChest || o(pose).furChest ? 'full' : o(pose).chainChest ? 'slim' : undefined;
 /** Whether a figure wears a chest piece of armour: a shawl over it is drawn in its copy fitted over armour (`armourFit`). */
 const armourChest = (pose: FigurePose): boolean => armourFit(pose) !== undefined;
-const wearsTrousers = (pose: FigurePose): boolean => (pose.outfit?.trousers ?? true) && !(o(pose).plateLegs || o(pose).leatherLegs || o(pose).chainLegs || o(pose).scaleLegs || o(pose).obsidianLegs);
+const wearsTrousers = (pose: FigurePose): boolean => (pose.outfit?.trousers ?? true) && !(o(pose).plateLegs || o(pose).leatherLegs || o(pose).chainLegs || o(pose).scaleLegs || o(pose).obsidianLegs || o(pose).furLegs);
 /** Whether a figure wears the plate set's boots (`tools/sculpt/garments/plateboots.mjs`; over the leggings, the body stood on their soles): off unless asked for. */
 const wearsPlateBoots = (pose: FigurePose): boolean => pose.outfit?.plateBoots ?? false;
 /** Whether a figure wears the boots (the body stands on their soles while it does): not under the plate or leather boots. */
@@ -1477,11 +1494,13 @@ const wearsChainBoots = (pose: FigurePose): boolean => pose.outfit?.chainBoots ?
 const wearsScaleBoots = (pose: FigurePose): boolean => pose.outfit?.scaleBoots ?? false;
 /** Whether a figure wears the obsidian set's boots (the scale boots knapped, `tools/sculpt/garments/obsidian.mjs`; the body stood on their soles): off unless asked for. */
 const wearsObsidianBoots = (pose: FigurePose): boolean => pose.outfit?.obsidianBoots ?? false;
-const wearsBoots = (pose: FigurePose): boolean => (pose.outfit?.boots ?? true) && !wearsPlateBoots(pose) && !wearsLeatherBoots(pose) && !wearsChainBoots(pose) && !wearsScaleBoots(pose) && !wearsObsidianBoots(pose);
+/** Whether a figure wears the fur set's boots (the body stood on their soles): off unless asked for. */
+const wearsFurBoots = (pose: FigurePose): boolean => pose.outfit?.furBoots ?? false;
+const wearsBoots = (pose: FigurePose): boolean => (pose.outfit?.boots ?? true) && !wearsPlateBoots(pose) && !wearsLeatherBoots(pose) && !wearsChainBoots(pose) && !wearsScaleBoots(pose) && !wearsObsidianBoots(pose) && !wearsFurBoots(pose);
 /** Whether a figure wears the tunic (under the shawl, over the trousers). */
-const wearsTunic = (pose: FigurePose): boolean => (pose.outfit?.tunic ?? true) && !(o(pose).plateChest || o(pose).leatherChest || o(pose).chainChest || o(pose).scaleChest || o(pose).obsidianChest);
+const wearsTunic = (pose: FigurePose): boolean => (pose.outfit?.tunic ?? true) && !(o(pose).plateChest || o(pose).leatherChest || o(pose).chainChest || o(pose).scaleChest || o(pose).obsidianChest || o(pose).furChest);
 /** Whether a figure has the hood up: down unless asked for, and only with the shawl (it rises out of the shawl's cowl). */
-const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) && !(o(pose).plateHelm || o(pose).leatherHat || o(pose).chainCoif || o(pose).scaleHelm || o(pose).obsidianHelm);
+const wearsHood = (pose: FigurePose): boolean => (pose.outfit?.hood ?? false) && !(o(pose).plateHelm || o(pose).leatherHat || o(pose).chainCoif || o(pose).scaleHelm || o(pose).obsidianHelm || o(pose).furHood);
 /**
  * Whether a figure's hair is drawn over its low-poly head: not while the hood is up (the hood's shell is snug on the
  * skull, so any hairstyle would come through it), nor under the plate helm. A hairstyle drawn with the body checks this
@@ -1498,12 +1517,14 @@ const wearsHelm = (pose: FigurePose): boolean => pose.outfit?.plateHelm ?? false
  * tippet over the shoulders is left out under a chest piece with a collar of its own (`coifTippetDropped`).
  */
 const wearsCoif = (pose: FigurePose): boolean => pose.outfit?.chainCoif ?? false;
-const coifTippetDropped = (pose: FigurePose): boolean => wearsShawl(pose) || !!(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).chainShawl || o(pose).scaleChest || o(pose).scaleShawl || o(pose).obsidianChest || o(pose).obsidianShawl);
+const coifTippetDropped = (pose: FigurePose): boolean => wearsShawl(pose) || !!(o(pose).plateChest || o(pose).plateMantle || o(pose).leatherChest || o(pose).leatherShawl || o(pose).chainShawl || o(pose).scaleChest || o(pose).scaleShawl || o(pose).obsidianChest || o(pose).obsidianShawl || o(pose).furChest || o(pose).furShawl);
 /** Whether a figure wears the scale set's helm (`tools/sculpt/garments/scalehelm.mjs`: rigid on the head, the hair not drawn under it): off unless asked for. */
 const wearsScaleHelm = (pose: FigurePose): boolean => pose.outfit?.scaleHelm ?? false;
 /** Whether a figure wears the obsidian set's helm (the scale helm knapped: rigid on the head, the hair not drawn under it): off unless asked for. */
 const wearsObsidianHelm = (pose: FigurePose): boolean => pose.outfit?.obsidianHelm ?? false;
-export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wearsHelm(pose) && !wearsCoif(pose) && !wearsScaleHelm(pose) && !wearsObsidianHelm(pose);
+/** Whether a figure wears the fur set's hood (rigid on the head, the hair not drawn under it): off unless asked for. */
+const wearsFurHood = (pose: FigurePose): boolean => pose.outfit?.furHood ?? false;
+export const hairShown = (pose: FigurePose): boolean => !wearsHood(pose) && !wearsHelm(pose) && !wearsCoif(pose) && !wearsScaleHelm(pose) && !wearsObsidianHelm(pose) && !wearsFurHood(pose);
 /**
  * Whether a figure wears the leather set's feathered cap (`assets/lowhat-<who>.json` by `tools/sculpt/garments/hat.mjs`:
  * rigid on the head, no bones of its own, its crown snug on the skull, the hair drawn pressed under it, `hairStyle`):
@@ -1614,7 +1635,7 @@ const METAL_WORN: Readonly<Record<MetalSetPiece, (pose: FigurePose) => boolean>>
   legs: (p) => p.outfit?.plateLegs ?? false, boots: (p) => p.outfit?.plateBoots ?? false,
 };
 /** Whether any chest piece of armour is worn over the legs (a metal set's leggings' waist left out under it). */
-const anyChestArmour = (p: FigurePose): boolean => !!(o(p).plateChest || o(p).leatherChest || o(p).chainChest || o(p).scaleChest || o(p).obsidianChest);
+const anyChestArmour = (p: FigurePose): boolean => !!(o(p).plateChest || o(p).leatherChest || o(p).chainChest || o(p).scaleChest || o(p).obsidianChest || o(p).furChest);
 /** Each metal set's five pieces as GARMENTS entries, empty until the set is in. */
 const metalGarments = (m: string) => METAL_SET_PIECES.map((piece) => ({
   man: EMPTY('male'), woman: EMPTY('female'), set: [m, piece] as [string, MetalSetPiece],
@@ -1637,17 +1658,17 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; set?: [s
   { man: MALE_HELM as unknown as GarmentAsset, woman: FEMALE_HELM as unknown as GarmentAsset, wears: (p) => wearsHelm(p) && plateOwn(p, 'helm'), enchanted: enchantedOf('helm'), plate: 'helm' },
   // the plate set's leggings (`tools/sculpt/garments/platelegs.mjs`): off unless asked for; their base layer takes the place of the legs' skin
   { man: MALE_PLATE_LEGS as unknown as GarmentAsset, woman: FEMALE_PLATE_LEGS as unknown as GarmentAsset, wears: (p) => (p.outfit?.plateLegs ?? false) && plateOwn(p, 'legs'), enchanted: enchantedOf('legs'), legs: 'plateLegs', plate: 'legs' },
-  { man: MALE_PLATE_BOOTS as unknown as GarmentAsset, woman: FEMALE_PLATE_BOOTS as unknown as GarmentAsset, wears: (p) => wearsPlateBoots(p) && plateOwn(p, 'boots'), enchanted: enchantedOf('boots'), drops: (pose) => (pose.outfit?.plateLegs || pose.outfit?.scaleLegs || pose.outfit?.obsidianLegs) ?? false, plate: 'boots' },
+  { man: MALE_PLATE_BOOTS as unknown as GarmentAsset, woman: FEMALE_PLATE_BOOTS as unknown as GarmentAsset, wears: (p) => wearsPlateBoots(p) && plateOwn(p, 'boots'), enchanted: enchantedOf('boots'), drops: (pose) => (pose.outfit?.plateLegs || pose.outfit?.scaleLegs || pose.outfit?.obsidianLegs || pose.outfit?.furLegs) ?? false, plate: 'boots' },
   { man: MALE_PLATE_CHEST as unknown as GarmentAsset, woman: FEMALE_PLATE_CHEST as unknown as GarmentAsset, wears: (p) => wearsPlateChest(p) && plateOwn(p, 'chest'), enchanted: enchantedOf('chest'), chest: 'plateChest', plate: 'chest' },
   // the plate set's fur mantle (`assets/lowmantle-<who>.json` by `tools/sculpt/garments/mantle.mjs`), the plate shawl: off
   // unless asked for; its clasps and rim in the shawl's metal (`MANTLE_ROLE`); enchanted, its clasps' cores glow
   { man: MALE_MANTLE as unknown as GarmentAsset, woman: FEMALE_MANTLE as unknown as GarmentAsset, wears: (p) => (p.outfit?.plateMantle ?? false) && plateOwn(p, 'mantle'), enchanted: enchantedOf('mantle'), plate: 'mantle' },
   { man: MALE_LEATHER_BOOTS as unknown as GarmentAsset, woman: FEMALE_LEATHER_BOOTS as unknown as GarmentAsset, wears: wearsLeatherBoots, enchanted: enchantedOf('leatherBoots'), dye: 'leatherBoots' },
   // (their waist, from dropFrom on (the waistband and the cloth above the chest's undershirt's foot), left out under the leather chest)
-  { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: (p) => wearsLeatherChest(p) || (p.outfit?.chainChest ?? false), legs: 'leatherLegs', dye: 'leatherLegs' },
+  { man: MALE_LEATHER_LEGS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.leatherLegs ?? false, enchanted: enchantedOf('leatherLegs'), drops: (p) => wearsLeatherChest(p) || (p.outfit?.chainChest ?? false) || (p.outfit?.furChest ?? false), legs: 'leatherLegs', dye: 'leatherLegs' },
   // (their hip flaps, only without the leather chest, the breastplate, the hauberk or the cuirass: its skirt or faulds take
   // their place over the hip)
-  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false) && !wearsPlateChest(p) && !(p.outfit?.chainChest ?? false) && !(p.outfit?.scaleChest ?? false) && !(p.outfit?.obsidianChest ?? false), enchanted: enchantedOf('leatherLegs'), legs: 'leatherFlaps', dye: 'leatherLegs' },
+  { man: MALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, woman: FEMALE_LEATHER_LEGS_FLAPS as unknown as GarmentAsset, wears: (p) => (p.outfit?.leatherLegs ?? false) && !(p.outfit?.leatherChest ?? false) && !wearsPlateChest(p) && !(p.outfit?.chainChest ?? false) && !(p.outfit?.scaleChest ?? false) && !(p.outfit?.obsidianChest ?? false) && !(p.outfit?.furChest ?? false), enchanted: enchantedOf('leatherLegs'), legs: 'leatherFlaps', dye: 'leatherLegs' },
   // the leather set's chest & arms (`tools/sculpt/garments/leatherchest.mjs`): over the leggings, under the shawl (its
   // polygons the shawl covers, from dropFrom on, left out under it)
   { man: MALE_LEATHER_CHEST as unknown as GarmentAsset, woman: FEMALE_LEATHER_CHEST as unknown as GarmentAsset, wears: wearsLeatherChest, enchanted: enchantedOf('leatherChest'), drops: wearsLeatherShawl, chest: 'leatherChest', dye: 'leatherChest' },
@@ -1716,6 +1737,12 @@ const GARMENTS: ReadonlyArray<{ man: GarmentAsset; woman: GarmentAsset; set?: [s
   ...([['bare', MALE_CIRCLET_BARE, FEMALE_CIRCLET_BARE], ['swept', MALE_CIRCLET_SWEPT, FEMALE_CIRCLET_SWEPT], ['braid', MALE_CIRCLET_BRAID, FEMALE_CIRCLET_BRAID], ['bob', MALE_CIRCLET_BOB, FEMALE_CIRCLET_BOB], ['mohawk', MALE_CIRCLET_MOHAWK, FEMALE_CIRCLET_MOHAWK], ['buzz', MALE_CIRCLET_BUZZ, FEMALE_CIRCLET_BUZZ]] as const).map(([style, man, woman]) => ({
     man: man as unknown as GarmentAsset, woman: woman as unknown as GarmentAsset, wears: (p: FigurePose) => p.gear?.head?.id === 'circlet' && circletOver(p) === style, enchanted: (p: FigurePose) => !!p.gear?.head?.enchanted, kit: 'circlet' as const,
   })),
+  // the fur set (\`tools/sculpt/garments/metalsets.mjs\` fur), head to feet: its leggings' waist left out under any chest piece
+  { man: MALE_FUR_HELM as unknown as GarmentAsset, woman: FEMALE_FUR_HELM as unknown as GarmentAsset, wears: wearsFurHood, enchanted: enchantedOf('furHood') },
+  { man: MALE_FUR_CHEST as unknown as GarmentAsset, woman: FEMALE_FUR_CHEST as unknown as GarmentAsset, wears: (p) => p.outfit?.furChest ?? false, enchanted: enchantedOf('furChest') },
+  { man: MALE_FUR_SHAWL as unknown as GarmentAsset, woman: FEMALE_FUR_SHAWL as unknown as GarmentAsset, wears: (p) => p.outfit?.furShawl ?? false, enchanted: enchantedOf('furShawl') },
+  { man: MALE_FUR_LEGS as unknown as GarmentAsset, woman: FEMALE_FUR_LEGS as unknown as GarmentAsset, wears: (p) => p.outfit?.furLegs ?? false, enchanted: enchantedOf('furLegs'), drops: anyChestArmour },
+  { man: MALE_FUR_BOOTS as unknown as GarmentAsset, woman: FEMALE_FUR_BOOTS as unknown as GarmentAsset, wears: wearsFurBoots, enchanted: enchantedOf('furBoots') },
   // the metal sets (`metalGarments`): each metal with a set of its own, empty until it is in
   ...Object.keys(METAL_SETS).flatMap(metalGarments),
 ];
@@ -1725,14 +1752,14 @@ const circletOver = (p: FigurePose): string => { const s = hairStyle(p, (p.look 
 function pendantOver(p: FigurePose): 'shawl' | 'shawlSlim' | 'shawlOver' | 'leather' | 'tunic' | undefined {
   if (p.gear?.jewel?.id !== 'jewelled_pendant') return undefined;
   if (wearsShawl(p)) { const fit = armourFit(p); return fit === 'slim' ? 'shawlSlim' : fit === 'full' ? 'shawlOver' : 'shawl'; }
-  if (wearsLeatherShawl(p) || o(p).plateMantle || o(p).scaleShawl || o(p).obsidianShawl || o(p).chainShawl) return undefined;
+  if (wearsLeatherShawl(p) || o(p).plateMantle || o(p).scaleShawl || o(p).obsidianShawl || o(p).chainShawl || o(p).furShawl) return undefined;
   if (wearsLeatherChest(p)) return 'leather';
   return armourChest(p) ? undefined : wearsTunic(p) ? 'tunic' : undefined;
 }
 /** Which fit of the tool belt a figure wears (`tools/sculpt/garments/kit.mjs` BELT_OVER), or none: over the plate chest, the hauberk, the scale cuirass, the leather chest, or the cloth. */
 function beltOver(p: FigurePose): 'cloth' | 'leather' | 'plate' | 'chain' | 'scale' | undefined {
   if (p.gear?.belt?.id !== 'toolbelt') return undefined;
-  return wearsPlateChest(p) ? 'plate' : o(p).chainChest ? 'chain' : o(p).scaleChest || o(p).obsidianChest ? 'scale' : wearsLeatherChest(p) ? 'leather' : 'cloth';
+  return wearsPlateChest(p) ? 'plate' : o(p).chainChest ? 'chain' : o(p).scaleChest || o(p).obsidianChest ? 'scale' : o(p).furChest ? 'plate' : wearsLeatherChest(p) ? 'leather' : 'cloth';
 }
 
 /**

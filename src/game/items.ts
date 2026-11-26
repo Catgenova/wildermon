@@ -147,7 +147,8 @@ const STATUETTE_DEF: ItemDef = {
 };
 
 /** An obsidian piece's line, its numbers filled in by the fight rules (`fight.ts`, off `ARMOUR_CLASSES.obsidian` and `ARMOUR_VS.obsidian`). */
-const OBSIDIAN_SAYS = 'Soak {soak:pct}; {says}. Full set: burden {burden:pct}.';
+/** An armour class's piece's line (the obsidian set's and the fur set's): its class's soak, what each blow does, the set's burden. */
+const ARMOUR_SAYS = 'Soak {soak:pct}; {says}. Full set: burden {burden:pct}.';
 
 export const ITEM_DEFS: Record<string, ItemDef> = {
   shovel: { name: 'Shovel', category: 'tool', weight: 3, description: 'Digs, flattens and packs dirt.' },
@@ -217,6 +218,12 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   leather_shawl: { name: 'Leather shawl', category: 'tool', weight: 1.4 },
   leather_trousers: { name: 'Leather trousers', category: 'tool', weight: 2 },
   leather_boots: { name: 'Leather boots', category: 'tool', weight: 1.6 },
+  // Fur, pelts stitched onto leather.
+  fur_hood: { name: 'Fur hood', category: 'tool', weight: 1.2, description: ARMOUR_SAYS },
+  fur_vest: { name: 'Fur vest', category: 'tool', weight: 3.6, description: ARMOUR_SAYS },
+  fur_cloak: { name: 'Fur cloak', category: 'tool', weight: 2.2, description: ARMOUR_SAYS },
+  fur_leggings: { name: 'Fur leggings', category: 'tool', weight: 3, description: ARMOUR_SAYS },
+  fur_boots: { name: 'Fur boots', category: 'tool', weight: 2.2, description: ARMOUR_SAYS },
   // Chain, rings drawn and riveted at an anvil.
   chain_coif: { name: 'Chain coif', category: 'tool', weight: 2.6 },
   chain_hauberk: { name: 'Chain hauberk', category: 'tool', weight: 7.5 },
@@ -531,11 +538,11 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   scale_leggings: { name: 'Scale leggings', category: 'tool', weight: 4 },
   scale_boots: { name: 'Scale boots', category: 'tool', weight: 2.4 },
   // Obsidian armour (`gear.ts` OBSIDIAN): knapped plates on a leather backing, riveted at an anvil.
-  obsidian_helm: { name: 'Obsidian helm', category: 'tool', weight: 2.2, description: OBSIDIAN_SAYS },
-  obsidian_cuirass: { name: 'Obsidian cuirass', category: 'tool', weight: 8, description: OBSIDIAN_SAYS },
-  obsidian_shawl: { name: 'Obsidian shawl', category: 'tool', weight: 3.8, description: OBSIDIAN_SAYS },
-  obsidian_leggings: { name: 'Obsidian leggings', category: 'tool', weight: 5.6, description: OBSIDIAN_SAYS },
-  obsidian_boots: { name: 'Obsidian boots', category: 'tool', weight: 3.4, description: OBSIDIAN_SAYS },
+  obsidian_helm: { name: 'Obsidian helm', category: 'tool', weight: 2.2, description: ARMOUR_SAYS },
+  obsidian_cuirass: { name: 'Obsidian cuirass', category: 'tool', weight: 8, description: ARMOUR_SAYS },
+  obsidian_shawl: { name: 'Obsidian shawl', category: 'tool', weight: 3.8, description: ARMOUR_SAYS },
+  obsidian_leggings: { name: 'Obsidian leggings', category: 'tool', weight: 5.6, description: ARMOUR_SAYS },
+  obsidian_boots: { name: 'Obsidian boots', category: 'tool', weight: 3.4, description: ARMOUR_SAYS },
   tusk: { name: 'Tusk', category: 'material', weight: 1.6, stackable: true, raw: true, decay: 1, description: 'The belly of a composite bow.' },
   sinew: { name: 'Sinew', category: 'material', weight: 0.2, stackable: true, raw: true, decay: 4, description: 'The back of a composite bow.' },
   dragon_scale: { name: 'Dragon scale', category: 'material', weight: 1.2, stackable: true, raw: true, decay: 0.2, description: 'Scale armour. From a dragon only. Hoard scales (a dragon roost\'s hoard): scale armour made of them alone has a QL cap of {hoardCap}× your skill.' },

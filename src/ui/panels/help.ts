@@ -3331,6 +3331,7 @@ export function helpText(): string {
       <li>Worn per piece in ${ARMOUR_SLOTS.length} places (${listed(ARMOUR_SLOTS)}); counts only where a blow lands. <b>Wear or wield</b> (right-click); the inventory marks worn items.</li>
       <li>${MADE_ARMOUR.length} craftable kinds, each with its own skill trained <b>by being hit in it</b>. Base % of a blow stopped, before quality (QL), metal and that skill:
       <b>cloth</b> (tailoring) ${percent(ARMOUR_CLASSES.cloth.soak)}; <b>leather</b> (tanned hide, knife, leatherworking) ${percent(ARMOUR_CLASSES.leather.soak)};
+      <b>fur</b> (fur on leather, awl, leatherworking) ${percent(ARMOUR_CLASSES.fur.soak)}, burden ${percent(ARMOUR_CLASSES.fur.burden)}, ${armourSays('fur')};
       <b>chain</b> (moulds, riveted at an anvil, chain armoursmithing) ${percent(ARMOUR_CLASSES.chain.soak)}; <b>plate</b> (beaten whole, plate armoursmithing) ${percent(ARMOUR_CLASSES.plate.soak)}.</li>
       <li>QL and skill raise it; damage lowers it. Wears where struck; a piece at full damage falls off.</li>
       <li>Burden (slowdown on foot from armour, shield and load): a full suit of iron plate: ${percent(PLATE_SUIT / (1 + PLATE_SUIT))} slower, +${percent(PLATE_SUIT)} wind per action (cloth: ${percent(ARMOUR_CLASSES.cloth.burden)}). Mounted, driving or aboard: load past the limit only.</li>

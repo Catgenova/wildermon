@@ -106,6 +106,8 @@ import { BUDGET as BEAST_BUDGET, STAND_FPS } from '../../render/beasts';
 import { BIND_BY_ID, keyName } from '../../game/keybinds';
 import { RUNESTONES, SAFE_RING, START_GAP, STONE_SPAN, TELE_FAR, TELE_FAST, TELE_NEAR, TELE_QL_HIGH, TELE_QL_LOW, TELE_SLOW } from '../../game/runestones';
 import { BAG_CARRY as BAG_CARRY_293, BAG_CARRY_QL, bagCarry, bagCarryPct } from '../../game/gear';
+import { ARMOUR as ARMOUR_712, ARMOUR_CLASSES as ARMOUR_CLASSES_712 } from '../../game/gear';
+import { ARMOUR_SWING_BY as ARMOUR_SWING_BY_712 } from '../../game/fight';
 import { OLD_AT as OLD_AT_287, OLD_FOR as OLD_FOR_287, YOUNG_FOR as YOUNG_FOR_287 } from '../../game/creatures';
 import { AROUND_LEASH as AROUND_LEASH_602, AROUND_LEFT as AROUND_LEFT_602 } from '../../game/creatures';
 import { PIER_SHOO as PIER_SHOO_602 } from '../../game/piers';
@@ -447,6 +449,18 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Fur: a new armour class between leather and chain.
+  {
+    n: 712,
+    day: '2026-11-26',
+    lines: () => {
+      const F = ARMOUR_CLASSES_712.fur, L = ARMOUR_CLASSES_712.leather, C = ARMOUR_CLASSES_712.chain;
+      return [
+        `New: fur armour, ${listed(ARMOUR_712.filter((a) => a.cls === 'fur').map((a) => a.id.replace('fur_', '')))}: fur on leather, awl, leatherworking. Soak ${percent(F.soak)} (leather ${percent(L.soak)}, chain ${percent(C.soak)}); full set burden ${percent(F.burden)} (leather ${percent(L.burden)}, chain ${percent(C.burden)}); swing weight ×${ARMOUR_SWING_BY_712.fur}; ${armourSays('fur')}.`,
+        'New: the fur set drawn as its own: wolf-eared hood, pelt vest with crossed straps, fur cloak, fur leggings with cross-gartered shins, fur-cuffed boots.',
+      ];
+    },
+  },
   // The metal sets: steel.
   {
     n: 711,

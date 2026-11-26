@@ -2304,6 +2304,7 @@ import{$C as e,$a as t,$b as n,$c as r,$g as i,$n as a,$t as o,$w as s,$x as ee,
       <li>Worn per piece in ${ey.length} places (${S(ey)}); counts only where a blow lands. <b>Wear or wield</b> (right-click); the inventory marks worn items.</li>
       <li>${ty.length} craftable kinds, each with its own skill trained <b>by being hit in it</b>. Base % of a blow stopped, before quality (QL), metal and that skill:
       <b>cloth</b> (tailoring) ${b(C.cloth.soak)}; <b>leather</b> (tanned hide, knife, leatherworking) ${b(C.leather.soak)};
+      <b>fur</b> (fur on leather, awl, leatherworking) ${b(C.fur.soak)}, burden ${b(C.fur.burden)}, ${up(`fur`)};
       <b>chain</b> (moulds, riveted at an anvil, chain armoursmithing) ${b(C.chain.soak)}; <b>plate</b> (beaten whole, plate armoursmithing) ${b(C.plate.soak)}.</li>
       <li>QL and skill raise it; damage lowers it. Wears where struck; a piece at full damage falls off.</li>
       <li>Burden (slowdown on foot from armour, shield and load): a full suit of iron plate: ${b(xv/(1+xv))} slower, +${b(xv)} wind per action (cloth: ${b(C.cloth.burden)}). Mounted, driving or aboard: load past the limit only.</li>

@@ -2420,8 +2420,8 @@ export interface FigurePose {
    * the shawl, the trousers, the boots and the tunic worn and the hood down; the hood is up only with the shawl, and the
    * hair is not drawn under it. The plate, leather and chain sets' pieces are off unless asked for, each plain unless `enchanted` says so.
    */
-  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots' | ObsidianPiece, boolean>> & {
-    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots' | ObsidianPiece, boolean>>;
+  outfit?: Partial<Record<'shawl' | 'trousers' | 'boots' | 'tunic' | 'hood' | 'plateChest' | 'plateLegs' | 'plateBoots' | 'plateHelm' | 'plateMantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots' | ObsidianPiece | FurPiece, boolean>> & {
+    enchanted?: Partial<Record<'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | 'leatherChest' | 'leatherLegs' | 'leatherBoots' | 'leatherShawl' | 'leatherHat' | 'clothShawl' | 'clothHood' | 'clothTunic' | 'clothTrousers' | 'clothBoots' | ChainPiece | 'scaleHelm' | 'scaleChest' | 'scaleShawl' | 'scaleLegs' | 'scaleBoots' | ObsidianPiece | FurPiece, boolean>>;
     /**
      * The metal each plate or chain piece is smithed from (`GearPiece.material`): its plates or its mail drawn in it (`src/sculpt/lowpoly.ts` plateMat); none, its own colours.
      * The scale set's pieces (`scale`, one for the set) in dragon scale's colour (`DRAGON_SCALE`), or a metal's where one is named.
@@ -6603,6 +6603,8 @@ export type { GearLook, GearPiece, GearSlot } from '../contract/gear';
 export type ChainPiece = 'chainCoif' | 'chainChest' | 'chainShawl' | 'chainLegs' | 'chainBoots';
 /** The obsidian set's pieces on a low-poly body (`../sculpt/lowpoly.ts`, `tools/sculpt/garments/obsidian.mjs`). */
 export type ObsidianPiece = 'obsidianHelm' | 'obsidianChest' | 'obsidianShawl' | 'obsidianLegs' | 'obsidianBoots';
+/** The fur set's pieces on a low-poly body (`../sculpt/lowpoly.ts`, `tools/sculpt/garments/metalsets.mjs` fur). */
+export type FurPiece = 'furHood' | 'furChest' | 'furShawl' | 'furLegs' | 'furBoots';
 /** The plate and chain sets' sculpted pieces, each in its own metal (`FigurePose.outfit.metal`; the plate shawl's mantle its clasps and rim), and the scale set's, all in one material. */
 export type PlatePiece = 'chest' | 'legs' | 'boots' | 'helm' | 'mantle' | ChainPiece | 'scale';
 /** The cloth and leather sculpted pieces a dye colours (`FigurePose.outfit.dye`). */
