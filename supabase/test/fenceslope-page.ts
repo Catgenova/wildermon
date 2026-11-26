@@ -69,10 +69,26 @@ function draw(type: string | null): { w: number; h: number; px: number[] } {
   return { w: c.width, h: c.height, px: Array.from(d) };
 }
 
+/**
+ * Drawn as `draw` does until two draws in a row agree (a picture still loading, settled): those pixels. Every draw is
+ * the scene as it stands, so this is the scene once nothing is left to come in.
+ */
+async function settle(type: string | null): Promise<{ w: number; h: number; px: number[] }> {
+  let last = draw(type);
+  for (let k = 0; k < 20; k++) {
+    await new Promise((r) => setTimeout(r, 150));
+    const next = draw(type);
+    const same = next.px.length === last.px.length && next.px.every((v, i) => v === last.px[i]);
+    last = next;
+    if (same) break;
+  }
+  return last;
+}
+
 export interface FenceSlope { a: [number, number]; b: [number, number]; rise: number; dpr: number }
 function ends(): FenceSlope {
   const dpr = canvasEl.width / canvasEl.clientWidth || 1;
   return { a: corner(FX, FY), b: corner(FX + N, FY), rise: world.getHeight(FX + N, FY) - world.getHeight(FX, FY), dpr };
 }
 
-(window as unknown as { fenceslope: unknown }).fenceslope = { draw, ends };
+(window as unknown as { fenceslope: unknown }).fenceslope = { draw, settle, ends };
