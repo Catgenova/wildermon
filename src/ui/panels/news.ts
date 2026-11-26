@@ -449,6 +449,14 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // The metal sets' and the fur set's trousers up over the hips; the front of the crotch.
+  {
+    n: 716,
+    day: '2026-11-26',
+    lines: () => [
+      'Fixed: every metal set\'s and the fur set\'s trousers cover the hips and the front of the crotch, and meet the chest piece worn over them.',
+    ],
+  },
   // The metal sets' trousers closed round the thigh, lead's greaves round the calf and its gorget.
   {
     n: 715,

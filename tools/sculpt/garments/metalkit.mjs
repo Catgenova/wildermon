@@ -426,12 +426,12 @@ export function forearms(B, o) {
 export function hips(B, o) {
   const A = B.at;
   // closed: round the inside of the thigh too, held close to the skin there (where the thighs pass each other), the
-  // crotch left a little wider on the woman's (whose thighs meet), the inside left out above the knee (which swells) and the back of the knee (which folds)
+  // crotch's sides left a little wider on the woman's (whose thighs meet) and its front kept, the inside left out above the knee (which swells) and the back of the knee (which folds)
   const cut = o.closed ? 9 : o.inner ?? -0.05, crotch = o.crotch ?? (o.closed && B.who === 'female' ? 0.45 : 0.32);
   const innerOf = (p, n) => dot(n, [-Math.sign(p[0]), 0, 0]);
   return shell(B, {
     sub: o.sub ?? 1, hide: o.hide,
-    keep: (i) => { const p = B.V[i], s = p[0] >= 0 ? 'l' : 'r'; const inner = innerOf(p, B.N[i]); return on(B, i, 'thigh', 'torso') > 0.6 && on(B, i, 'calf') < 0.3 && yOf(p) < o.top && yOf(p) > o.foot(s) - 0.05 && !(inner > Math.max(0.35, cut) && yOf(p) < A.hip[s][1] + 0.1) && !(inner > cut && yOf(p) < A.hip[s][1] - 0.35) && !(Math.abs(p[0]) < crotch && yOf(p) < A.hip[s][1] - 0.1) && !(o.closed && inner > 0.35 && yOf(p) < lerp(A.knee[s], A.hip[s], 0.42)[1]) && !(o.closed && B.N[i][2] < -0.3 && yOf(p) < A.knee[s][1] + 0.25); },
+    keep: (i) => { const p = B.V[i], s = p[0] >= 0 ? 'l' : 'r'; const inner = innerOf(p, B.N[i]); return on(B, i, 'thigh', 'torso') > 0.6 && on(B, i, 'calf') < 0.3 && yOf(p) < o.top && yOf(p) > o.foot(s) - 0.05 && !(inner > Math.max(0.35, cut) && yOf(p) < A.hip[s][1] + 0.1) && !(inner > cut && yOf(p) < A.hip[s][1] - 0.35) && !(Math.abs(p[0]) < crotch && yOf(p) < A.hip[s][1] - 0.1 && !(o.closed && B.N[i][2] > 0.6 && B.N[i][1] > -0.5)) && !(o.closed && inner > 0.35 && yOf(p) < lerp(A.knee[s], A.hip[s], 0.42)[1]) && !(o.closed && B.N[i][2] < -0.3 && yOf(p) < A.knee[s][1] + 0.25); },
     off: ({ p, n }) => o.off(p, n) * (o.closed ? 1 - 0.75 * smooth(0, 0.5, innerOf(p, n)) : 1),
     mat: ({ p, n }) => o.mat(p, n),
     rim: o.rim, thick: o.thick ?? 0.04,

@@ -322,7 +322,7 @@ function ironChest(B) {
 function ironLegs(B) {
   const A = B.at, waist = waistOf(A);
   // wool trousers, the waist left out under a chest piece
-  const hose = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'hoseW' : frac(y(p) * 1.4) < 0.1 ? 'hoseD' : 'hose'), rim: 'hoseD' });
+  const hose = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.75 : 0.5) ? 'hoseW' : frac(y(p) * 1.4) < 0.1 ? 'hoseD' : 'hose'), rim: 'hoseD' });
   // the knee cops and the splints down the shin, a glowing rim round each cop
   const shin = shins(B, {
     from: -0.18, to: 0.85, round: 1.35,
@@ -599,7 +599,7 @@ function steelChest(B) {
 function steelLegs(B) {
   const A = B.at, waist = waistOf(A);
   // the arming hose under, red, its waist left out under a chest piece
-  const hose = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'armingW' : 'arming'), rim: 'armingD' });
+  const hose = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'armingW' : 'arming'), rim: 'armingD' });
   // the cuisses: steel down the front and outside of the thigh
   const cuisse = shell(B, {
     sub: 2,
@@ -717,7 +717,7 @@ function furChest(B) {
 function furLegs(B) {
   const A = B.at, waist = waistOf(A);
   // the leggings: a pelt over the hips and thighs, its waist left out under a chest piece
-  const hose = hips(B, { closed: true, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.13 + 0.03 * tuft(p) + 0.06 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.12 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'leatherW' : pelt(p)), rim: 'furD' });
+  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.13 + 0.03 * tuft(p) + 0.06 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.12 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'leatherW' : pelt(p)), rim: (m) => (m === 'leatherW' ? 'leatherW' : 'furD') });
   // the shins: fur wrapped round, bound with leather cross-garters, a glowing bead line under the knee
   const shin = shins(B, {
     from: -0.08, to: 0.9, round: 2.6,
@@ -822,7 +822,7 @@ function tinChest(B) {
 
 function tinLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const hose = hips(B, { closed: true, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'hoseW' : frac(y(p) * 1.4) < 0.08 ? 'hoseD' : 'hose'), rim: (m) => (m === 'hoseW' ? 'hoseW' : 'hoseD') });
+  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'hoseW' : frac(y(p) * 1.4) < 0.08 ? 'hoseD' : 'hose'), rim: (m) => (m === 'hoseW' ? 'hoseW' : 'hoseD') });
   const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: () => 'hose', rim: 'hoseD' });
   // the knee cops: tin, a glowing rim round each
   const cops = shins(B, {
@@ -928,7 +928,7 @@ function zincChest(B) {
 
 function zincLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const trousers = hips(B, { closed: true, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'canvasW' : frac(y(p) * 1.3) < 0.07 ? 'canvasD' : 'canvas'), rim: (m) => (m === 'canvasW' ? 'canvasW' : 'canvasD') });
+  const trousers = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'canvasW' : frac(y(p) * 1.3) < 0.07 ? 'canvasD' : 'canvas'), rim: (m) => (m === 'canvasW' ? 'canvasW' : 'canvasD') });
   const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: () => 'canvas', rim: 'canvasD' });
   // a zinc plate strapped over each thigh's front, and the knee: a glowing rivet line down each
   const plates = shell(B, {
@@ -1032,7 +1032,7 @@ function leadChest(B) {
 
 function leadLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const under = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'gamW' : 'gam'), rim: 'gamD' });
+  const under = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'gamW' : 'gam'), rim: 'gamD' });
   // thick lead greaves closed round the shin, a heavy knee boss with a glowing ring
   const greaves = shins(B, {
     from: -0.2, to: 0.9, round: 3.2,
@@ -1141,7 +1141,7 @@ function pewterChest(B) {
 
 function pewterLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const hose = hips(B, { closed: true, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'woolW' : 'woolD'), rim: (m) => (m === 'woolW' ? 'woolW' : 'woolD') });
+  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.75 : 0.5) ? 'woolW' : 'woolD'), rim: (m) => (m === 'woolW' ? 'woolW' : 'woolD') });
   // the hose below the knee, cross-tied, a pewter boss at each knee with a glowing rim
   const calves = shins(B, { from: -0.1, to: 0.9, round: 2.7, off: (g) => (g.t < 0.12 ? 0.13 + 0.05 * Math.cos(g.a) : 0.08), mat: (g, p) => { if (g.t < 0.12 && Math.abs(g.a) < 0.9) return g.t < -0.06 || g.t > 0.08 ? 'rune' : 'pw'; if (g.t < 0.2 && Math.abs(g.a) > 1.7) return null; return frac(g.t * 7 + g.a * 0.4) < 0.12 || frac(g.t * 7 - g.a * 0.4) < 0.12 ? 'leatherD' : 'woolD'; }, rim: 'woolD' });
   return { P: merge(hose, calves), dropAt: (f) => f.mat === 'woolW' };
@@ -1246,7 +1246,7 @@ function brassChest(B) {
 
 function brassLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const under = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'coatW' : frac(y(p) * 1.5) < 0.08 ? 'coatD' : 'coat'), rim: 'coatD' });
+  const under = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'coatW' : frac(y(p) * 1.5) < 0.08 ? 'coatD' : 'coat'), rim: 'coatD' });
   // the knee: a brass joint, a gear on its outside with a glowing hub; brass splints down the shin
   const knees = shins(B, {
     from: -0.18, to: 0.88, round: 2.4,
@@ -1344,7 +1344,7 @@ function goldChest(B) {
 function goldLegs(B) {
   const A = B.at, waist = waistOf(A);
   // hose striped red and white, gold knee cops with a glowing rim
-  const hose = hips(B, { closed: true, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'redW' : frac(roundTorso(p) / (2 * Math.PI) * 10 + (p[0] > 0 ? 0.5 : 0)) < 0.5 ? 'red' : 'white'), rim: (m) => (m === 'redW' ? 'redW' : 'redD') });
+  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'redW' : frac(roundTorso(p) / (2 * Math.PI) * 10 + (p[0] > 0 ? 0.5 : 0)) < 0.5 ? 'red' : 'white'), rim: (m) => (m === 'redW' ? 'redW' : 'redD') });
   const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: (g) => (frac(g.a / (2 * Math.PI) * 8) < 0.5 ? 'red' : 'white'), rim: 'redD' });
   const cops = shins(B, { from: -0.18, to: 0.16, round: 1.4, off: (g) => 0.16 + 0.07 * Math.cos(g.a) * (1 - Math.abs(g.t) * 4), mat: (g) => (g.t < -0.13 || g.t > 0.12 ? 'rune' : Math.abs(g.a) > 1.2 ? 'auS' : 'au'), rim: 'auS' });
   return { P: merge(hose, calves, cops), dropAt: (f) => f.mat === 'redW' };
@@ -1453,7 +1453,7 @@ function electrumChest(B) {
 function electrumLegs(B) {
   const A = B.at, waist = waistOf(A);
   // trousers in purple, a lozenge pattern down them; electrum scales over the knees with a glowing line
-  const trousers = hips(B, { closed: true, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'purpleW' : (frac((p[0] + y(p)) * 2.5) < 0.05 || frac((p[0] - y(p)) * 2.5) < 0.05) ? 'saffron' : 'purple'), rim: (m) => (m === 'purpleW' ? 'purpleW' : 'purpleD') });
+  const trousers = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'purpleW' : (frac((p[0] + y(p)) * 2.5) < 0.05 || frac((p[0] - y(p)) * 2.5) < 0.05) ? 'saffron' : 'purple'), rim: (m) => (m === 'purpleW' ? 'purpleW' : 'purpleD') });
   const calves = shins(B, { from: 0.12, to: 0.88, round: 3.2, off: () => 0.07, mat: () => 'purple', rim: 'purpleD' });
   const knees = shins(B, { from: -0.16, to: 0.2, round: 1.5, off: () => 0.14, mat: (g, p) => (g.t < -0.1 ? 'rune' : scales(p)), rim: 'elS' });
   return { P: merge(trousers, calves, knees), dropAt: (f) => f.mat === 'purpleW' };
@@ -1546,7 +1546,7 @@ function firesteelChest(B) {
 
 function firesteelLegs(B) {
   const A = B.at, waist = waistOf(A);
-  const hose = hips(B, { closed: true, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'ashW' : 'ash'), rim: (m) => (m === 'ashW' ? 'ashW' : 'ashD') });
+  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'ashW' : 'ash'), rim: (m) => (m === 'ashW' ? 'ashW' : 'ashD') });
   const cuisse = shell(B, {
     sub: 2,
     keep: (i) => { const p = B.V[i], s = p[0] >= 0 ? 'l' : 'r'; const g = legAt(B, p).thigh; return on(B, i, 'thigh') > 0.6 && g.t > 0.2 && g.t < 0.95 && dot(B.N[i], [Math.sign(p[0]) * 0.6, 0, 0.8]) > -0.1 && !(Math.abs(p[0]) < 0.32 && y(p) < A.hip[s][1] - 0.1); },
@@ -1629,7 +1629,7 @@ function moonChest(B, o) {
 }
 function moonLegs(B, o) {
   const A = B.at, waist = waistOf(A);
-  const hose = hips(B, { closed: true, top: waist - 0.1, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? o.underW : o.under), rim: (m) => (m === o.underW ? o.underW : o.underD) });
+  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? o.underW : o.under), rim: (m) => (m === o.underW ? o.underW : o.underD) });
   const cuisse = shell(B, {
     sub: 2,
     keep: (i) => { const p = B.V[i], s = p[0] >= 0 ? 'l' : 'r'; const g = legAt(B, p).thigh; return on(B, i, 'thigh') > 0.6 && g.t > 0.2 && g.t < 0.95 && dot(B.N[i], [Math.sign(p[0]) * 0.6, 0, 0.8]) > -0.1 && !(Math.abs(p[0]) < 0.32 && y(p) < A.hip[s][1] - 0.1); },
