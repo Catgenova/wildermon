@@ -447,6 +447,14 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // The metal sets: steel.
+  {
+    n: 711,
+    day: '2026-11-26',
+    lines: () => [
+      'New: steel plate armour drawn as a set of its own: closed armet, ridged breastplate with plackart and faulds, lamed pauldrons, couters and vambraces, blue velvet mantelet, cuisses, winged poleyns and greaves, lamed sabatons.',
+    ],
+  },
   // The metal sets: bronze.
   {
     n: 710,

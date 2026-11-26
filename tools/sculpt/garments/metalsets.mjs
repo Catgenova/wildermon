@@ -549,9 +549,9 @@ function bronzeMantle(B) {
 
 /* ==== steel: the Milanese harness (Italy, the fifteenth century) ===================================================== */
 const STEEL_MATS = {
-  st: { c: '#b9c0c8', kind: 3 },
-  stS: { c: '#6d747d', kind: 3 },
-  stD: { c: '#4a5058', kind: 3 },
+  st: { c: '#949ca6', kind: 3 },
+  stS: { c: '#5a616a', kind: 3 },
+  stD: { c: '#3c4249', kind: 3 },
   brass: { c: '#b8953f', kind: 3 },
   rune: { c: '#7b8aa0', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
   velvet: { c: '#26386a', kind: 2 },
@@ -587,7 +587,7 @@ function steelChest(B) {
       return 'st';
     },
     rim: 'stD',
-    caps: { off: () => 0.14, mat: () => 'arming' },
+    caps: { off: () => 0.14, mat: () => 'stS' },
   });
   // the pauldrons: four lames over each shoulder, a brass rivet line on the lowest
   const pauldrons = shoulders(B, {
@@ -595,8 +595,8 @@ function steelChest(B) {
     off: (t) => 0.3 + 0.04 * frac((t + 0.35) / 0.19),
     mat: (t) => { const k = frac((t + 0.35) / 0.19); return k > 0.85 ? 'stD' : t > 0.23 && k < 0.2 ? 'brass' : 'st'; },
   });
-  // the rerebraces down the upper arm, the arming doublet's red at the armpit
-  const rere = upperArms(B, { from: -0.35, to: 0.85, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.12), mat: (u, p, n) => (n[0] * Math.sign(p[0]) < -0.3 ? 'arming' : frac(u.t * 5) < 0.12 ? 'stS' : 'st') });
+  // the rerebraces down the upper arm, dark on the inner side
+  const rere = upperArms(B, { from: -0.35, to: 0.85, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.12), mat: (u, p, n) => (n[0] * Math.sign(p[0]) < -0.3 ? 'stD' : frac(u.t * 5) < 0.12 ? 'stS' : 'st') });
   // the couters and the vambraces: a fan at the elbow's outside, the forearm closed in steel, a glowing band at the wrist
   const vamb = forearms(B, {
     from: -0.15, to: 0.93, elbow: true,
@@ -609,7 +609,7 @@ function steelChest(B) {
 function steelLegs(B) {
   const A = B.at, waist = waistOf(A);
   // the arming hose under, red, its waist left out under a chest piece
-  const hose = hips(B, { inner: 0.3, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.08 + (p[2] > 0.1 && y(p) < waist - 0.75 ? 0.06 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'armingW' : 'arming'), rim: 'armingD' });
+  const hose = hips(B, { inner: 0.3, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 0.85)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - 0.75 ? 'armingW' : 'arming'), rim: 'armingD' });
   // the cuisses: steel down the front and outside of the thigh
   const cuisse = shell(B, {
     sub: 2,
@@ -621,8 +621,8 @@ function steelLegs(B) {
   // the poleyns, winged at the outside, and the greaves closed round the shin; a glowing ring round each poleyn
   const greaves = shins(B, {
     from: -0.2, to: 0.9, round: 3.0,
-    off: (g) => (g.t < 0.12 ? 0.22 + 0.06 * Math.cos(g.a) * (1 - Math.abs(g.t) * 5) + (g.a * Math.sign(1) > 0.9 && g.t < 0.06 ? 0.08 : 0) : 0.14 + 0.03 * Math.exp(-(((g.t - 0.35) / 0.2) ** 2))),
-    mat: (g) => { if (g.t < 0.12) return Math.abs(g.t) > 0.1 ? 'rune' : 'st'; if (g.t < 0.16) return 'stD'; if (g.t > 0.86) return 'stS'; return Math.abs(g.a) < 0.04 ? 'stS' : 'st'; },
+    off: (g, p) => (g.t < 0.12 ? (-g.a * Math.sign(p[0]) < -0.6 ? 0.15 : 0.22 + 0.06 * Math.cos(g.a) * (1 - Math.abs(g.t) * 5)) + (-g.a * Math.sign(p[0]) > 0.9 && g.t < 0.06 ? 0.08 : 0) : 0.14 + 0.03 * Math.exp(-(((g.t - 0.35) / 0.2) ** 2))),
+    mat: (g, p) => { if (g.t < 0.16 && -g.a * Math.sign(p[0]) < -0.8) return null; if (g.t < 0.12) return Math.abs(g.t) > 0.1 ? 'rune' : 'st'; if (g.t < 0.16) return 'stD'; if (g.t > 0.86) return 'stS'; return Math.abs(g.a) < 0.04 ? 'stS' : 'st'; },
     rim: 'stD',
   });
   return { P: merge(hose, cuisse, greaves), dropAt: (f) => f.mat === 'armingW' };
@@ -657,7 +657,7 @@ function steelHelm(B) {
       if (Math.abs(th - (browTh + 0.07)) < 0.03 && s < 0.95) return 'rune';
       if (th > browTh + 0.45 && th < browTh + 0.75 && s > 0.15 && s < 0.55 && frac(th * 14) < 0.35 && frac(s * 9) < 0.4) return 'stD';
       if (th < 1.6 && mid < 0.06) return 'stS';
-      if (th > 2.05) return 'brass';
+      if (th > 2.05) return 'stD';
       return 'st';
     },
   });
@@ -667,8 +667,8 @@ function steelMantle(B) {
   const A = B.at, sx = A.shoulder.l[0];
   // the mantelet: blue velvet over the pauldrons and down to the shoulder blades' foot, brass-edged
   const cloth = cloak(B, {
-    start: (x) => lerp([2.1, 0, 0], [1.1, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.95 * sx, 0, 0], [0.85 * sx, 0, 0], smooth(0, 0.5, s))[0],
+    start: (x) => lerp([2.3, 0, 0], [1.1, 0, 0], smooth(0.75, 1.1, Math.abs(x)))[0],
+    wide: (s) => lerp([0.86 * sx, 0, 0], [0.66 * sx, 0, 0], smooth(0.2, 0.6, s))[0],
     over: [steelChest(B)],
     off: () => 0.16, thick: 0.04,
     hang: A.spine2[1] - 0.3, rowsDown: 5, folds: 9, fold: 0.06,
