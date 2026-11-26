@@ -16,9 +16,10 @@ import { ELEMENT_GLOW, ENCHANTMENTS, enchantGlow } from '../../src/game/enchant'
 import { MOTE_ELEMENTS } from '../../src/game/motes';
 import { SET as COPPER } from '../../src/sculpt/metalcopper';
 import { SET as IRON } from '../../src/sculpt/metaliron';
+import { SET as BRONZE } from '../../src/sculpt/metalbronze';
 import { check, finish } from './harness';
 
-const SETS = { copper: COPPER, iron: IRON } as const;
+const SETS = { copper: COPPER, iron: IRON, bronze: BRONZE } as const;
 const PIECES = { helm: ['head', 'helm'], chest: ['chest', 'plate_breastplate'], mantle: ['shawl', 'plate_shawl'], legs: ['legs', 'plate_legs'], boots: ['feet', 'plate_boots'] } as const;
 
 // every element has a glow, and every enchantment's is its first mote's element's
