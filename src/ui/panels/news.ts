@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Gold rebuilt piece by piece (tools/sculpt/garments/gold.mjs).
+  {
+    n: 720,
+    day: '2026-11-26',
+    lines: () => [
+      'Changed: gold armour redrawn as a royal guard\'s parade armour: a gilded comb morion with sunbursts and a crimson-and-white plume; a peascod cuirass etched with raised scrolls, a jewelled girdle, puffed crimson sleeves slashed to white satin, scalloped shoulder wings; paned trunk hose over cloth of gold, half-greaves, a blue garter; bear-paw sabatons with star-rowel spurs.',
+      'Changed: the gold shawl is a royal mantle: an ermine tippet with a jewelled chain of office and a sun medallion, and a stiff crimson cloak lined in royal blue with a crown on its back.',
+      'Changed: enchanted gold lights its suns and its crown.',
+    ],
+  },
   // Iron rebuilt piece by piece (tools/sculpt/garments/kit/iron.mjs).
   {
     n: 719,

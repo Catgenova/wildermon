@@ -7,6 +7,7 @@
 import { writeFileSync } from 'node:fs';
 import { STEEL_MATS, steelHelm, steelChest, steelMantle, steelLegs, steelBoots } from './steel.mjs';
 import * as CU from './kit/copper.mjs';
+import { GOLD_MATS, goldHelm, goldChest, goldMantle, goldLegs, goldBoots } from './gold.mjs';
 import {
   browTheta, chestFront, cloak, disc, feet, forearms, fromFront, gorget, helm, hips, shins, shoulderCaps, shoulders, torso, upperArms, waistOf as waistAt,
 } from './metalkit.mjs';
@@ -1424,108 +1425,7 @@ function brassMantle(B) {
   return merge(cloth, pin);
 }
 
-/* ==== gold: the royal guard ======================================================================================== */
-const GOLD_MATS = {
-  au: { c: '#d0a43a', kind: 3 },
-  auS: { c: '#86651b', kind: 3 },
-  rune: { c: '#a3803a', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
-  red: { c: '#9b1f23', kind: 2 },
-  redD: { c: '#651417', kind: 2 },
-  redW: { c: '#9b1f24', kind: 2 },
-  white: { c: '#e6e0d4', kind: 2 },
-  whiteD: { c: '#b9b2a4', kind: 2 },
-  ermine: { c: '#1f1b1a', kind: 2 },
-  sole: { c: '#2a1f18', kind: 2 },
-};
-
-function goldChest(B) {
-  const A = B.at, waist = waistOf(A);
-  // a fluted gold breastplate over a red velvet doublet; a glowing line round the breastplate's neck and foot
-  const plate = (p) => p[2] > -0.05 && y(p) > waist - 0.05 && y(p) < A.chest[1] + 0.62;
-  const coat = torso(B, {
-    from: waist - 0.5,
-    off: (p) => 0.13 + (plate(p) ? 0.1 + 0.02 * Math.cos(p[0] * 14) : 0) + 0.05 * smooth(waist, waist - 0.45, y(p)),
-    mat: (p) => {
-      if (plate(p)) { if (y(p) < waist + 0.07 || y(p) > A.chest[1] + 0.54) return 'rune'; return Math.cos(p[0] * 14) < -0.7 ? 'auS' : 'au'; }
-      return y(p) < waist - 0.42 ? 'au' : frac(y(p) * 2.5) < 0.06 ? 'redD' : 'red';
-    },
-    rim: 'auS',
-    caps: { off: () => 0.17, mat: () => 'red' },
-  });
-  // puffed sleeves slashed red over white, gold bands at the shoulder and the elbow; gold cuffs
-  const sleeves = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.1 + 0.06 * Math.sin(Math.PI * clamp(t)) ), mat: (u) => (u.t < 0.05 || u.t > 0.92 ? 'au' : frac(u.a * 1.3) < 0.3 ? 'white' : 'red') });
-  const cuffs = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.1 + (f.t > 0.78 ? 0.04 : 0), mat: (f) => (f.t > 0.86 ? 'rune' : f.t > 0.78 ? 'au' : 'red') });
-  return merge(coat, sleeves, cuffs);
-}
-
-function goldLegs(B) {
-  const A = B.at, waist = waistOf(A);
-  // hose striped red and white, gold knee cops with a glowing rim
-  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'redW' : frac(roundTorso(p) / (2 * Math.PI) * 10 + (p[0] > 0 ? 0.5 : 0)) < 0.5 ? 'red' : 'white'), rim: (m) => (m === 'redW' ? 'redW' : 'redD') });
-  const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: (g) => (frac(g.a / (2 * Math.PI) * 8) < 0.5 ? 'red' : 'white'), rim: 'redD' });
-  const cops = shins(B, { from: -0.18, to: 0.16, round: 1.4, off: (g) => 0.16 + 0.07 * Math.cos(g.a) * (1 - Math.abs(g.t) * 4), mat: (g) => (g.t < -0.13 || g.t > 0.12 ? 'rune' : Math.abs(g.a) > 1.2 ? 'auS' : 'au'), rim: 'auS' });
-  return { P: merge(hose, calves, cops), dropAt: (f) => f.mat === 'redW' };
-}
-
-function goldBoots(B) {
-  const A = B.at;
-  // white leather boots to the calf, a gold cuff over a glowing band, a gold toe
-  return feet(B, {
-    up: 0.95,
-    off: (p, n, top) => (y(p) > top - 0.18 ? 0.05 : 0),
-    mat: (p, n, top) => {
-      const s = p[0] >= 0 ? 'l' : 'r';
-      if (y(p) > top - 0.18) return 'au';
-      if (y(p) > top - 0.27) return 'rune';
-      if (p[2] > A.ball[s][2] + 0.25) return 'au';
-      return 'white';
-    },
-    rim: 'whiteD',
-  });
-}
-
-function goldHelm(B) {
-  const browTh = browTheta(B);
-  // a gilded burgonet: a high comb front to back, a peak over the eyes, cheek pieces, a white plume from its crown
-  const P = helm(B, {
-    rim: 'auS', down: 2.2,
-    margin: ({ th, ph }) => { const s = fromFront(ph), mid = Math.min(s, Math.PI - s); return 0.11 + (th < 1.3 && mid < 0.1 ? 0.28 * (1 - mid / 0.1) * Math.min(1, (1.3 - th) / 0.4) : 0) + (Math.abs(th - browTh + 0.02) < 0.12 && s < 0.9 ? 0.18 * smooth(browTh - 0.14, browTh + 0.1, th) : 0); },
-    mat: (d, { th, ph }) => {
-      const s = fromFront(ph), mid = Math.min(s, Math.PI - s);
-      if (th > browTh + 0.1 && s < 0.85) return null;
-      if (th < 1.3 && mid < 0.1) return 'auS';
-      if (Math.abs(th - (browTh - 0.12)) < 0.04) return 'rune';
-      return frac(ph / (Math.PI / 6)) < 0.04 ? 'auS' : 'au';
-    },
-  });
-  const head = onBone(B, 'head');
-  const top = P.V.reduce((b, p) => (p[1] > b[1] ? p : b), [0, -99, 0]);
-  const plume = [];
-  for (let k = 0; k < 5; k++) {
-    const sx = (k - 2) * 0.07, base = add(top, [sx, 0.05, -0.1]), long = 1 - Math.abs(k - 2) * 0.12;
-    const path = [[0, 0, 0], [0, 0.35, -0.15], [0, 0.45, -0.55], [0, 0.2, -0.95], [0, -0.25, -1.15]].map((q) => [q[0] + sx * (q[2] < 0 ? -q[2] : 0), q[1] * long, q[2] * long]);
-    const rings = path.map((q, j) => { const w = 0.12 * (1 - j / 5) + 0.04; return [add(q, [-w, 0, 0]), add(q, [0, w * 0.8, 0]), add(q, [w, 0, 0]), add(q, [0, -w * 0.5, 0])]; });
-    plume.push(loft(rings, (cc, i) => (i >= 3 ? 'whiteD' : 'white'), { o: base, X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] }, head));
-  }
-  return merge(P, ...plume);
-}
-
-function goldMantle(B) {
-  const A = B.at, sx = A.shoulder.l[0];
-  // the royal cape: red, an ermine collar over the shoulders, gold-edged; a gold clasp with a glowing stone
-  const cloth = cloak(B, {
-    start: (x) => lerp([2.1, 0, 0], [1.15, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.84 * sx, 0, 0], [0.68 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
-    over: [goldChest(B)],
-    off: () => 0.2, thick: 0.05,
-    hang: lerp(A.spine1, A.pelvis, 0.95)[1], folds: 6, fold: 0.13,
-    mat: (p, u, s) => { if (s < 0.3) return frac(u * 7 + s * 13) < 0.08 && frac(s * 11) < 0.3 ? 'ermine' : 'white'; if (s > 0.96 || Math.abs(u) > 0.95) return 'au'; return 'red'; },
-    rim: 'redD',
-  });
-  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.25).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
-  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], [[0.22, 0, 'auS'], [0.22, 0.05, 'au'], [0.14, 0.06, 'rune'], [0.09, 0.1, 'au']]);
-  return merge(cloth, pin);
-}
+/* ==== gold: the royal guard in parade armour (tools/sculpt/garments/gold.mjs, built with the plate kit) ========== */
 
 /* ==== electrum: the Immortal (the Achaemenid guard) ================================================================ */
 const ELECTRUM_MATS = {
