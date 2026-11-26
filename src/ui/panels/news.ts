@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Iron rebuilt piece by piece (tools/sculpt/garments/kit/iron.mjs).
+  {
+    n: 719,
+    day: '2026-11-26',
+    lines: () => [
+      'Changed: iron armour redrawn as a Viking-age huscarl\'s: a pointed spangenhelm with gilt eye guards, a crest and a neck guard of iron splints; an indigo gambeson under a lamellar coat with a round chest mirror, lamellar shoulder guards and skirt, splinted vambraces; russet trousers with woven braid, wrapped and cross-gartered shins, splinted greaves and knee discs; leather boots with bear-fur cuffs, iron toe caps and prick spurs.',
+      'Changed: the iron shawl is a bear-pelt mantle with a ruff over a madder-red cape, pinned by a great iron ring brooch between two ringed bosses.',
+      'Changed: enchanted iron lights the helm\'s brows and crest, the brooch and bosses, the chest mirror\'s ring, the knee rings and the spur goads.',
+    ],
+  },
   // Copper rebuilt piece by piece (tools/sculpt/garments/kit/copper.mjs).
   {
     n: 718,

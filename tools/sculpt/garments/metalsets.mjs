@@ -592,129 +592,49 @@ function copperMantle(B) {
   return merge(...parts);
 }
 
-/* ==== iron: the early medieval foot soldier (the Norman and the Norseman) ========================================== */
+/* ==== iron: the early medieval huscarl (the Vendel and the Viking age): tools/sculpt/garments/kit/iron.mjs ======== */
+import * as IRON from './kit/iron.mjs';
 const IRON_MATS = {
-  hoseW: { c: '#5a4637', kind: 2 },
-  fe: { c: '#7d8590', kind: 3 },
-  feS: { c: '#4d535c', kind: 3 },
-  rivet: { c: '#a9b0ba', kind: 3 },
-  rune: { c: '#5f7f9a', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
-  mail: { c: '#6f7680', kind: 3 },
-  mailD: { c: '#3f444b', kind: 3 },
-  gam: { c: '#3f5677', kind: 2 },
-  gamD: { c: '#2a3a52', kind: 2 },
-  wool: { c: '#4f6247', kind: 2 },
-  woolD: { c: '#34412f', kind: 2 },
-  hose: { c: '#5a4636', kind: 2 },
-  hoseD: { c: '#3c2e24', kind: 2 },
-  leather: { c: '#6b4630', kind: 2 },
+  // blackened iron, its edges filed bright, its insides dark; gilt bronze fittings
+  fe: { c: '#2c3036', kind: 3 },
+  feM: { c: '#4b5159', kind: 3 },
+  feL: { c: '#cfd5dc', kind: 3 },
+  feD: { c: '#15171a', kind: 3 },
+  gilt: { c: '#b48c3e', kind: 3 },
+  mailD: { c: '#363b42', kind: 3 },
+  // the glow, lit in the enchantment's colour: the helm's brows and crest, the chest's mirror ring, the mantle's brooch
+  // and its bosses' rings, the knee discs' rings, the spurs' goads
+  runeG: { c: '#b48c3e', kind: 3, lit: { c: '#ffe7a6', kind: 1 } },
+  rune: { c: '#58281d', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
+  runeS: { c: '#8f979f', kind: 3, lit: { c: '#ffe7a6', kind: 1 } },
+  // the gambeson (indigo), the lacing, the leather
+  gam: { c: '#2f4a78', kind: 2 },
+  gamD: { c: '#1f3157', kind: 2 },
+  lace: { c: '#8a4630', kind: 2 },
+  leather: { c: '#5a3a26', kind: 2 },
   leatherD: { c: '#3e281c', kind: 2 },
   sole: { c: '#2e211a', kind: 2 },
+  soleH: { c: '#241913', kind: 2 },
+  // the mantle: madder wool and its woven hem, the bear's fur
+  wool: { c: '#7a2a22', kind: 2 },
+  woolD: { c: '#4e1a16', kind: 2 },
+  trim: { c: '#c49a3c', kind: 2 },
+  trimD: { c: '#5e1d17', kind: 2 },
+  fur: { c: '#4b3424', kind: 2 },
+  furL: { c: '#80603f', kind: 2 },
+  furD: { c: '#23180f', kind: 2 },
+  // the trousers (their waist, left out under a chest piece) and the wraps
+  hose: { c: '#6a3a28', kind: 2 },
+  hoseW: { c: '#6a3a29', kind: 2 },
+  hoseD: { c: '#43251a', kind: 2 },
+  wrap: { c: '#a8977a', kind: 2 },
 };
-/** The iron coat's depth: the gambeson under it, the lamellar over the chest and the back, a step at each row's foot. */
-const ironRow = (A) => (A.chest[1] + 0.35 - waistOf(A)) / 5;
-const ironCoat = (A, p) => { const r = frac((A.chest[1] + 0.35 - y(p)) / ironRow(A)); return y(p) < A.chest[1] + 0.35 && y(p) > waistOf(A) - 0.6 ? 0.19 + 0.03 * r + 0.09 * smooth(A.chest[1] - 0.2, A.chest[1] + 0.35, y(p)) : y(p) > waistOf(A) ? 0.13 : 0.09; };
+const ironChest = (B) => merge(...IRON.ironChestOf(B).parts);
+const ironLegs = (B) => ({ P: merge(...IRON.ironLegsOf(B).parts), dropAt: (f) => f.mat === 'hoseW' });
+const ironBoots = (B) => IRON.ironBootsOf(B);
+const ironHelm = (B) => merge(...IRON.ironHelmOf(B).P);
 
-function ironChest(B) {
-  const A = B.at, waist = waistOf(A), R = ironRow(A), top = A.chest[1] + 0.35;
-  // the gambeson to the hips, the iron coat of lames over it from the chest down, a belt at the waist
-  const coat = torso(B, {
-    from: waist - 0.6,
-    off: (p) => ironCoat(A, p) + (Math.abs(y(p) - waist) < 0.1 ? 0.05 : 0),
-    mat: (p) => {
-      if (Math.abs(y(p) - waist) < 0.1) return Math.abs(p[0]) < 0.12 && p[2] > 0 ? 'rivet' : 'leatherD';
-      if (y(p) >= top || y(p) < waist - 0.6) return frac((p[0] + y(p)) * 2.2) < 0.15 || frac((p[0] - y(p)) * 2.2) < 0.15 ? 'gamD' : 'gam';
-      const r = frac((top - y(p)) / R), col = frac((roundTorso(p) / (2 * Math.PI)) * 26);
-      if (r > 0.86) return 'feS';
-      if (r < 0.2 && col > 0.4 && col < 0.6) return 'rune';
-      if (col < 0.07) return 'feS';
-      return 'fe';
-    },
-    rim: 'feS',
-    caps: { off: () => 0.15, mat: (p) => (frac((p[0] + y(p)) * 2.2) < 0.15 ? 'gamD' : 'gam') },
-  });
-  // square shoulder plates, two lames
-  const pl = shoulders(B, {
-    off: (t) => (t < 0.12 ? 0.3 : 0.33),
-    mat: (t) => (t > 0.1 && t < 0.15 ? 'feS' : t > 0.3 ? 'feS' : frac(t * 9) < 0.15 ? 'rivet' : 'fe'),
-  });
-  // the gambeson's long sleeves, quilted
-  // (the armpit's front fold, and the arm's inner side where it faces front or back, on his body only: hers lies against
-  // the arm and crosses it in the walk)
-  const sleeves = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.09), mat: (u, p) => (frac(u.t * 7) < 0.18 ? 'gamD' : 'gam') });
-  // the vambraces: iron bands over the sleeve's end, a glowing band at the wrist
-  const vamb = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.1 + (f.t > 0.3 ? 0.04 : 0), mat: (f) => { if (f.t < 0.3) return frac(f.t * 8) < 0.2 ? 'gamD' : 'gam'; if (f.t > 0.8) return 'rune'; return frac(f.t * 7) < 0.25 ? 'feS' : 'fe'; } });
-  return merge(coat, pl, sleeves, vamb);
-}
-
-function ironLegs(B) {
-  const A = B.at, waist = waistOf(A);
-  // wool trousers, the waist left out under a chest piece
-  const hose = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.75 : 0.5) ? 'hoseW' : frac(y(p) * 1.4) < 0.1 ? 'hoseD' : 'hose'), rim: 'hoseD' });
-  // the knee cops and the splints down the shin, a glowing rim round each cop
-  const shin = shins(B, {
-    from: -0.18, to: 0.85, round: 1.35,
-    off: (g) => (g.t < 0.12 ? 0.2 + 0.08 * Math.cos(g.a) * (1 - Math.abs(g.t) * 5) : 0.13),
-    mat: (g) => { if (g.t < 0.12) return g.t < -0.11 || g.t > 0.1 ? 'rune' : 'fe'; if (g.t < 0.17) return 'leatherD'; const k = frac((g.a + 1.35) / 2.7 * 4); return k < 0.12 ? 'hoseD' : frac(g.t * 6) < 0.1 ? 'rivet' : 'fe'; },
-    rim: 'feS',
-  });
-  // the trousers' shins under the splints
-  const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: () => 'hose', rim: 'hoseD' });
-  return { P: merge(hose, calves, shin), dropAt: (f) => f.mat === 'hoseW' };
-}
-
-function ironBoots(B) {
-  const A = B.at;
-  return feet(B, {
-    up: 0.75,
-    off: (p, n, top) => (y(p) > top - 0.22 ? 0.03 : 0),
-    mat: (p, n, top) => {
-      const s = p[0] >= 0 ? 'l' : 'r';
-      if (y(p) > top - 0.22) return y(p) > top - 0.08 ? 'fe' : 'rune';
-      if (Math.abs(y(p) - (A.ankle[s][1] - 0.05)) < 0.06) return 'feS';
-      return p[2] > A.ball[s][2] + 0.2 ? 'leatherD' : 'leather';
-    },
-    rim: 'leatherD',
-  });
-}
-
-function ironHelm(B) {
-  const browTh = browTheta(B), top0 = 0.5;
-  return helm(B, {
-    rim: 'feS', down: 2.22,
-    margin: ({ th }) => 0.1 + 0.42 * Math.max(0, 1 - th / 1.2) ** 1.6,
-    mat: (d, { th, ph }) => {
-      const s = fromFront(ph);
-      // the face open below the brow but for the nasal; the mail falling round the sides and the back
-      if (th > browTh && s < 0.95 && !(s < 0.12 && th < browTh + 0.55)) return null;
-      if (th > browTh + 0.08) { if (s < 0.12) return 'fe'; return frac(th * 18 + (Math.floor(ph * 10) % 2) * 0.5) < 0.5 ? 'mail' : 'mailD'; }
-      if (th > browTh - 0.12) return frac(ph * 12 / (2 * Math.PI)) < 0.25 ? 'rune' : 'feS';
-      // the four ribs of the frame, riveted
-      const rib = frac(ph / (Math.PI / 2) + 0.5);
-      if (rib < 0.08 || rib > 0.92) return th > top0 && frac(th * 6) < 0.25 ? 'rivet' : 'feS';
-      return 'fe';
-    },
-  });
-}
-
-function ironMantle(B) {
-  const A = B.at, sx = A.shoulder.l[0];
-  // a wool cloak over both shoulders and down the back to the seat, its edge and its lining darker; a square iron pin at
-  // the right shoulder
-  const cloth = cloak(B, {
-    start: (x) => lerp([2.1, 0, 0], [1.2, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.88 * sx, 0, 0], [0.74 * sx, 0, 0], smooth(0, 0.5, s))[0],
-    over: [ironChest(B)],
-    off: () => 0.18, thick: 0.04,
-    hang: lerp(A.spine1, A.pelvis, 0.8)[1], folds: 7, fold: 0.12,
-    mat: (p, u, s) => (Math.abs(u) > 0.93 || s > 0.96 ? 'woolD' : frac(s * 9) < 0.08 ? 'woolD' : 'wool'),
-    rim: 'woolD',
-  });
-  // (the pin on the cloak's front edge over the right shoulder)
-  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.25).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
-  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], [[0.2, 0, 'feS'], [0.2, 0.05, 'fe'], [0.15, 0.06, 'rune'], [0.1, 0.06, 'feS'], [0.06, 0.1, 'fe']]);
-  return merge(cloth, pin);
-}
+const ironMantle = (B) => merge(...IRON.ironMantleOf(B).parts);
 
 /* ==== bronze: the hoplite (Classical Greece) ======================================================================= */
 const BRONZE_MATS = {
