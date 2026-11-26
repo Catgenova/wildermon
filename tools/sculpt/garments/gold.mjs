@@ -41,6 +41,8 @@ export const GOLD_MATS = {
   white: { c: '#f2ede2', kind: 2 },
   satin: { c: '#f6f1e6', kind: 0 },
   ruby: { c: '#b0102c', kind: 3 },
+  // (the sabatons' rosette ruby, lit when enchanted: the boots' glow)
+  rubyLit: { c: '#b0102c', kind: 3, lit: { c: '#ffe7a6', kind: 1 } },
   royal: { c: '#1f3c8f', kind: 0 },
   goldcloth: { c: '#e8b83c', kind: 0 },
   crimsonW: { c: '#68091b', kind: 0 },
@@ -518,7 +520,7 @@ function sabaton(B, s) {
   out.push(tube(rowPath(toe, 0, 0, TV, TV), { r: 0.04, k: 3, mat: 'auL', w: () => wBall }));
   // (a rosette on the instep where the lames meet the toe, a ruby in it)
   { const q = toe.at(1.2, TV / 2), o = unit(add(q.n, [0, 0.4, 0]));
-    out.push(sunburst(add(q.p, mul(o, 0.02)), o, { R: female ? 0.15 : 0.18, rays: 8, inner: 0.45, short: 0.7, dome: 0.03, mat: 'auL', w: () => wBall }), stud(add(q.p, mul(o, 0.04)), o, { r: 0.06, h: 0.06, k: 4, mat: 'ruby', w: () => wBall })); }
+    out.push(sunburst(add(q.p, mul(o, 0.02)), o, { R: female ? 0.15 : 0.18, rays: 8, inner: 0.45, short: 0.7, dome: 0.03, mat: 'auL', w: () => wBall }), stud(add(q.p, mul(o, 0.04)), o, { r: 0.06, h: 0.06, k: 4, mat: 'rubyLit', w: () => wBall })); }
   // (its flutes: four raised ridges fanning to the toe)
   for (const j of [4.2, 7, 9.8]) out.push(tube(colPath(toe, j, 0.5, TU - 0.6, 5, 0.01), { r: 0.035, k: 3, mat: 'auL', w: () => wBall }));
   const under = plateOn(FT, { a0: PI - 1.2, a1: PI + 1.2, t0: () => tBall - 0.08, t1: () => 0.995, nu: 5, nv: 6, off: (u) => 0.06 * (1 - smooth(0.6, 1, u)) + 0.02 });
