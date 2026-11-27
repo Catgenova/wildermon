@@ -132,7 +132,7 @@ check('anything else is the default', same(cleanLook({ gender: 'goblin', hair: '
 check('nothing at all is the default', same(cleanLook(null), DEFAULT_LOOK) && same(cleanLook([1, 2]), DEFAULT_LOOK) && same(cleanLook('woman'), DEFAULT_LOOK));
 check('eyes, beards and cloth are not kept', same(Object.keys(cleanLook({ ...DEFAULT_LOOK, eyes: 'green', beard: 'full', shirt: 'woad' })), LOOK_KINDS));
 check('the default is the old default\'s skin exactly', skinColour(DEFAULT_LOOK) === '#ddae85');
-const rolled = Array.from({ length: 200 }, () => randomLook());
+const rolled = Array.from({ length: 2000 }, () => randomLook()); // enough that every hairstyle comes up (200 missed one now and then)
 check('a rolled look is clean', rolled.every((l) => same(cleanLook(l), l)));
 check('and comes as either body and every hairstyle', GENDERS.every((g) => rolled.some((l) => l.gender === g.id)) && HAIRSTYLES.every((h) => rolled.some((l) => l.hair === h.id)));
 
