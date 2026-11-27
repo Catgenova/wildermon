@@ -1,7 +1,10 @@
 # One fixed repair to the live island, run by hand. It writes; look.yml only reads.
 #
-# Asked about: "telestone is bugged. Immediately return player catgenova to position 3558, 937". A Telestone took
-# catgenova to a Runestone with no way back. This puts their body on the ground at the middle of tile (3558, 937).
+# Asked for: "Replace the wall": the north wall of the house at (2610, 2986) in Meris Meadow, removed at 03:15:45
+# UTC on 2026-11-27 ("Removed: wall, north side.", told to Meri; look.yml wall_gone_at). This lays it again, finished:
+# a plain wall (`solid`), a copy of the nearest finished one on the same storey and row of the same building (building 3,
+# else its nearest window), so its material, dye and glass are the house's own, with no padlock and nobody's plan. Nothing is written if a wall
+# already stands there.
 name: Mend the island
 
 on:
@@ -32,7 +35,20 @@ jobs:
           PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
         run: |
           supabase link --project-ref "$PROJECT_REF"
+          w="world_id::text like 'f3a88670%'"
+          echo "== the north side of (2610, 2986) before"
+          supabase db query --linked "select level, dir, x, y, building, type, material from wall where $w and dir = 'h' and x = 2610 and y = 2986"
+          echo "== laid"
           supabase db query --linked "
-            update player p set x = 3558.5, y = 937.5, level = 0, moved_at = now(), seen_at = now(), away = false
-             where p.name = 'catgenova'
-            returning p.name, p.x, p.y, p.level"
+            with src as (
+              select w.* from wall w join wall_type_def t on t.id = w.type
+               where w.$w and w.building = 3 and w.level = 0 and w.dir = 'h' and w.y = 2986
+                 and w.type in ('solid', 'window', 'bay') and bill_done(w.needed)
+               order by (w.type <> 'solid'), abs(w.x - 2610) limit 1)
+            insert into wall
+            select (jsonb_populate_record(null::wall, to_jsonb(src) || jsonb_build_object('x', 2610, 'lock', null, 'planned_by', null))).*
+              from src
+             where not exists (select 1 from wall e where e.world_id = src.world_id and e.level = 0 and e.dir = 'h' and e.x = 2610 and e.y = 2986)
+            returning level, dir, x, y, building, type, material, dye, glass, bill_done(needed) as done"
+          echo "== the house's north row after"
+          supabase db query --linked "select level, dir, x, y, building, type, material, bill_done(needed) as done from wall where $w and building = 3 and dir = 'h' and y = 2986 order by x"
