@@ -19,11 +19,11 @@
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { SPECIES } from '../../src/game/creatures';
 import { ARMOUR_VS, armPace, BLOW_KINDS, blowOf, fightBase, FLANK_HIT, HEAVY_HIT, HIDE_TAKES, HIDES, KNIFE_BLEED, KNIFE_BLEED_SECS, STAGGER_MAUL, WIND_UP } from '../../src/game/fight';
-import { Game } from '../../src/game/game';
+import { Game, STARTER_WEAR } from '../../src/game/game';
 import { WEAPONS } from '../../src/game/gear';
 import type { Wound, WoundKind } from '../../src/game/wounds';
 import { TileType } from '../../src/world/tiles';
-import { psql, ok, bad, check } from './harness';
+import { psql, ok, bad, check, bare } from './harness';
 
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
 const ATTACK = ACTION_BY_ID.get('attack_creature');
@@ -170,6 +170,7 @@ check(`all ${Object.keys(SPECIES).length} kinds wear the same hide and hit as he
 /** A body on level grass. */
 const body = (): Game => {
   const g = Game.create(4242);
+  bare(g, STARTER_WEAR); // as the island's body here: no starting cloth
   const w = g.world;
   for (let y = 16; y <= 26; y++) for (let x = 16; x <= 26; x++) { w.setHeight(x, y, 4); w.setDirt(x, y, 3); }
   for (let y = 16; y <= 25; y++) for (let x = 16; x <= 25; x++) w.setTile(x, y, TileType.Grass, 0);

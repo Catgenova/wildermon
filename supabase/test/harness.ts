@@ -102,6 +102,18 @@ export const handsSql = (w: string, u: string, skills: readonly string[], level 
 export const hands = (g: { skills: { values: Map<string, number> } }, skills: readonly string[], level = HANDS): void => {
   for (const s of skills) g.skills.values.set(s, Math.max(g.skills.values.get(s) ?? 0, level));
 };
+/**
+ * A browser's new body as the island's tests make theirs (straight into `player`, no `starter_kit`): without the cloth a
+ * new body comes ashore in (`STARTER_WEAR`, game.ts), neither worn nor carried, which slows a walk and tires a dig a little.
+ */
+export const bare = (g: { player: { equipped: Record<string, number | null> }; inventory: { remove(uid: number, count?: number): boolean } },
+  wear: ReadonlyArray<readonly [string, string]>): void => {
+  for (const [, slot] of wear) {
+    const uid = g.player.equipped[slot];
+    g.player.equipped[slot] = null;
+    if (uid != null) g.inventory.remove(uid);
+  }
+};
 /** The skills walls, floors, roofs and columns are planned and built in. */
 export const BUILD_HANDS: readonly string[] = ['carpentry', 'masonry'];
 /** The skills recipes are made in (`craftgates.ts`, a gate on every recipe), and paving and restoring. */

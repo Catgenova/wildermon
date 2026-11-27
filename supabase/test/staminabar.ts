@@ -15,16 +15,17 @@
  *
  * The island half runs in one transaction that is rolled back.
  */
-import { CHAR_START, Game } from '../../src/game/game';
+import { CHAR_START, Game, STARTER_WEAR } from '../../src/game/game';
 import { SKILL_TOP } from '../../src/game/skills';
 import { WIND_REST } from '../../src/game/body';
 import { ACTION_BY_ID } from '../../src/game/actions';
-import { psql, ok, bad, check } from './harness';
+import { psql, ok, bad, check, bare } from './harness';
 
 const near = (a: number, b: number): boolean => Math.abs(a - b) < 1e-9;
 
 const LEVELS = [CHAR_START, 60, SKILL_TOP];
 const g = Game.create(4242);
+bare(g, STARTER_WEAR); // as the island's body here: no starting cloth
 const dig = ACTION_BY_ID.get('dig')!;
 
 /* ---- the browser ---------------------------------------------------------- */

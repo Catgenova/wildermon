@@ -27,10 +27,10 @@ import {
   FIST, ARROWS, BODKIN_HIDE, BURN_WEAR, CRIT_BASE, CRIT_HIT, CRIT_KNIFE, CRIT_PER_SKILL, critChance, DODGE_GAIN, DODGE_MOST, DODGE_PER_CONTROL,
   DODGE_PER_KG, dodgeChance, KNIFE_BLEED_SECS, nockedArrow, STAGGER_MAUL, THREAT_HOLD, VENOM_DRAIN, VENOM_SECS,
 } from '../../src/game/fight';
-import { Game } from '../../src/game/game';
+import { Game, STARTER_WEAR } from '../../src/game/game';
 import { WEAPON_BY_ID } from '../../src/game/gear';
 import { TileType } from '../../src/world/tiles';
-import { psql, ok, bad, check } from './harness';
+import { psql, ok, bad, check, bare } from './harness';
 
 const near = (a: number, b: number, by = 1e-6): boolean => Math.abs(a - b) <= by * Math.max(1, Math.abs(b));
 
@@ -316,6 +316,7 @@ check('the browser is told what it is fighting', /^\d+$/.test(island('SAID')), i
 
 const field = (): Game => {
   const g = Game.create(4242);
+  bare(g, STARTER_WEAR); // as the island's body here: no starting cloth
   const w = g.world;
   for (let y = 4; y <= 40; y++) for (let x = 4; x <= 40; x++) { w.setHeight(x, y, 4); w.setDirt(x, y, 3); w.setTile(x, y, TileType.Grass, 0); }
   g.player.x = 20.5;

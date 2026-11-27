@@ -31,13 +31,13 @@
  *
  * No database.
  */
-import { Game } from '../../src/game/game';
+import { Game, STARTER_WEAR } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { CATCH_UP, clockSteps, MAX_STEP } from '../../src/engine/loop';
 import { turnsAhead, turnsOf, VIA_MAX } from '../../src/net/island';
 import { TILE_DEFS, TileType } from '../../src/world/tiles';
 import { BASE_SPEED } from '../../src/game/player';
-import { ok, bad, check } from './harness';
+import { ok, bad, check, bare } from './harness';
 
 const sum = (a: number[]): number => a.reduce((s, v) => s + v, 0);
 
@@ -54,6 +54,7 @@ check('no time, no steps', clockSteps(0).length === 0 && clockSteps(-1).length =
 /* ---- the action bar, on the wall clock ------------------------------------------------------ */
 
 const game = Game.create(4242);
+bare(game, STARTER_WEAR); // as the island's body here: no starting cloth
 let wall = 1_000_000;
 game.wallClock = () => wall;
 const def = ACTION_BY_ID.get('dig');

@@ -30,7 +30,7 @@
  *
  * Runs against the database the suite leaves behind, and puts it back.
  */
-import { Game } from '../../src/game/game';
+import { Game, STARTER_WEAR } from '../../src/game/game';
 import { ACTIONS, type ActionDef, type Target } from '../../src/game/actions';
 import { STONES_DEPTH, atWaterEdge, plantRefusal, stonesRefusal } from '../../src/game/watergarden';
 import { BOTANIZE_WATER_TABLE } from '../../src/game/forage';
@@ -43,7 +43,7 @@ import { DAY_SECONDS } from '../../src/game/pace';
 import {
   WATER_PLANTS, WATER_PLANT_BY_ID, WATER_ROOTING, seasonBegan, stateLine, waterPlantState,
 } from '../../src/world/waterplants';
-import { psql } from './harness';
+import { psql, bare } from './harness';
 import { SKILL_GATES } from '../../src/game/skillgates';
 
 /** The level that opens every gate of a kind in a skill (`skillgates.ts`): what this test's builder works at. */
@@ -197,6 +197,7 @@ const ISLAND_SCENE = `
 /** The same scene in a browser's game of its own. */
 function browserScene(): Game {
   const g = Game.create(31337, 64);
+  bare(g, STARTER_WEAR); // as the island's body here: no starting cloth
   g.skills.values.set('botanizing', gatesOpen('water_plant', 'botanizing'));
   const w = g.world;
   for (let y = 0; y <= 64; y++) for (let x = 0; x <= 64; x++) w.setHeight(x, y, height(x, y));
