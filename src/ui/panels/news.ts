@@ -183,7 +183,6 @@ import { NEED_KINDS, NEED_LABEL } from './care';
 import { HUNGRY_AT, HURT_AT } from './wildermon';
 import { CARE_WANTING as CARE_WANTING_317, COOKED_MEAT_TOO } from '../../game/creatures';
 import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
-import { OUTFITS } from '../creator';
 import { MAX_ZOOM, SCULPTED_MAX_ZOOM } from '../../engine/camera';
 import { article, burnsFor, capital, finePercent, listed, listedOr, numberWord, percent, readyIn, timeWords } from '../../game/words';
 import { TRASH_ENDS, TRASH_RULE } from '../../game/trash';
@@ -455,6 +454,7 @@ export const NEWS: News[] = [
     day: '2026-11-27',
     lines: () => [
       'Changed: new players come ashore wearing a cloth tunic, trousers and shoes.',
+      'Changed: the character creator\'s preview shows that cloth only; its outfit buttons are gone.',
     ],
   },
   // The island tells a client its own pace (rpc_travel_speed), for the Unity client's mounts, carts and boats.
@@ -5559,7 +5559,7 @@ export const NEWS: News[] = [
       `New: animations: idle; walk; overhead swing (mining; a fight with ${listedOr(WEAPONS.filter((w) => w.twoHanded && !w.ammo).map((w) => itemDef(w.id).name.toLowerCase()))}). Other jobs, fights, meditating, emotes, casting: one placeholder gesture.`,
       `New: ${itemDef('maul').name.toLowerCase()} drawn as the Runestone Warhammer, both hands, overhead swing. ${itemDef('long_sword').name}: both hands in a fight, slash trail; on the back when wielded.`,
       `Changed: character creator. Body: ${listedOr(GENDERS.map((g) => g.name))}. Hair: ${listedOr(HAIRSTYLES.filter((h) => ['bald', 'swept', 'braid'].includes(h.id)).map((h) => h.name))}. Hair colour: hue, the whole colour wheel. Hair brightness: near black to near white, grey over its top ${percent(HAIR_FADE)}. Skin: palest to darkest.`,
-      `Changed: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit ${listedOr(OUTFITS.map((o) => o.name))}, head bare.`,
+      `Changed: creator preview: the sculpted body, idle, turned by ◀ ▶ or dragging; Head close-up; outfit None, Cloth, Leather or Plate, head bare.`,
       'Removed: build Neither, eyes, beards, shirt and trousers colours, swatch hair colours, other haircuts. Existing looks: the nearest body, hairstyle, hair colour and skin.',
       'Removed: Sculpted figures setting (always on).',
     ],

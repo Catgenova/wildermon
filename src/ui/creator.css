@@ -55,7 +55,7 @@
 .cr-me:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
 
 /*
- * Under the mirror: turn it, look close, and the first outfit on or off. The
+ * Under the mirror: turn it, and look close. The
  * same eight ways round the island draws you.
  */
 .cr-turn {

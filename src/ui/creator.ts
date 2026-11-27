@@ -15,17 +15,11 @@ type Outfit = NonNullable<FigurePose['outfit']>;
 /** Every piece of the first outfit off: the body in its painted undergarment. */
 const BARE: Outfit = { shawl: false, trousers: false, boots: false, tunic: false, hood: false };
 /**
- * What the preview can show the body in, by the game's own outfit flags (`FigurePose.outfit`, as the review tools in
- * `tools/sculpt/*game.mjs` set them): the undergarment alone (the first, what the preview opens on), and each set of
- * clothes and armour, its hood, hat or helm off so the hair shows (the hood down, no leather hat, no plate helm).
- * Another set is another row.
+ * What the preview shows the body in: what a new body comes ashore wearing (`STARTER_WEAR`, game.ts), a cloth tunic,
+ * trousers and shoes, by the game's own outfit flags (`FigurePose.outfit`), and nothing else. Asked for: "remove the
+ * preview options but keep the preview, it will only display those 3 equipment not nude or plate etc".
  */
-export const OUTFITS: ReadonlyArray<{ id: string; name: string; outfit: Outfit }> = [
-  { id: 'none', name: 'None', outfit: BARE },
-  { id: 'cloth', name: 'Cloth', outfit: { shawl: true, trousers: true, boots: true, tunic: true, hood: false } },
-  { id: 'leather', name: 'Leather', outfit: { ...BARE, leatherChest: true, leatherLegs: true, leatherBoots: true, leatherShawl: true } },
-  { id: 'plate', name: 'Plate', outfit: { ...BARE, plateMantle: true, plateChest: true, plateLegs: true, plateBoots: true } },
-];
+export const ASHORE_OUTFIT: Outfit = { ...BARE, tunic: true, trousers: true, boots: true };
 
 const button = (className: string, text: string, label?: string): HTMLButtonElement => {
   const b = document.createElement('button');
@@ -72,8 +66,8 @@ interface Slider {
  *
  * The mirror is the sculpted body the island draws (`drawPortrait`, with the
  * sculpted bodies asked for on this page): the man's or the woman's,
- * standing in its idle, in its painted undergarment or one of the sets of
- * clothes and armour (`OUTFITS`), turned by its arrows, by dragging or by the arrow
+ * standing in its idle, in what it comes ashore wearing (`ASHORE_OUTFIT`: a
+ * cloth tunic, trousers and shoes), turned by its arrows, by dragging or by the arrow
  * keys. Under it, a button per body and a thumbnail per hairstyle there is a
  * mesh for (`HAIRSTYLES`), and sliders for the hair's hue and brightness and
  * the skin, each with the exact colour beside it. Every change is in the mirror on
@@ -90,14 +84,13 @@ export class Creator {
   private readonly mirror: HTMLCanvasElement;
   private readonly choices: HTMLDivElement;
   private readonly closeUp: HTMLButtonElement;
-  private readonly dressed: HTMLButtonElement[] = [];
   private readonly thumbs: Array<{ canvas: HTMLCanvasElement; hair: string }> = [];
   private readonly marks: Array<{ kind: 'gender' | 'hair'; id: string; button: HTMLButtonElement; label: HTMLElement; name: string }> = [];
   private readonly sliders: Slider[] = [];
   private walking = 0;
   private facing = 1;
   private close = false;
-  private outfit: Outfit = OUTFITS[0].outfit;
+  private readonly outfit: Outfit = ASHORE_OUTFIT;
   /** Whether the thumbnails were last drawn with the sculpted bodies loaded: they land after the page does. */
   private thumbsSculpted = false;
 
@@ -134,29 +127,12 @@ export class Creator {
     });
     turn.append(left, this.closeUp, right);
 
-    // What the preview shows the body in: one of OUTFITS.
-    const wear = document.createElement('div');
-    wear.className = 'cr-turn cr-wear';
-    wear.setAttribute('role', 'group');
-    wear.setAttribute('aria-label', 'Outfit');
-    for (const o of OUTFITS) {
-      const b = button('', o.name);
-      b.dataset.outfit = o.id;
-      b.setAttribute('aria-pressed', String(o.outfit === this.outfit));
-      b.addEventListener('click', () => {
-        this.outfit = o.outfit;
-        for (const d of this.dressed) d.setAttribute('aria-pressed', String(d === b));
-      });
-      this.dressed.push(b);
-      wear.append(b);
-    }
-
     const roll = button('cr-roll', 'Random');
     roll.addEventListener('click', () => {
       this.look = randomLook();
     });
 
-    column.append(this.mirror, turn, wear, roll);
+    column.append(this.mirror, turn, roll);
 
     this.choices = document.createElement('div');
     this.choices.className = 'cr-choices';

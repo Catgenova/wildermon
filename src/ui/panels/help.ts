@@ -1,5 +1,4 @@
 import { GENDERS, HAIR_FADE, HAIRSTYLES } from '../../game/look';
-import { OUTFITS } from '../creator';
 import { CROSS_CARE, CROSS_CHANCE, CROSS_SKILL, HYBRID_HARDY, HYBRID_WORK, HYBRIDS } from '../../game/hybridlist';
 import { MAP_LEGEND, MAP_ZOOM_MIN, MAP_ZOOM_STEP, SETTLEMENT_BORDER_PX } from './minimap';
 import { BAG_CARRY, BAG_CARRY_QL, bagCarry, bagCarryPct } from '../../game/gear';
@@ -1685,7 +1684,7 @@ export function helpText(): string {
       <li>Island: <i>Customize character</i> under <b>How you look</b> (Settings, <kbd>O</kbd>) opens the account page's character creator on your current look.
       <i>Step ashore</i> saves it to your account, applies it on every island you have a body on and returns you. Nothing changes before that.</li>
       <li>Creator: <b>Body</b> ${GENDERS.map((g) => g.name).join(', ')}; <b>Hair</b> ${HAIRSTYLES.map((h) => h.name).join(', ')}; <b>Hair colour</b> (hue), <b>Hair brightness</b> (grey over its top ${Math.round(HAIR_FADE * 100)}%), <b>Skin</b> sliders.
-      Preview: ◀ ▶ or drag to turn, <i>Head</i> close-up, outfit ${OUTFITS.map((o) => o.name).join(', ')}.</li>
+      Preview: ◀ ▶ or drag to turn, <i>Head</i> close-up, shown in the cloth tunic, trousers and shoes a new body comes ashore wearing.</li>
     </ul>
     <h4>Two-step sign-in</h4>
     <ul>
