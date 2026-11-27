@@ -449,6 +449,14 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // The island tells a client its own pace (rpc_travel_speed), for the Unity client's mounts, carts and boats.
+  {
+    n: 734,
+    day: '2026-11-27',
+    lines: () => [
+      'Fixed: in the Unity client, riding, driving and sailing go at the mount\'s, cart\'s or boat\'s own pace.',
+    ],
+  },
   // Fur rebuilt piece by piece (tools/sculpt/garments/fur.mjs).
   {
     n: 733,
