@@ -295,8 +295,6 @@ import { DEFAULT_LOOK, type Look } from '../game/look';
 import { ANCIENT_SWORD } from '../game/gear';
 import { METALS } from '../game/metal';
 import { STRIDE, type Baked } from './bake';
-import { occlusion } from './ao';
-import { LUSTRE } from './shading';
 import { M, bodyMaterials } from './models/body';
 import { bonesOf, FEMALE, heightOf, MALE, REST_EXTRAS, relaxedIdle, type Bones, type Proportions } from './rig';
 import { humanProportions } from './human';
@@ -681,7 +679,7 @@ const GARMENT_MAT = Object.keys(M).length;
  * The garments' materials, each once (garments of one outfit share theirs): a colour, lit (kind 0) or unlit (kind 1); a
  * garment's material is its index here, plain or enchanted.
  */
-const GARMENT_COLOURS: Array<{ c: string; kind: number; piece?: Tinted; role?: PlateRole; ench?: string; metal?: string }> = [];
+const GARMENT_COLOURS: Array<{ c: string; kind: number; piece?: Tinted; role?: PlateRole; ench?: string }> = [];
 /** What tints a garment's material: a plate piece's metal, or a dyed piece's dye (`dye:<piece>`). */
 type Tinted = PlatePiece | `dye:${DyedPiece}` | `kit:${KitPiece}`;
 /**
@@ -697,12 +695,11 @@ const kitOf = (pose: FigurePose): KitTints => {
   const g = pose.gear, circlet = g?.head?.id === 'circlet' ? (g.head.material ?? '').split(',').map((x) => x.trim()) : undefined;
   return { ...(g?.offhand?.material ? { shield: g.offhand.material } : {}), ...(g?.jewel?.material ? { jewel: g.jewel.material } : {}), ...(circlet ? { stones: circlet } : {}), ...(pose.outfit?.glow ? { glow: pose.outfit.glow } : {}) };
 };
-/** (a glowing material, kind 1, kept apart for each piece it glows on, `ench`: its glow its enchantment's, `KitTints.glow`;
- * a metal one, kind 3, for each metal set it is of, `metal`: its lustre that metal's, `lustreOf`) */
-const colourIndex = (m: { c: string; kind: number }, piece?: Tinted, role?: PlateRole, ench?: string, metal?: string): number => {
-  const e = m.kind === 1 ? ench : undefined, mt = m.kind === 3 ? metal : undefined;
-  const k = GARMENT_COLOURS.findIndex((x) => x.c === m.c && x.kind === m.kind && x.piece === piece && x.role === role && x.ench === e && x.metal === mt);
-  return k >= 0 ? k : GARMENT_COLOURS.push({ c: m.c, kind: m.kind, piece, role, ...(e ? { ench: e } : {}), ...(mt ? { metal: mt } : {}) }) - 1;
+/** (a glowing material, kind 1, kept apart for each piece it glows on, `ench`: its glow its enchantment's, `KitTints.glow`) */
+const colourIndex = (m: { c: string; kind: number }, piece?: Tinted, role?: PlateRole, ench?: string): number => {
+  const e = m.kind === 1 ? ench : undefined;
+  const k = GARMENT_COLOURS.findIndex((x) => x.c === m.c && x.kind === m.kind && x.piece === piece && x.role === role && x.ench === e);
+  return k >= 0 ? k : GARMENT_COLOURS.push({ c: m.c, kind: m.kind, piece, role, ...(e ? { ench: e } : {}) }) - 1;
 };
 /**
  * A plate piece's plates (`mats` 'plate', the face) and their shadow side ('shade'), and a chain piece's mail (its rings'
@@ -763,7 +760,7 @@ const USED = new WeakMap<Baked, { used: readonly number[]; at: number }>();
  * garments it can wear (their own bones posed with the body's always, each garment's after the one before; each drawn
  * when the bake is asked for with it worn), and its hairstyles.
  */
-function lowBody(A: Asset, P: Proportions, share: number, garments0: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>, under: ReadonlyArray<ReadonlyArray<readonly [number, readonly number[], readonly number[]]>>, enchs: ReadonlyArray<string | undefined> = [], sets: ReadonlyArray<string | undefined> = []): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number, cast?: boolean) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; wet: () => number; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[]; lift: (local: Array<M3 | undefined>, move: V) => number; toGame: (p: V) => V; swap: (k: number, g: GarmentAsset) => void } {
+function lowBody(A: Asset, P: Proportions, share: number, garments0: readonly GarmentAsset[], hairs: Record<string, HairAsset>, tints: ReadonlyArray<Tinted | undefined>, under: ReadonlyArray<ReadonlyArray<readonly [number, readonly number[], readonly number[]]>>, enchs: ReadonlyArray<string | undefined> = []): { baked: (worn: readonly boolean[], sword?: Carried, style?: string, lit?: readonly boolean[], drop?: readonly boolean[], prop?: string, tools?: Partial<Record<Side, string>>, up?: Partial<Record<Side, number>>, nock?: number, cast?: boolean) => Baked; bones: (pose: FigurePose, worn?: readonly boolean[], over?: Record<string, [number, number, number]>) => Float32Array; shapes: () => number[]; wet: () => number; trail: (pose: FigurePose, lit: boolean) => TrailDraw | undefined; skeleton: Skeleton; held: Held; heldOf: (id: string) => Held | undefined; toolHeld: (id: string) => Held | undefined; figure: (pose: FigurePose) => Array<M3 | undefined>; used: (worn: readonly boolean[], lit?: readonly boolean[]) => number[]; lift: (local: Array<M3 | undefined>, move: V) => number; toGame: (p: V) => V; swap: (k: number, g: GarmentAsset) => void } {
   const BONES = A.bones;
   /** The garments, each swappable for another on no bones of its own (`swap`: a metal set's pieces, loaded when first worn). */
   const garments: GarmentAsset[] = [...garments0];
@@ -783,7 +780,7 @@ function lowBody(A: Asset, P: Proportions, share: number, garments0: readonly Ga
   /** Each garment's materials, plain and enchanted: their indices among the garments'. */
   const indexOne = (k: number, look: 'plain' | 'enchanted'): number[] => looksOf(garments[k], look).map((m, i) => {
     const g = garments[k], t = tints[k], role = !t ? undefined : t.startsWith('dye:') ? DYE_ROLE[g.mats[i]] : t.startsWith('kit:') ? KIT_ROLE[g.mats[i]] : t === 'mantle' ? MANTLE_ROLE[g.mats[i]] : PLATE_ROLE[g.mats[i]];
-    return colourIndex(m, role && t, role, enchs[k], sets[k]);
+    return colourIndex(m, role && t, role, enchs[k]);
   });
   const indexOf = (look: 'plain' | 'enchanted') => garments.map((_, k) => indexOne(k, look));
   const MATS_OF = { plain: indexOf('plain'), enchanted: indexOf('enchanted') };
@@ -973,8 +970,6 @@ function lowBody(A: Asset, P: Proportions, share: number, garments0: readonly Ga
   }
 
   const BAKED = new Map<string, Baked>();
-  /** Each dressed body's occlusion (`occlusion`), by what it wears and its hair, whatever is in its hands. */
-  const AO_OF = new Map<string, Float32Array>();
   /**
    * The body with the hairstyle's hair if it has one, and the garments worn over it, laid out for the GPU in one bake:
    * every polygon its own corners, each with the polygon's normal, so it is drawn flat; the body's polygons a worn
@@ -1078,8 +1073,6 @@ function lowBody(A: Asset, P: Proportions, share: number, garments0: readonly Ga
       });
       shapes = { from, count: verts.length / STRIDE - from, shapes: SH.length, data: Float32Array.from(data) };
     });
-    // (what is held after: no occlusion of its own, `occlusion`)
-    const dressedTo = verts.length / STRIDE;
     if (sword && PR) {
       // laid at rest on the right hand's socket, all of it on that hand, or on the back's or the belt's, all of it on the
       // upper back or the pelvis (sat, the back's); its glow's polygons left out
@@ -1142,12 +1135,6 @@ function lowBody(A: Asset, P: Proportions, share: number, garments0: readonly Ga
     }
     const baked: Baked = { band: 1, verts: Float32Array.from(verts), tris: Uint32Array.from(tris), nVerts: verts.length / STRIDE, nTris: tris.length / 3, bones: [...ALL.map((b) => b.name), GROUND], ms: performance.now() - t0, grid: [0, 0, 0], cell: 0, faceSkin: Float32Array.from(faceSkin) };
     if (shapes) baked.shapes = shapes;
-    // (the dressed body's the same whatever is in the hands: worked out once for each, `AO_OF`)
-    const kp = key.split('|'), dressedKey = `${kp[0]}|${kp[2]}`, had0 = AO_OF.get(dressedKey);
-    const ao = had0 && had0.length === dressedTo ? had0 : occlusion(baked.verts, STRIDE, baked.tris, baked.nVerts, dressedTo).subarray(0, dressedTo);
-    if (ao !== had0) { if (AO_OF.size > 64) AO_OF.clear(); AO_OF.set(dressedKey, ao); }
-    baked.ao = new Float32Array(baked.nVerts).fill(1);
-    baked.ao.set(ao);
     USED.set(baked, { used, at: places.worn });
     BAKED.set(key, baked);
     return baked;
@@ -1382,7 +1369,6 @@ function lowBody(A: Asset, P: Proportions, share: number, garments0: readonly Ga
     MATS_OF.plain[k] = indexOne(k, 'plain');
     MATS_OF.enchanted[k] = indexOne(k, 'enchanted');
     BAKED.clear();
-    AO_OF.clear();
     garmentMatsAnew();
   }
 
@@ -1802,20 +1788,14 @@ const underOf = (table: ChestLegs): Array<Array<readonly [number, readonly numbe
 const ENCH_KEYS: readonly string[] = [...new Set(Object.values(ITEM_PIECES).map((p) => p.ench as string))];
 const enchOf = (g: (typeof GARMENTS)[number]): string | undefined =>
   g.enchanted ? ENCH_KEYS.find((k) => g.enchanted?.({ outfit: { enchanted: { [k]: true } } } as unknown as FigurePose)) : undefined;
-/** A metal's lustre as a material takes it (`./shading.ts` LUSTRE), by its id or its name; nothing for no metal or one not known. */
-function lustreOf(metal: string | undefined): { lustre?: number } {
-  const id = metal ? METAL_KEY.get(metal.toLowerCase()) : undefined, l = id ? LUSTRE[id] : undefined;
-  return l ? { lustre: l } : {};
-}
 const tintOf = (g: (typeof GARMENTS)[number]): Tinted | undefined => g.plate ?? (g.dye ? (`dye:${g.dye}` as const) : g.kit ? (`kit:${g.kit}` as const) : undefined);
 const BODIES = {
-  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), { ...HAIRS.male, ...underHat(MALE_LEATHER_HAT) }, GARMENTS.map(tintOf), underOf(MALE_CHEST_LEGS), GARMENTS.map(enchOf), GARMENTS.map((g) => g.set?.[0])),
-  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), { ...HAIRS.female, ...underHat(FEMALE_LEATHER_HAT) }, GARMENTS.map(tintOf), underOf(FEMALE_CHEST_LEGS), GARMENTS.map(enchOf), GARMENTS.map((g) => g.set?.[0])),
+  man: lowBody(MALE_ASSET as unknown as Asset, MALE, 1, GARMENTS.map((g) => g.man), { ...HAIRS.male, ...underHat(MALE_LEATHER_HAT) }, GARMENTS.map(tintOf), underOf(MALE_CHEST_LEGS), GARMENTS.map(enchOf)),
+  woman: lowBody(FEMALE_ASSET as unknown as Asset, FEMALE, WOMAN_OF_MAN, GARMENTS.map((g) => g.woman), { ...HAIRS.female, ...underHat(FEMALE_LEATHER_HAT) }, GARMENTS.map(tintOf), underOf(FEMALE_CHEST_LEGS), GARMENTS.map(enchOf)),
 };
 /** The garments' materials after the body's (each once, however many garments share it): lit by the body's light in their own colours, unlit (glowing in the bloom), or metal (lit by its brightness, as the sword). */
-// (kind 3: lit as metal, for a glossy sheen: the obsidian set's plates, tools/sculpt/garments/obsidian.mjs; a metal set's
-// metal in that metal's lustre)
-const garmentMat = (m: (typeof GARMENT_COLOURS)[number]): Material => (m.kind === 1 ? { colour: m.c, emissive: true } : m.kind === 2 ? { colour: m.c, gear: true } : m.kind === 3 ? { colour: m.c, gear: true, metal: true, ...lustreOf(m.metal) } : { colour: m.c, cloth: true });
+// (kind 3: lit as metal, for a glossy sheen: the obsidian set's plates, tools/sculpt/garments/obsidian.mjs)
+const garmentMat = (m: (typeof GARMENT_COLOURS)[number]): Material => (m.kind === 1 ? { colour: m.c, emissive: true } : m.kind === 2 ? { colour: m.c, gear: true } : m.kind === 3 ? { colour: m.c, gear: true, metal: true } : { colour: m.c, cloth: true });
 const GARMENT_MATS: Material[] = GARMENT_COLOURS.map(garmentMat);
 /** The garments' materials brought up to `GARMENT_COLOURS` after a garment is swapped in (`lowBody` swap). */
 function garmentMatsAnew(): void { for (let k = GARMENT_MATS.length; k < GARMENT_COLOURS.length; k++) GARMENT_MATS.push(garmentMat(GARMENT_COLOURS[k])); }
@@ -1864,7 +1844,7 @@ function plateMat(g: (typeof GARMENT_COLOURS)[number], metal: string): Material 
   const sh = metalShades(metal), top = Math.min(1, METAL_TOP / LUMA(sh.metal));
   const face = GARMENT_COLOURS.find((x) => x.piece === g.piece && x.role === 'face' && x.kind === g.kind) ?? g;
   const k = g.role === 'shade' ? Math.pow(LUMA(hexRgb(g.c)) / LUMA(hexRgb(face.c)), METAL_FACETS) : 1;
-  return { colour: hexOfRgb(sh.metal.map((v) => v * k * top)), gear: true, metal: true, ...lustreOf(metal) };
+  return { colour: hexOfRgb(sh.metal.map((v) => v * k * top)), gear: true, metal: true };
 }
 /**
  * The scale set's scales and scale-plate (`PLATE_ROLE` scale, edge) in its material: dragon scale's colour
@@ -1895,7 +1875,7 @@ function dyeMat(g: (typeof GARMENT_COLOURS)[number], dye: string, was: Material)
 function kitMat(g: (typeof GARMENT_COLOURS)[number], kit: KitTints, was: Material): Material {
   const piece = g.piece?.slice(4) as KitPiece, role = g.role;
   const metal = (rgb: readonly number[]): Material => ({ colour: hexOfRgb(rgb), gear: true, metal: true });
-  if (role === 'iron') { const sh = metalShades('iron'); return { ...metal(sh.metal.map((v) => v * Math.min(1, METAL_TOP / LUMA(sh.metal)))), ...lustreOf('iron') }; }
+  if (role === 'iron') { const sh = metalShades('iron'); return metal(sh.metal.map((v) => v * Math.min(1, METAL_TOP / LUMA(sh.metal)))); }
   if (piece === 'shieldWood') { const w = woodTone(kit.shield), k = LUMA(hexRgb(g.c)) / LUMA(OAK); return w ? { ...was, colour: hexOfRgb(w.map((v) => v * k)) } : was; }
   if (piece === 'shieldMetal') return plateMat(g, kit.shield ?? 'iron');
   const stone = piece === 'jewel' ? kit.jewel : role?.startsWith('stone') ? kit.stones?.[Number(role.slice(5)) - 1] : undefined, tone = gemTone(stone);
@@ -1903,7 +1883,7 @@ function kitMat(g: (typeof GARMENT_COLOURS)[number], kit: KitTints, was: Materia
   return tone ? metal(tone) : was;
 }
 /** A prop's materials, plain or enchanted, its head's or blade's stone in its metal (`metalTint`): lit by the body's light by brightness, or unlit (and so glowing in the bloom). */
-const propMats = (p: PropAsset, which: 'plain' | 'enchanted', metal: string | undefined): Material[] => p[which].map((m) => (m.kind === 0 ? { colour: metalTint(p, m, metal), gear: true, ...(m.metal ? { metal: true, ...(m.metal !== 'glass' && !m.wood ? lustreOf(metal ?? 'iron') : {}) } : {}) } : { colour: m.c, emissive: true }));
+const propMats = (p: PropAsset, which: 'plain' | 'enchanted', metal: string | undefined): Material[] => p[which].map((m) => (m.kind === 0 ? { colour: metalTint(p, m, metal), gear: true, ...(m.metal ? { metal: true } : {}) } : { colour: m.c, emissive: true }));
 /** The skin colour the bodies' light was fitted to (`tools/sculpt/lowlight.py`), red, green and blue nought to one: a cloth's colour over it tints the light. */
 const FIT_SKIN: [number, number, number] = [0.68, 0.49, 0.41];
 

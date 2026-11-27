@@ -153,7 +153,6 @@ import { SPELL_VISUALS } from '../../render/spells';
 import { furnitureDef, liquidCapacity, POND_EVERY, STATION_REACH, WATER_AT_HAND, type PlacedFurniture } from '../../game/furniture';
 import { billWords, CHARGE_PER_QL, CHARGE_QL, chargesFor, countOf, DRINK_LITRES, LIQUID_NAME, LITRE_KG, lyeAshFor, LYE_ASH_PER_LITRE, RARITY_ROOM, TAN_LYE, type Item } from '../../game/items';
 import { RUNE_GATE, RUNE_GATE_FADE, RUNE_GATE_GLOW_REACH, RUNE_GATE_REACH, RUNE_GATE_RISE, runeGateName } from '../../game/runegate';
-import { AO_MOST, LUSTRE, METAL_GLINT, METAL_LUSTRE, NIGHT_LIFT } from '../../sculpt/shading';
 import { METALS, INGOT_LUMPS, INGOT_WEIGHT, MOULD_BY_ID, MOULD_SKILL, MOULDS, SMITH_TOOL } from '../../game/metal';
 import { meltFits, meltLumps, meltQl } from '../../game/melt';
 import { furnaceMadeSaid, meltingSaid, SMELTER_H, SMELTER_W } from '../../game/smelter';
@@ -444,28 +443,12 @@ const GLASS_GATE_IDLE: Idle = { why: 'gate', n: 6, what: ['material', 'glass'] }
 /** Its card while a hod carrier's gates read its level in the gate's skill, carpentry 1 (663 to 665): any other worker's gate card. */
 const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, undefined, { carpentry: 1 });
 
-/** The metals of one lustre (the sculpted bodies' sheen, 734), named as a list says them. */
-const lustreNames = (l: 1 | 2 | 3): string => listed(METALS.filter((m) => (LUSTRE[m.id] ?? 2) === l).map((m) => m.name.toLowerCase()));
-
 /** Restoration's first relic and enchanting's first Formula, opened at a new body's level (698). */
 const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll`)!;
 /** Stonecutting's, milling's and glassblowing's first making, opened at a new body's level (697). */
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
-  // The sculpted bodies' shading (src/sculpt/gl.ts, ao.ts, shading.ts).
-  {
-    n: 734,
-    day: '2026-11-27',
-    lines: () => [
-      `Changed: metal sheen by metal: ×${METAL_LUSTRE[1]} on ${lustreNames(1)}; ×${METAL_LUSTRE[3]} on ${lustreNames(3)}.`,
-      `New: metal glint on facets turned between the light and the eye: up to ${percent(METAL_GLINT[0])} toward the metal's own colour.`,
-      `New: shade in creases and under hems, collars and brims: up to ${percent(AO_MOST)} darker.`,
-      'New: ink line where one part of a body stands in front of another.',
-      `Changed: bodies at night: ${percent(NIGHT_LIFT)} more contrast under the dark.`,
-      'Changed: bodies drawn faster: light once a polygon; no glow pass on a body with nothing glowing.',
-    ],
-  },
   // Fur rebuilt piece by piece (tools/sculpt/garments/fur.mjs).
   {
     n: 733,

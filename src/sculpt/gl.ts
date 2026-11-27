@@ -11,8 +11,6 @@
  * on the 2D canvas with one `drawImage`, where `drawFigure` would draw.
  */
 import { HEIGHT_SCALE } from '../render/iso';
-import { NIGHT_WASH, UNDER_WASH } from '../render/nightwash';
-import { METAL_GLINT, METAL_LUSTRE, METAL_TINT, NIGHT_LIFT } from './shading';
 import type { View } from '../render/figure';
 import { STRIDE, type Baked } from './bake';
 import type { Material } from './sdf';
@@ -54,21 +52,6 @@ export const HAIR_VALLEYS = [0.62, 0.7, 0.78, 0.86];
  * [how far toward white, from b, full at b], on the facets turned to the light.
  */
 export const METAL_CURVE = [0.12, 1.5], METAL_SHEEN = [0.32, 1.08, 1.4];
-// And a glint on the facets turned halfway between the light and the viewer (the light's way, the fitted light's first
-// order: `LowLight.sh` terms 1 to 3), so it moves over the facets as the body turns; both toward the metal's own hue at
-// its brightest (at night toward `MOON`), both times the metal's lustre (`./shading.ts` METAL_GLINT, METAL_TINT, METAL_LUSTRE).
-/**
- * The night's wash (the island's, `NIGHT_WASH`): its colour and how far a body goes to it at full night; before it, a
- * body's brightness (as luma) spread out round `NIGHT_MID` by one and `NIGHT_LIFT` at full night, so its forms still read
- * under the wash, whether laid here (`DrawOpts.night`) or over the canvas after (`UNDER_WASH`).
- */
-const NIGHT_RGB = NIGHT_WASH.colour.split(',').map(Number), NIGHT_MOST = NIGHT_WASH.alpha, NIGHT_MID = 0.42;
-/** A metal's sheen and glint at night: the moon's colour. */
-const MOON = [0.74, 0.84, 1.0];
-/** A low-poly body's line where one part stands in front of another (a step in depth, figure units, to a pixel beside): how dark, as a share of the ink. */
-const LOW_INNER = 0.55, LOW_DEPTH_STEP = 0.9;
-const vec3 = (a: readonly number[]): string => `vec3(${a.map((x) => x.toFixed(4)).join(', ')})`;
-const NIGHT_GLSL = vec3(NIGHT_RGB.map((x) => x / 255));
 /** Corrective shapes a draw may weigh (`Baked.shapes`). */
 const MAX_SHAPES = 8;
 /** Texels a row of the shapes' texture (each vertex's shapes, two texels a shape, run on along the rows). */
@@ -92,30 +75,13 @@ const WET_UP = 0.9, WET_MOST = 0.3, WET_RGB = [69, 112, 122];
 const VS = `#version 300 es
 precision highp float;
 layout(location=0) in vec3 aPos; layout(location=1) in vec3 aNrm; layout(location=2) in float aMat; layout(location=3) in vec4 aBones; layout(location=4) in vec4 aW; layout(location=5) in vec2 aStamp;
-layout(location=6) in vec4 aFaceBones; layout(location=7) in vec4 aFaceW; layout(location=8) in float aAo;
+layout(location=6) in vec4 aFaceBones; layout(location=7) in vec4 aFaceW;
 // The bones' matrices, three rows (texels) a bone along one row of a float texture: a phone's GPU may hold as few as 256
 // vertex uniform vectors (MAX_VERTEX_UNIFORM_VECTORS), which MAX_BONES * 3 rows as uniforms and the rest would pass.
 uniform highp sampler2D uBones;
 uniform vec2 uEx, uEy; uniform float uHS; uniform vec3 uT; uniform vec2 uHalf; uniform float uDepth; uniform vec2 uOff; uniform float uLow;
 uniform highp sampler2D uShapes; uniform int uShapeFrom, uShapeCount, uShapeK; uniform float uShapeW[${MAX_SHAPES}];
-uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uXv, uYv, uZv;
 out vec3 vNrm; out vec3 vPos; flat out float vMat; flat out float vBone; out float vDepth; flat out float vMatB; out float vStamp; flat out vec3 vFace;
-// A low-poly body's light, one a polygon (its face's normal the same at all its corners): the fitted light and the same
-// matte, the cosine to the half way between the light and the viewer (the glint), and its occlusion.
-flat out vec3 vLit; flat out vec3 vLitM; flat out float vGlint; flat out float vAo;
-// The review renders' light (tools/sculpt/lowlight.py): the skin's colour from the facet's normal in view space (x right,
-// y up, z toward the viewer), real spherical harmonics to the third order and three rims, one coefficient set a channel;
-// \`matte\`, without its highlight lobe and its two rims (the last three terms).
-vec3 lowLight(vec3 v, bool matte) {
-  float x = v.x, y = v.y, z = v.z, b = pow(1.0 - max(z, 0.0), 3.0);
-  float t[${SH_TERMS}] = float[${SH_TERMS}](1.0, x, y, z, x * y, y * z, 3.0 * z * z - 1.0, x * z, x * x - y * y, y * (3.0 * x * x - y * y), x * y * z,
-    y * (5.0 * z * z - 1.0), z * (5.0 * z * z - 3.0), x * (5.0 * z * z - 1.0), z * (x * x - y * y), x * (x * x - 3.0 * y * y),
-    pow(max(0.0, dot(v, normalize(vec3(-0.95, 0.25, -0.2)))), 8.0), max(-x, 0.0) * b, max(x, 0.0) * b);
-  vec3 c = vec3(0.0);
-  int n = matte ? ${SH_TERMS - 3} : ${SH_TERMS};
-  for (int k = 0; k < ${SH_TERMS}; k++) { if (k >= n) break; c += t[k] * uSH[k]; }
-  return max(c, 0.0);
-}
 vec4 boneRow(int r) { return texelFetch(uBones, ivec2(r, 0), 0); }
 vec3 skinP(int b, vec3 p) { vec4 q = vec4(p, 1.0); return vec3(dot(boneRow(b*3), q), dot(boneRow(b*3+1), q), dot(boneRow(b*3+2), q)); }
 vec3 skinN(int b, vec3 n) { return vec3(dot(boneRow(b*3).xyz, n), dot(boneRow(b*3+1).xyz, n), dot(boneRow(b*3+2).xyz, n)); }
@@ -147,15 +113,7 @@ void main() {
     fn = vec3(0.0);
     for (int i = 0; i < 4; i++) { float w = aFaceW[i]; if (w > 0.0) fn += w * skinN(int(aFaceBones[i] + 0.5), rn); }
     fn = normalize(fn);
-    // (seen from behind, the face toward the viewer: as the fragment's)
-    if (dot(fn, uT) < 0.0) fn = -fn;
-    vec3 lv = vec3(dot(fn, uXv), dot(fn, uYv), dot(fn, uZv));
-    vLit = lowLight(lv, false); vLitM = lowLight(lv, true);
-    const vec3 LUM = vec3(0.299, 0.587, 0.114);
-    vec3 key = vec3(dot(uSH[1], LUM), dot(uSH[2], LUM), dot(uSH[3], LUM));
-    vGlint = dot(lv, normalize(normalize(key + vec3(0.0, 0.0, 1e-4)) + vec3(0.0, 0.0, 1.0)));
-    vAo = aAo;
-  } else { vLit = vec3(0.0); vLitM = vec3(0.0); vGlint = 0.0; vAo = 1.0; }
+  }
   vFace = fn;
   float sx = p.x * uEx.x + p.y * uEy.x - uOff.x;
   float sy = p.x * uEx.y + p.y * uEy.y - p.z * uHS - uOff.y;
@@ -167,22 +125,39 @@ void main() {
 const FS = `#version 300 es
 precision highp float;
 in vec3 vNrm; in vec3 vPos; flat in float vMat; flat in float vBone; in float vDepth; flat in float vMatB; in float vStamp; flat in vec3 vFace;
-flat in vec3 vLit; flat in vec3 vLitM; flat in float vGlint; flat in float vAo;
 uniform vec4 uMat[${MAX_MATS}];
 uniform vec3 uL; uniform vec3 uT; uniform float uGrain; uniform float uNight; uniform float uMode; uniform float uFlat; uniform float uBlink;
-uniform float uLow; uniform vec3 uTone; uniform vec3 uFit; uniform vec3 uZv;
+uniform float uLow; uniform vec3 uSH[${SH_TERMS}]; uniform vec3 uTone; uniform vec3 uFit; uniform vec3 uXv, uYv, uZv;
 // What of the body is behind an egg (SculptDraw.hide: a mount's barrel), left out: its middle and its radii, none at radii nought.
 uniform vec3 uHideC, uHideR;
 // Lit by a blow landing (SculptDraw.hit), nought to one.
 uniform float uHit;
-// How dark the night is that the canvas is washed with after this body is drawn (UNDER_WASH), nought to one.
-uniform float uUnder;
 // The water's surface (SculptDraw.water): its level, and which side of it is drawn (1 over, -1 under, 0 no water).
 uniform vec2 uWater;
 layout(location=0) out vec4 oCol; layout(location=1) out vec4 oNd; layout(location=2) out vec4 oId;
 vec3 hsv2rgb(vec3 c){ vec4 K = vec4(1.0, 2.0/3.0, 1.0/3.0, 3.0); vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www); return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y); }
 vec3 rgb2hsv(vec3 c){ vec4 K = vec4(0.0, -1.0/3.0, 2.0/3.0, -1.0); vec4 p = c.g < c.b ? vec4(c.bg, K.wz) : vec4(c.gb, K.xy); vec4 q = c.r < p.x ? vec4(p.xyw, c.r) : vec4(c.r, p.yzx); float d = q.x - min(q.w, q.y); float e = 1.0e-10; return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x); }
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// The review renders' light (tools/sculpt/lowlight.py): the skin's colour from the facet's normal in view space (x right,
+// y up, z toward the viewer), real spherical harmonics to the third order and three rims, one coefficient set a channel.
+vec3 lowLight(vec3 v) {
+  float x = v.x, y = v.y, z = v.z, b = pow(1.0 - max(z, 0.0), 3.0);
+  float t[${SH_TERMS}] = float[${SH_TERMS}](1.0, x, y, z, x * y, y * z, 3.0 * z * z - 1.0, x * z, x * x - y * y, y * (3.0 * x * x - y * y), x * y * z,
+    y * (5.0 * z * z - 1.0), z * (5.0 * z * z - 3.0), x * (5.0 * z * z - 1.0), z * (x * x - y * y), x * (x * x - 3.0 * y * y),
+    pow(max(0.0, dot(v, normalize(vec3(-0.95, 0.25, -0.2)))), 8.0), max(-x, 0.0) * b, max(x, 0.0) * b);
+  vec3 c = vec3(0.0);
+  for (int k = 0; k < ${SH_TERMS}; k++) c += t[k] * uSH[k];
+  return max(c, 0.0);
+}
+// The same light without its highlight lobe and its two rims (the last three terms): a matte surface's.
+vec3 lowLightMatte(vec3 v) {
+  float x = v.x, y = v.y, z = v.z;
+  float t[${SH_TERMS - 3}] = float[${SH_TERMS - 3}](1.0, x, y, z, x * y, y * z, 3.0 * z * z - 1.0, x * z, x * x - y * y, y * (3.0 * x * x - y * y), x * y * z,
+    y * (5.0 * z * z - 1.0), z * (5.0 * z * z - 3.0), x * (5.0 * z * z - 1.0), z * (x * x - y * y), x * (x * x - 3.0 * y * y));
+  vec3 c = vec3(0.0);
+  for (int k = 0; k < ${SH_TERMS - 3}; k++) c += t[k] * uSH[k];
+  return max(c, 0.0);
+}
 vec3 hashCol(float i){ return 0.35 + 0.6 * vec3(hash(vec2(i, 1.0)), hash(vec2(i, 7.0)), hash(vec2(i, 13.0))); }
 void main() {
   if (uHideR.x > 0.0) {
@@ -214,8 +189,6 @@ void main() {
   int step = (flags >> 13) & 3;
   float dl = dot(n, uL);
   vec3 c = base;
-  // the night the body is seen in, washed here (uNight) or over the canvas after (uUnder)
-  float dark = max(uNight, uUnder);
   if (uMode > 0.5) {
     if (uMode < 1.5) c = n * 0.5 + 0.5;
     else if (uMode < 2.5) c = hashCol(float(mi));
@@ -225,7 +198,7 @@ void main() {
   } else if (uLow > 0.5) {
     // A low-poly body as its review renders: one shade a polygon, skin lit by their light in the look's tone, cloth by the
     // same light in its own colour over the skin it was fitted to, the rest its colour.
-    vec3 lit = vLit;
+    vec3 lv = vec3(dot(n, uXv), dot(n, uYv), dot(n, uZv)), lit = lowLight(lv);
     if (ramp) {
       // Hair: its colour, a mid tone or a highlight (toward a warm light) by the facet's light over the review skin's
       // (tools/sculpt/lowhairshot.mjs HAIR_RAMP, HAIR_TONES), each lit a little within its step so two facets part; a
@@ -242,26 +215,16 @@ void main() {
       // and gear in hand (a sword) by its brightness only, as the gear's review renders light it
       const vec3 LUM = vec3(0.299, 0.587, 0.114);
       // and matte paint on the body (the undergarment) by the brightness of the light less its highlight and rims
-      if (matte) lit = vLitM;
+      if (matte) lit = lowLightMatte(lv);
       float b = dot(lit, LUM) / dot(uFit, LUM);
       c = matte ? min(base * (0.18 + 0.82 * b), 1.0) : skin ? min(lit * uTone, 1.0) : cloth ? min(lit * base / uFit, 1.0) : gear ? min(base * (0.18 + 0.82 * b), 1.0) : base;
-      // and a head, a blade or a plate in its metal (gear and metal) steeper: its facets turned from the light darker,
-      // those full in it brighter, a sheen on those turned straight to it and a glint on those turned half way to the
-      // viewer, toward the metal's own hue at its brightest (at night, the moon's), as much as its lustre
-      // (METAL_CURVE, METAL_SHEEN, METAL_GLINT, METAL_TINT, METAL_LUSTRE)
+      // and a head or a blade in its metal (gear and metal) steeper: its facets turned from the light darker, those full
+      // in it brighter, and a sheen toward white on those turned straight to it (METAL_CURVE, METAL_SHEEN)
       if (gear && metal) {
-        float lus[4] = float[4](${METAL_LUSTRE.map((x) => x.toFixed(3)).join(', ')});
-        float k = lus[(flags >> 16) & 3];
-        float top = max(max(base.r, base.g), max(base.b, 1e-3));
-        vec3 hue = base / top;
-        vec3 sheen = mix(mix(vec3(1.0), hue, ${METAL_TINT.toFixed(3)}), ${vec3(MOON)}, dark);
         c = base * (${METAL_CURVE[0].toFixed(3)} + ${(1 - METAL_CURVE[0]).toFixed(3)} * pow(b, ${METAL_CURVE[1].toFixed(3)}));
-        float s = ${METAL_SHEEN[0].toFixed(3)} * smoothstep(${METAL_SHEEN[1].toFixed(3)}, ${METAL_SHEEN[2].toFixed(3)}, b) + ${METAL_GLINT[0].toFixed(3)} * sqrt(top) * smoothstep(${METAL_GLINT[1].toFixed(3)}, ${METAL_GLINT[2].toFixed(3)}, vGlint);
-        c = mix(min(c, 1.0), sheen, min(1.0, k * s));
+        c = min(c + (1.0 - min(c, 1.0)) * ${METAL_SHEEN[0].toFixed(3)} * smoothstep(${METAL_SHEEN[1].toFixed(3)}, ${METAL_SHEEN[2].toFixed(3)}, b), 1.0);
       }
     }
-    // in what is near it (its occlusion)
-    c *= vAo;
   } else if (uFlat > 0.5) {
     c = base;
   } else {
@@ -292,13 +255,7 @@ void main() {
     c += (hash(floor(gl_FragCoord.xy / 2.0)) - 0.5) * uGrain;
   }
   if (uMode < 0.5) c = mix(c, vec3(${WET_RGB.join('.0, ')}.0) / 255.0, wet);
-  // after dark, its brightness spread round the middle so its forms still read under the night's wash (NIGHT_MID,
-  // NIGHT_LIFT), and the wash itself where it is laid here
-  if (!emissive && uMode < 0.5 && dark > 0.0) {
-    float l = dot(c, vec3(0.299, 0.587, 0.114));
-    c = min(c * max(${NIGHT_MID.toFixed(3)} + (l - ${NIGHT_MID.toFixed(3)}) * (1.0 + ${NIGHT_LIFT.toFixed(3)} * dark), 0.0) / max(l, 1e-3), 1.0);
-  }
-  if (!emissive && uMode < 0.5) c = mix(c, ${NIGHT_GLSL}, uNight * ${NIGHT_MOST.toFixed(3)});
+  if (!emissive && uMode < 0.5) c = mix(c, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68);
   // Lit by a blow: light added on the body, opaque, its shading kept: a red rim where the surface turns from the viewer,
   // hot toward white at its edge, and a breath of red over the rest, as night or day.
   if (uHit > 0.0 && uMode < 0.5) {
@@ -317,8 +274,6 @@ in vec2 aP; void main(){ gl_Position = vec4(aP, 0.0, 1.0); }`;
 const EDGE_FS = `#version 300 es
 precision highp float;
 uniform sampler2D uCol; uniform sampler2D uNd; uniform sampler2D uId; uniform vec2 uPx; uniform float uInk; uniform float uDepthStep; uniform float uShow; uniform float uNight; uniform float uInner; uniform float uFoam;
-// Whether anything drawn glows (an emissive material among the draw's): the bloom looked for only then.
-uniform float uGlow;
 // The body's own tile of the textures (glBatchBegin), as the texel middles at its edges: a sample past them is the edge's,
 // as from a texture the tile's own size clamped to its edge, and never a neighbour's.
 uniform vec4 uClamp;
@@ -353,15 +308,8 @@ void main() {
     }
   }
   // Inside: a thinner line where a part stands in front of another (a step away in depth to a pixel beside), or at a sharp crease.
-  // A low-poly body's (uInner 2): the step in depth alone, never on what has no ink or no crease of its own (LOW_INNER).
   float inner = 0.0;
-  if (c.a > 0.5 && uInner > 1.5) {
-    if (id.b < 0.25) {
-      float dz = 0.0;
-      for (int k = 0; k < 4; k++) { vec2 o = k < 2 ? vec2(k == 0 ? uPx.x : -uPx.x, 0.0) : vec2(0.0, k == 2 ? uPx.y : -uPx.y); vec4 e = at(uNd, vUv + o); if (at(uCol, vUv + o).a > 0.5) dz = max(dz, e.w - nd.w); }
-      inner = dz > uDepthStep ? ${LOW_INNER.toFixed(3)} : 0.0;
-    }
-  } else if (c.a > 0.5 && uInner > 0.5) {
+  if (c.a > 0.5 && uInner > 0.5) {
     vec4 A = at(uNd, vUv + vec2(uPx.x, 0.0)), B = at(uNd, vUv - vec2(uPx.x, 0.0)), C = at(uNd, vUv + vec2(0.0, uPx.y)), D = at(uNd, vUv - vec2(0.0, uPx.y));
     float dz = max(max(A.w - nd.w, B.w - nd.w), max(C.w - nd.w, D.w - nd.w));
     vec3 n0 = nd.xyz * 2.0 - 1.0;
@@ -377,7 +325,7 @@ void main() {
   }
   // Emissive bloom: the glow of any emissive pixel within four px, stronger at night.
   vec3 glow = vec3(0.0);
-  if (uGlow > 0.5 && id.g < 0.5) {
+  if (id.g < 0.5) {
     float w = 0.0;
     for (int d = 0; d < 8; d++) {
       float a = float(d) * 0.7854;
@@ -390,7 +338,7 @@ void main() {
     if (w > 0.0) glow = glow / w * min(1.0, w / 6.0) * (0.35 + 0.45 * uNight);
   }
   if (uShow > 0.5) { o = sil > 0.5 ? vec4(1.0, 0.2, 0.2, 1.0) : inner > 0.0 ? vec4(0.2, 1.0, 0.3, 1.0) : vec4(c.rgb * 0.5 + 0.3, c.a); return; }
-  if (foam > 0.5) o = vec4(mix(vec3(${FOAM_RGB.join('.0, ')}.0) / 255.0, ${NIGHT_GLSL}, uNight * ${NIGHT_MOST.toFixed(3)}) * ${FOAM_A.toFixed(2)}, ${FOAM_A.toFixed(2)});
+  if (foam > 0.5) o = vec4(mix(vec3(${FOAM_RGB.join('.0, ')}.0) / 255.0, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68) * ${FOAM_A.toFixed(2)}, ${FOAM_A.toFixed(2)});
   else if (sil > 0.5) o = vec4(inkOf(near), 1.0);
   else if (c.a > 0.5) o = vec4(mix(c.rgb, inkOf(c.rgb), inner) + glow, 1.0);
   else o = vec4(glow, glow == vec3(0.0) ? 0.0 : min(1.0, length(glow) * 2.0));
@@ -423,7 +371,7 @@ void main() {
   if (texture(uCol, uv).a > 0.5 && texture(uNd, uv).w < vDepth + ${TRAIL_BEHIND.toFixed(2)}) discard;
   float a = clamp(vA, 0.0, 1.0) * smoothstep(0.0, 0.35, vV) * (1.0 - smoothstep(0.8, 1.0, vV));
   vec3 c = mix(uEdge, uRgb, smoothstep(0.15, 0.85, vV));
-  if (uLit < 0.5) { c = mix(c, ${NIGHT_GLSL}, uNight * ${NIGHT_MOST.toFixed(3)}); a *= ${TRAIL_PLAIN.toFixed(2)}; o = vec4(c * a, a); }
+  if (uLit < 0.5) { c = mix(c, vec3(12.0, 20.0, 44.0) / 255.0, uNight * 0.68); a *= ${TRAIL_PLAIN.toFixed(2)}; o = vec4(c * a, a); }
   else { float k = a * ${TRAIL_LIT.toFixed(2)}; o = vec4(c * k * (1.0 + ${TRAIL_ADD.toFixed(2)} * a), k); }
 }`;
 
@@ -509,10 +457,10 @@ export function glContext(): Ctx | null {
   const quad = gl.createBuffer()!;
   gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
-  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW', 'uHideC', 'uHideR', 'uHit', 'uWater', 'uUnder'];
+  const names = ['uBones', 'uEx', 'uEy', 'uHS', 'uT', 'uHalf', 'uDepth', 'uOff', 'uMat', 'uL', 'uGrain', 'uNight', 'uMode', 'uFlat', 'uBlink', 'uLow', 'uSH', 'uTone', 'uFit', 'uXv', 'uYv', 'uZv', 'uShapes', 'uShapeFrom', 'uShapeCount', 'uShapeK', 'uShapeW', 'uHideC', 'uHideR', 'uHit', 'uWater'];
   const u = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(prog, n)]));
   const wu = Object.fromEntries(names.map((n) => [n, gl.getUniformLocation(wire, n)]));
-  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner', 'uFoam', 'uClamp', 'uGlow'].map((n) => [n, gl.getUniformLocation(edge, n)]));
+  const eu = Object.fromEntries(['uCol', 'uNd', 'uId', 'uPx', 'uInk', 'uDepthStep', 'uShow', 'uNight', 'uInner', 'uFoam', 'uClamp'].map((n) => [n, gl.getUniformLocation(edge, n)]));
   CTX = { gl, cv, prog, edge, wire, tBones, fbo: gl.createFramebuffer()!, tCol: gl.createTexture()!, tNd: gl.createTexture()!, tId: gl.createTexture()!, depth: gl.createRenderbuffer()!, quad, w: 0, h: 0, u, eu, wu };
   return CTX;
 }
@@ -547,7 +495,7 @@ function size(C: Ctx, w: number, h: number): void {
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
-interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number; face: WebGLBuffer | null; shapes: WebGLTexture | null; ao: WebGLBuffer | null }
+interface Buffers { vbo: WebGLBuffer; ibo: WebGLBuffer; lines: WebGLBuffer; nLines: number; face: WebGLBuffer | null; shapes: WebGLTexture | null }
 let BUFFERS = new WeakMap<Baked, Buffers>();
 function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
   let bf = BUFFERS.get(b);
@@ -570,12 +518,6 @@ function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
     gl.bindBuffer(gl.ARRAY_BUFFER, face);
     gl.bufferData(gl.ARRAY_BUFFER, b.faceSkin, gl.STATIC_DRAW);
   }
-  let ao: WebGLBuffer | null = null;
-  if (b.ao) {
-    ao = gl.createBuffer()!;
-    gl.bindBuffer(gl.ARRAY_BUFFER, ao);
-    gl.bufferData(gl.ARRAY_BUFFER, b.ao, gl.STATIC_DRAW);
-  }
   let shapes: WebGLTexture | null = null;
   if (b.shapes) {
     // each vertex's shapes, two texels a shape, run on along rows of SHAPE_ROW
@@ -588,7 +530,7 @@ function buffersOf(gl: WebGL2RenderingContext, b: Baked): Buffers {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
   }
-  bf = { vbo, ibo, lines, nLines: ln.length, face, shapes, ao };
+  bf = { vbo, ibo, lines, nLines: ln.length, face, shapes };
   BUFFERS.set(b, bf);
   return bf;
 }
@@ -599,13 +541,12 @@ export function forgetBuffers(b: Baked): void {
   if (!bf || !CTX) return;
   CTX.gl.deleteBuffer(bf.vbo); CTX.gl.deleteBuffer(bf.ibo); CTX.gl.deleteBuffer(bf.lines);
   if (bf.face) CTX.gl.deleteBuffer(bf.face);
-  if (bf.ao) CTX.gl.deleteBuffer(bf.ao);
   if (bf.shapes) CTX.gl.deleteTexture(bf.shapes);
   BUFFERS.delete(b);
 }
 
 const hexOf = (h: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [number, number, number];
-const MATS = new WeakMap<Material[], Float32Array>(), GLOWS = new WeakMap<Material[], boolean>();
+const MATS = new WeakMap<Material[], Float32Array>();
 function matsOf(ms: Material[]): Float32Array {
   let f = MATS.get(ms);
   if (f) return f;
@@ -613,14 +554,11 @@ function matsOf(ms: Material[]): Float32Array {
   ms.forEach((m, i) => {
     if (i >= MAX_MATS) return;
     const c = hexOf(m.colour);
-    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0) + (m.gear ? 512 : 0) + (m.ramp ? 1024 : 0) + (m.shave ? 2048 : 0) + (m.valley ? 4096 + (m.valley - 1) * 8192 : 0) + (m.matte ? 32768 : 0) + (Math.max(0, Math.min(3, m.lustre ?? 0)) * 65536)], i * 4);
+    f.set([c[0], c[1], c[2], (m.emissive ? 1 : 0) + (m.skin ? 2 : 0) + (m.metal ? 4 : 0) + (m.eye ? 8 : 0) + (m.soft ? 16 : 0) + (m.noInk ? 32 : 0) + (m.noCrease ? 64 : 0) + (m.thinInk ? 128 : 0) + (m.cloth ? 256 : 0) + (m.gear ? 512 : 0) + (m.ramp ? 1024 : 0) + (m.shave ? 2048 : 0) + (m.valley ? 4096 + (m.valley - 1) * 8192 : 0) + (m.matte ? 32768 : 0)], i * 4);
   });
   MATS.set(ms, f);
-  GLOWS.set(ms, ms.slice(0, MAX_MATS).some((m) => m.emissive));
   return f;
 }
-/** Whether any of a draw's materials glows (`uGlow`: the bloom looked for only then). */
-const glowsOf = (ms: Material[]): boolean => { matsOf(ms); return GLOWS.get(ms) ?? true; };
 
 /**
  * A low-poly body's light, as its review renders (`tools/sculpt/lowlight.py`): per term (`SH_TERMS`) the red, green and
@@ -717,7 +655,6 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
     gl.uniform3f(u.uL, v.L[0], v.L[1], v.L[2]);
     gl.uniform1f(u.uGrain, o.grain ?? 0.02);
     gl.uniform1f(u.uNight, o.night ?? 0);
-    gl.uniform1f(u.uUnder, o.night === undefined ? UNDER_WASH.dark : 0);
     gl.uniform1f(u.uMode, o.debug === 'normals' ? 1 : o.debug === 'mats' ? 2 : o.debug === 'bones' ? 3 : 0);
     gl.uniform1f(u.uFlat, o.flat ? 1 : 0);
     gl.uniform1f(u.uBlink, d.blink ?? 0);
@@ -766,15 +703,6 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
       gl.vertexAttribPointer(i, 4, gl.FLOAT, false, 32, off);
     }
   } else for (const i of [6, 7]) gl.disableVertexAttribArray(i);
-  // its occlusion (`Baked.ao`), else none: one
-  if (low && bf.ao) {
-    gl.bindBuffer(gl.ARRAY_BUFFER, bf.ao);
-    gl.enableVertexAttribArray(8);
-    gl.vertexAttribPointer(8, 1, gl.FLOAT, false, 4, 0);
-  } else {
-    gl.disableVertexAttribArray(8);
-    gl.vertexAttrib1f(8, 1);
-  }
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bf.ibo);
   gl.drawElements(gl.TRIANGLES, d.baked.nTris * 3, gl.UNSIGNED_INT, 0);
   if (o.debug === 'wire') {
@@ -790,7 +718,7 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.clear(gl.COLOR_BUFFER_BIT);
   gl.useProgram(C.edge);
   gl.bindBuffer(gl.ARRAY_BUFFER, C.quad);
-  for (let i = 1; i < 9; i++) gl.disableVertexAttribArray(i);
+  for (let i = 1; i < 8; i++) gl.disableVertexAttribArray(i);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, C.tCol); gl.uniform1i(C.eu.uCol, 0);
@@ -799,13 +727,12 @@ export function drawSculptGL(ctx: CanvasRenderingContext2D, sx: number, sy: numb
   gl.uniform2f(C.eu.uPx, 1 / C.w, 1 / C.h);
   gl.uniform4f(C.eu.uClamp, (x + 0.5) / C.w, (y + 0.5) / C.h, (x + w - 0.5) / C.w, (y + h - 0.5) / C.h);
   // The figure's ink: most of a pixel however far out, never more than a few however far in; in device pixels here.
-  // A low-poly body's: LOW_INK's round the silhouette, and inside only where a part stands in front of another (LOW_INNER).
+  // A low-poly body's: LOW_INK's, round the silhouette only, as its facets carry the form.
   const ink = (o.ink ?? (low ? LOW_INK(zoom) : Math.min(3.2, Math.max(0.9, 0.55 * zoom)))) * dpr;
   gl.uniform1f(C.eu.uInk, ink);
-  gl.uniform1f(C.eu.uInner, low ? 2 : 1);
-  gl.uniform1f(C.eu.uGlow, glowsOf(d.materials) ? 1 : 0);
+  gl.uniform1f(C.eu.uInner, low ? 0 : 1);
   gl.uniform1f(C.eu.uFoam, d.water?.keep === 'over' ? FOAM_PX(zoom) * dpr : 0);
-  gl.uniform1f(C.eu.uDepthStep, low ? LOW_DEPTH_STEP : 0.7);
+  gl.uniform1f(C.eu.uDepthStep, 0.7);
   gl.uniform1f(C.eu.uShow, o.debug === 'edges' ? 1 : 0);
   gl.uniform1f(C.eu.uNight, o.night ?? 0);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -921,7 +848,7 @@ function drawTrail(C: Ctx, d: SculptDraw, t: TrailDraw, w: number, h: number, ni
   gl.uniform1f(u.uNight, night);
   gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, t.strip.subarray(0, t.n * 5), gl.DYNAMIC_DRAW);
-  for (let i = 2; i < 9; i++) gl.disableVertexAttribArray(i);
+  for (let i = 2; i < 8; i++) gl.disableVertexAttribArray(i);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0);
   gl.enableVertexAttribArray(1);

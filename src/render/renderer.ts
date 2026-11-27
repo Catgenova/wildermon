@@ -88,7 +88,7 @@ const BENCH_ROUND = 2;
 const poseJob = (id: string | null | undefined): string | undefined => (id === PRACTISE || id === SHOOT_TARGET ? 'attack_creature' : id ?? undefined);
 import { ARMOUR_STAND, WOVEN_RUG } from '../game/decordefs';
 import { drawShine, shines } from './shine';
-import { NIGHT_WASH, UNDER_WASH } from './nightwash';
+import { NIGHT_WASH } from './nightwash';
 import { type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
 import { PAVE_STAGES } from './ivy';
 import { coverOf, GROWTH_PPM, growthPicture, ripeOf, seedOf, sunOf, type GrowthFace, type GrowthSeason } from './growth';
@@ -4104,13 +4104,7 @@ export class Renderer {
    * A method of its own so the timings count it with the figures.
    */
   drawBodies(): void {
-    // (under the night's wash they are laid down under: `UNDER_WASH`)
-    UNDER_WASH.dark = this.game.darkness();
-    try {
-      drawBodies();
-    } finally {
-      UNDER_WASH.dark = 0;
-    }
+    drawBodies();
   }
 
   /** Where the drawing went, layer by layer, while `Settings.timings` is on. */

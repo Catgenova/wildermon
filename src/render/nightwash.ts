@@ -6,10 +6,3 @@
  * put under the same night without taking the renderer with it.
  */
 export const NIGHT_WASH = { colour: '12, 20, 44', alpha: 0.68 } as const;
-
-/**
- * How dark the night is that the bodies drawn this frame are washed with after (`renderer.ts` sets it each frame, from
- * the game's darkness): the sculpted bodies take more contrast as it deepens, so they still read under the wash
- * (`src/sculpt/gl.ts` NIGHT_LIFT).
- */
-export const UNDER_WASH = { dark: 0 };
