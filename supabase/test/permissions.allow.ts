@@ -391,6 +391,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_thepath_supply(uuid,text)",
     "rpc_treasure_map(uuid,bigint)",
     "rpc_treasure_warm(uuid,bigint)",
+    "rpc_travel_speed(uuid)",
     "rpc_tree(uuid)",
     "rpc_unfriend(uuid,uuid)",
     "rpc_unstick(uuid)",

@@ -12,4 +12,14 @@ begin
   -- And food, the first time only: a full food bar of cheese at the kit's QL (`STARTER_FOOD`).
   insert into item (world_id, holder, holder_uid, def, ql, count)
   values (p_world, 'player', p_uid, 'cheese', 20, 5);
+  -- And dressed, the first time only: cloth over chest, legs and feet, worn (`STARTER_WEAR`).
+  declare v_tunic bigint; v_trousers bigint; v_shoes bigint;
+  begin
+    insert into item (world_id, holder, holder_uid, def, ql) values (p_world, 'player', p_uid, 'cloth_tunic', 20) returning id into v_tunic;
+    insert into item (world_id, holder, holder_uid, def, ql) values (p_world, 'player', p_uid, 'cloth_trousers', 20) returning id into v_trousers;
+    insert into item (world_id, holder, holder_uid, def, ql) values (p_world, 'player', p_uid, 'cloth_shoes', 20) returning id into v_shoes;
+    update player set equipped = coalesce(equipped, '{}'::jsonb)
+        || jsonb_build_object('chest', v_tunic, 'legs', v_trousers, 'feet', v_shoes)
+     where world_id = p_world and uid = p_uid;
+  end;
 end $function$

@@ -12,7 +12,7 @@ AS $function$
                     'rpc_letters', 'rpc_market', 'rpc_my_look', 'rpc_my_name', 'rpc_name_free', 'rpc_notices_ashore',
                     'rpc_orders', 'rpc_owner_am_i', 'rpc_owner_online', 'rpc_parcels', 'rpc_prices', 'rpc_sales',
                     'rpc_rune_gate_folk', 'rpc_settle', 'rpc_settlement', 'rpc_social', 'rpc_spells', 'rpc_springs',
-                    'rpc_store_log', 'rpc_swirls', 'rpc_treasure_map', 'rpc_treasure_warm', 'rpc_tree',
+                    'rpc_store_log', 'rpc_swirls', 'rpc_treasure_map', 'rpc_treasure_warm', 'rpc_travel_speed', 'rpc_tree',
                     'rpc_unported', 'rpc_worn') then 'look'
     when p_door in ('rpc_abandon', 'rpc_barter_accept', 'rpc_barter_answer', 'rpc_barter_ask', 'rpc_barter_cancel',
                     'rpc_barter_offer', 'rpc_buy', 'rpc_collect', 'rpc_deal', 'rpc_deal_answer', 'rpc_found',
