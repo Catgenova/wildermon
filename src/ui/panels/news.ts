@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Brass rebuilt piece by piece (tools/sculpt/garments/brass.mjs).
+  {
+    n: 724,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: brass armour redrawn as a clockwork artificer\'s: a closed diving-bell helm with bolted lens ports, a telescope monocle, a speaking grille, a gauge and a bolted corselet; a brass waistcoat breastplate with a gear window and a gauge over an oxblood leather coat with tails, copper cops, gear couters and pistoned vambraces; leather trousers with piston-driven knee gears and brass shin plates; brass-plated boots with ankle gears.',
+      'Changed: the brass shawl is a boiler pack: a riveted boiler as wide as the back with a great gear and an amber core, cooling fins, twin stacks above the shoulders and copper pipes over them to the breast.',
+      'Changed: enchanted brass lights its lens ports and monocle, the chest gauge, the boiler core and the knee and ankle gear hubs.',
+    ],
+  },
   // Mithril rebuilt piece by piece (tools/sculpt/garments/mithril.mjs).
   {
     n: 723,

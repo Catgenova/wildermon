@@ -11,6 +11,7 @@ import { GOLD_MATS, goldHelm, goldChest, goldMantle, goldLegs, goldBoots } from 
 import { LEAD_MATS, leadHelm, leadChest, leadMantle, leadLegs, leadBoots } from './lead.mjs';
 import * as TIN from './tin.mjs';
 import { MITHRIL_MATS, mithrilHelm, mithrilChest, mithrilMantle, mithrilLegs, mithrilBoots } from './mithril.mjs';
+import * as BRASS from './brass.mjs';
 import {
   browTheta, chestFront, cloak, disc, feet, forearms, fromFront, gorget, helm, hips, shins, shoulderCaps, shoulders, torso, upperArms, waistOf as waistAt,
 } from './metalkit.mjs';
@@ -1116,114 +1117,7 @@ function pewterMantle(B) {
   return merge(cloth, hood, pin);
 }
 
-/* ==== brass: the clockwork artificer ============================================================================== */
-const BRASS_MATS = {
-  br: { c: '#9c7a36', kind: 3 },
-  brS: { c: '#5a4419', kind: 3 },
-  cu: { c: '#9a5a32', kind: 3 },
-  rune: { c: '#7d6a40', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
-  lens: { c: '#3d4b52', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
-  coat: { c: '#4a2f24', kind: 2 },
-  coatD: { c: '#2e1d17', kind: 2 },
-  coatW: { c: '#4a2f25', kind: 2 },
-  sole: { c: '#221813', kind: 2 },
-};
-/** A gear's face at `c` (x, y) of radius r: its teeth round the rim, spokes inside, a glowing hub. */
-const gear = (p, c, r, teeth = 10) => {
-  const dx = p[0] - c[0], dy = y(p) - c[1], d = Math.hypot(dx, dy), a = Math.atan2(dx, dy);
-  if (d > r * 1.15) return null;
-  if (d > r) return frac(a / (2 * Math.PI) * teeth) < 0.5 ? 'br' : null;
-  if (d < r * 0.25) return 'rune';
-  if (d > r * 0.8) return 'br';
-  return frac(a / (2 * Math.PI) * 5) < 0.25 ? 'br' : 'brS';
-};
-
-function brassChest(B) {
-  const A = B.at, waist = waistOf(A);
-  // a cuirass of overlapping brass segments, copper rivet lines, a great gear on the breast with a glowing hub
-  const G = [0, A.chest[1] + 0.15];
-  const coat = torso(B, {
-    from: waist - 0.5,
-    off: (p) => 0.18 + 0.04 * frac((A.chest[1] + 0.7 - y(p)) / 0.36) + (p[2] > 0 && gear(p, G, 0.42) ? 0.06 : 0),
-    mat: (p) => {
-      if (p[2] > 0) { const g = gear(p, G, 0.42); if (g) return g; }
-      const f = frac((A.chest[1] + 0.7 - y(p)) / 0.36);
-      if (f > 0.86) return 'brS';
-      if (f < 0.1 && frac(roundTorso(p) * 2.5) < 0.2) return 'cu';
-      return 'br';
-    },
-    rim: 'brS',
-    caps: { off: () => 0.16, mat: () => 'coat' },
-  });
-  // shoulder cops of nested brass rings; leather sleeves with brass bands; vambraces with a glowing dial at the wrist
-  const cops = shoulders(B, { off: (t) => 0.3 + 0.03 * frac((t + 0.3) / 0.12), mat: (t) => (frac((t + 0.3) / 0.12) > 0.8 ? 'brS' : 'br') });
-  const sleeves = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.09 + (frac(t * 4) < 0.15 ? 0.03 : 0)), mat: (u) => (frac(u.t * 4) < 0.15 ? 'br' : 'coat') });
-  const vamb = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.12 + (f.t < 0.12 ? 0.06 : 0), mat: (f) => (f.t > 0.84 ? (Math.abs(f.a) < 0.6 ? 'lens' : 'brS') : f.t < 0.12 ? 'cu' : frac(f.t * 5) < 0.12 ? 'brS' : 'br') });
-  return merge(coat, cops, sleeves, vamb);
-}
-
-function brassLegs(B) {
-  const A = B.at, waist = waistOf(A);
-  const under = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'coatW' : frac(y(p) * 1.5) < 0.08 ? 'coatD' : 'coat'), rim: 'coatD' });
-  // the knee: a brass joint, a gear on its outside with a glowing hub; brass splints down the shin
-  const knees = shins(B, {
-    from: -0.18, to: 0.88, round: 2.4,
-    off: (g, p) => (g.t < 0.12 ? (-g.a * Math.sign(p[0]) < -0.6 ? 0.14 : 0.2) : 0.13),
-    mat: (g, p) => { if (g.t < 0.16 && -g.a * Math.sign(p[0]) < -0.8) return null; if (g.t < 0.12) { const out = -g.a * Math.sign(p[0]); return out > 0.9 && out < 1.6 && Math.abs(g.t) < 0.07 ? 'rune' : 'br'; } if (frac((g.a + 2.4) / 4.8 * 5) < 0.12) return 'cu'; return 'br'; },
-    rim: 'brS',
-  });
-  return { P: merge(under, knees), dropAt: (f) => f.mat === 'coatW' };
-}
-
-function brassBoots(B) {
-  const A = B.at;
-  // leather boots plated in brass over the foot, a gear at the ankle's outside with a glowing hub
-  return feet(B, {
-    up: 0.75,
-    off: (p, n, top) => (n[1] < -0.3 ? 0 : 0.03),
-    mat: (p, n, top) => {
-      const s = p[0] >= 0 ? 'l' : 'r', out = (p[0] - A.ankle[s][0]) * (s === 'l' ? 1 : -1);
-      if (out > 0.2 && Math.abs(y(p) - A.ankle[s][1]) < 0.18 && Math.abs(p[2] - A.ankle[s][2]) < 0.18) return Math.hypot(y(p) - A.ankle[s][1], p[2] - A.ankle[s][2]) < 0.07 ? 'rune' : 'cu';
-      if (y(p) > top - 0.12) return 'brS';
-      return p[2] > A.ankle[s][2] + 0.1 ? 'br' : 'coat';
-    },
-    rim: 'brS',
-  });
-}
-
-function brassHelm(B) {
-  const browTh = browTheta(B);
-  // a domed brass helm, closed, a round glowing lens before each eye, copper ribs, a ridge of rivets
-  return helm(B, {
-    rim: 'brS', down: 2.05,
-    margin: ({ th, ph }) => { const s = fromFront(ph); return 0.12 + 0.1 * Math.max(0, 1 - th / 0.9) + (Math.hypot(th - (browTh + 0.15), Math.abs(s) - 0.3) < 0.14 ? 0.07 : 0); },
-    mat: (d, { th, ph }) => {
-      const s = fromFront(ph), e = Math.hypot(th - (browTh + 0.15), s - 0.3);
-      if (s < 0.6 && e < 0.1) return 'lens';
-      if (s < 0.6 && e < 0.14) return 'cu';
-      if (th > browTh + 0.45 && s < 0.4 && frac(th * 14) < 0.4 && frac(s * 10) < 0.35) return 'brS';
-      if (frac(ph / (Math.PI / 4)) < 0.05 && th < browTh) return 'cu';
-      return th > 2.0 ? 'brS' : 'br';
-    },
-  });
-}
-
-function brassMantle(B) {
-  const A = B.at, sx = A.shoulder.l[0];
-  // a leather coat-tail cape, split at the back, brass-edged; a gear clasp on the right shoulder
-  const cloth = cloak(B, {
-    start: (x) => lerp([2.1, 0, 0], [1.15, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.88 * sx, 0, 0], [0.7 * sx, 0, 0], smooth(0.1, 0.55, s))[0],
-    over: [brassChest(B)],
-    off: () => 0.18, thick: 0.05,
-    hang: lerp(A.spine1, A.pelvis, 0.9)[1], folds: 4, fold: 0.08,
-    mat: (p, u, s) => (s > 0.7 && Math.abs(u) < 0.05 ? null : s > 0.95 || Math.abs(u) > 0.94 ? 'br' : 'coat'),
-    rim: 'coatD',
-  });
-  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.25).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
-  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], [[0.24, 0, 'brS'], [0.24, 0.05, 'br'], [0.18, 0.05, 'brS'], [0.12, 0.06, 'rune'], [0.06, 0.09, 'cu']]);
-  return merge(cloth, pin);
-}
+/* ==== brass: the mirror guard of the desert sultanate (tools/sculpt/garments/brass.mjs, built with the plate kit) == */
 
 /* ==== gold: the royal guard in parade armour (tools/sculpt/garments/gold.mjs, built with the plate kit) ========== */
 
@@ -1626,7 +1520,7 @@ const SETS = {
   gold: { MATS: GOLD_MATS, helm: goldHelm, chest: goldChest, mantle: goldMantle, legs: goldLegs, boots: goldBoots },
   electrum: { MATS: ELECTRUM_MATS, helm: electrumHelm, chest: electrumChest, mantle: electrumMantle, legs: electrumLegs, boots: electrumBoots },
   firesteel: { MATS: FIRESTEEL_MATS, helm: firesteelHelm, chest: firesteelChest, mantle: firesteelMantle, legs: firesteelLegs, boots: firesteelBoots },
-  brass: { MATS: BRASS_MATS, helm: brassHelm, chest: brassChest, mantle: brassMantle, legs: brassLegs, boots: brassBoots },
+  brass: { MATS: BRASS.BRASS_MATS, helm: BRASS.brassHelm, chest: BRASS.brassChest, mantle: BRASS.brassMantle, legs: BRASS.brassLegs, boots: BRASS.brassBoots },
   pewter: { MATS: PEWTER_MATS, helm: pewterHelm, chest: pewterChest, mantle: pewterMantle, legs: pewterLegs, boots: pewterBoots },
   lead: { MATS: LEAD_MATS, helm: leadHelm, chest: leadChest, mantle: leadMantle, legs: leadLegs, boots: leadBoots },
   zinc: { MATS: ZINC_MATS, helm: zincHelm, chest: zincChest, mantle: zincMantle, legs: zincLegs, boots: zincBoots },
