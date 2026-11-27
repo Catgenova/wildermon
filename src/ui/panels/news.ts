@@ -449,6 +449,14 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // A new body comes ashore dressed (STARTER_WEAR, starter_kit).
+  {
+    n: 735,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: new players come ashore wearing a cloth tunic, trousers and shoes.',
+    ],
+  },
   // The island tells a client its own pace (rpc_travel_speed), for the Unity client's mounts, carts and boats.
   {
     n: 734,

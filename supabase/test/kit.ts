@@ -20,7 +20,8 @@
  * Everything the island does is rolled back.
  */
 import { barterPutRefusal, barterSaid } from '../../src/game/barter';
-import { Game, KIT_LEFT_OUT, KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT } from '../../src/game/game';
+import { Game, KIT_LEFT_OUT, KIT_QL, STARTER_FOOD, STARTER_FOOD_COUNT, STARTER_KIT, STARTER_WEAR } from '../../src/game/game';
+const WEAR_DEFS = STARTER_WEAR.map(([id]) => `'${id}'`).join(', ');
 import { foodFill, Inventory, itemName } from '../../src/game/items';
 import { fitsOrder } from '../../src/game/orders';
 import { psql, ok, bad, check } from './harness';
@@ -54,9 +55,12 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', u)::text, true);
   perform rpc_join(w, 'Mira');
   insert into said select 'KIT', string_agg(def || ':' || ql::int || ':' || issued::text, ',' order by def)
-    from item where world_id = w and holder_uid = u and def not in ('deed_stake', '${STARTER_FOOD}');
+    from item where world_id = w and holder_uid = u and def not in ('deed_stake', '${STARTER_FOOD}', ${WEAR_DEFS});
   insert into said select 'FOOD', coalesce(string_agg(def || ':' || ql::int || ':' || count || ':' || issued::text, ','), '-')
     from item where world_id = w and holder_uid = u and def = '${STARTER_FOOD}';
+  insert into said select 'WEAR', coalesce(string_agg(e.s || ':' || i.def || ':' || i.ql::int || ':' || i.issued::text, ',' order by e.s), '-')
+    from player p cross join lateral jsonb_each_text(p.equipped) e(s, v) join item i on i.id = e.v::bigint and i.holder_uid = u
+   where p.world_id = w and p.uid = u;
   insert into said select 'STAKE', count(*)::text from item where world_id = w and holder_uid = u and def = 'deed_stake';
   select id into v_id from item where world_id = w and holder_uid = u and def = 'hatchet';
   insert into said values ('IMPROVE', coalesce(item_refusal(w, u, 'improve_item', jsonb_build_object('uid', v_id::text)), '-'));
@@ -116,6 +120,8 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 const want = [...STARTER_KIT].map(([id, ql]) => `${id}:${ql}:true`).sort().join(',');
 check('coming ashore gives the browser kit, every piece issued, at its QL', at('KIT') === want, at('KIT'));
 check('and the stake', at('STAKE') === '1', at('STAKE'));
+check(`coming ashore the first time dressed in cloth, worn, at QL ${KIT_QL}, not issued`,
+  at('WEAR') === [...STARTER_WEAR].map(([id, slot]) => `${slot}:${id}:${KIT_QL}:false`).sort().join(','), at('WEAR'));
 check('an issued tool cannot be improved', /cannot be improved/i.test(at('IMPROVE')), at('IMPROVE'));
 check('a death leaves every issued tool on the body and buries the rest', at('AFTER') === `${STARTER_KIT.length}|0`, at('AFTER'));
 check('the grave holds the log, the stake and the food, and no kit tool', at('GRAVE').split(',').sort().join(',') === ['deed_stake', 'log', STARTER_FOOD].sort().join(','), at('GRAVE'));

@@ -693,6 +693,12 @@ export const STARTER_KIT: ReadonlyArray<readonly [string, number, string]> = [
   ['quern', KIT_QL, ''],
   ['water_skin', 30, ''],
 ];
+/**
+ * What you wash ashore wearing, the first time only: a cloth tunic, trousers and shoes, at the kit's QL, worn in
+ * their slots. Not issued: worn, worn out and buried as any cloth is (`starter_kit` on the island, which this
+ * mirrors). Asked for: "new players should start with cloth chest, legs, boots equipped".
+ */
+export const STARTER_WEAR: ReadonlyArray<readonly [string, Slot]> = [['cloth_tunic', 'chest'], ['cloth_trousers', 'legs'], ['cloth_shoes', 'feet']];
 /** The quality a tool in the kit comes ashore at, for the text that says why to better it. */
 export const kitQl = (id: string): number => STARTER_KIT.find(([k]) => k === id)?.[1] ?? 0;
 
@@ -1512,6 +1518,7 @@ export class Game {
     for (const [id, ql, made] of STARTER_KIT) this.inventory.add(id, { ql, issued: true, extra: made || undefined });
     this.inventory.add('deed_stake', { ql: 50, extra: 'Pine' });
     this.inventory.add(STARTER_FOOD, { ql: KIT_QL, count: STARTER_FOOD_COUNT });
+    for (const [id, slot] of STARTER_WEAR) this.player.equipped[slot] = this.inventory.add(id, { ql: KIT_QL }).uid;
   }
 
   /** Whether the player can stand on a tile at a storey: the ground, or a finished floor, staircase or ladder. */
