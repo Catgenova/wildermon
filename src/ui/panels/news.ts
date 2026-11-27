@@ -455,6 +455,7 @@ export const NEWS: News[] = [
     lines: () => [
       'Changed: new players come ashore wearing a cloth tunic, trousers and shoes.',
       'Changed: the character creator\'s preview shows that cloth only; its outfit buttons are gone.',
+      'Fixed: in the Unity client, an overladen body walks at the island\'s crawl instead of being pulled back.',
     ],
   },
   // The island tells a client its own pace (rpc_travel_speed), for the Unity client's mounts, carts and boats.
