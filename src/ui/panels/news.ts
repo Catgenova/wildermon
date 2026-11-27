@@ -449,6 +449,66 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Fur rebuilt piece by piece (tools/sculpt/garments/fur.mjs).
+  {
+    n: 733,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: fur armour redrawn as a tundra raider\'s: a wolf\'s head worn as a hood with a bone-and-amber brow band; a shaggy wolf coat with a white fox collar, a seal-leather breast panel and a bone rib breastplate, a belt of claws and teeth, seal sleeves with bone wrist guards; reindeer-fur leggings with sewn knee pads, sinew cross-thongs and a wolf loincloth; mukluks with white fox cuffs.',
+      'Changed: the fur cloak is a snow leopard\'s whole pelt: a shaggy mane over the shoulders, the rosetted hide to the backs of the knees with its ringed tail, the forelegs knotted at the throat over a carved bone clasp with the paws hanging.',
+      'Changed: enchanted fur lights its amber: the brow beads, the breastplate runes, the cloak clasp, the loincloth charm and the boot beads.',
+    ],
+  },
+  // Seryll rebuilt piece by piece (tools/sculpt/garments/seryll.mjs).
+  {
+    n: 732,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: seryll armour redrawn as a tide-warden\'s: a nautilus helm with a crystal fin crest and finned cheek guards; a cuirass of lapping shell valves shading from teal through violet nacre to pearl, conch pauldrons, fluted vambraces with crystal fins; sea-green leggings with shell thigh valves, cockle knee guards and calf-shaped shell greaves; dark teal boots with shell toe caps, ankle fins and a nautilus coil at the heel.',
+      'Changed: the seryll shawl is a tide mantle: two tall crystal fan-fins rising from the shoulder blades over a knee-length cape of kelp blades with pearl floats, and a pearl collar pinned by a nautilus coil round a great pearl.',
+      'Changed: enchanted seryll lights its sea-glass: the brow band, the heart, the fin veins, the throat pearl, the knee pearls and the ankle beads.',
+    ],
+  },
+  // Electrum rebuilt piece by piece (tools/sculpt/garments/electrum.mjs).
+  {
+    n: 731,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: electrum armour redrawn as an Immortal\'s: a fluted electrum tiara over a crown of turquoise merlons, a hood with a scale aventail; a corselet of electrum tongue scales over a lapis robe, a lion-headed torque, a purple sash, an akinakes at the thigh; purple trousers with a lozenge band and scale knee guards; tan boots with curled toes and electrum toe plates.',
+      'Changed: the electrum shawl is a royal pectoral: an electrum crescent of turquoise rosettes from shoulder to shoulder, and a great winged sun standing across the back.',
+      'Changed: enchanted electrum lights its brow gem, the torque\'s eyes, the sun disc, the knee rims and the ankle gems.',
+    ],
+  },
+  // Adamantine rebuilt piece by piece (tools/sculpt/garments/adamantine.mjs).
+  {
+    n: 730,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: adamantine armour redrawn as a dwarven hold-guard\'s: a faceted octagonal helm with a gilt brow bar, a broad nasal and cheek plates; a gem-cut cuirass with gilt knotwork and a rune boss, terraced pauldrons, faceted arms over mail; mail chausses under faceted tassets, rune knee cops and octagonal greaves; squat faceted sabatons with gilt rune toe plates.',
+      'Changed: the adamantine shawl is a gate-mantle: a faceted collar and a yoke of hexagonal plates, a gilt chain of office to a mountain-and-gate clasp, and the hold\'s runestone on the back crowned with five gilt peaks.',
+      'Changed: enchanted adamantine lights its runes: the brow, the breast boss, the runestone, the knees and the toes.',
+    ],
+  },
+  // Glimmersteel rebuilt piece by piece (tools/sculpt/garments/glimmersteel.mjs).
+  {
+    n: 729,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: glimmersteel armour redrawn as a starlit duellist\'s: a blued burgonet with a crescent-moon comb, a brow crescent and star piercings; a slim starred cuirass over a violet slashed doublet, a single fencing pauldron, fencing mitts; indigo hose with garters, crescent knee cops and slim greaves; black cuffed riding boots with star-rowel spurs.',
+      'Changed: the glimmersteel shawl is a duellist\'s capelet over the left shoulder: midnight velvet sewn with stars, its silver-white lining sweeping across the back, a constellation on the back and a crescent brooch.',
+      'Changed: enchanted glimmersteel lights its crescents and stars: the helm\'s comb and brow, the pauldron badge, the brooch and constellation, the knee crescents and the rowels.',
+    ],
+  },
+  // Firesteel rebuilt piece by piece (tools/sculpt/garments/firesteel.mjs).
+  {
+    n: 728,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: fire-tempered steel redrawn as an ember knight\'s: a blackened fluted sallet with ram\'s horns, lava cracks in the crown and ember eyes in the slit; keeled gothic plate with flame-cut lames and a molten heart, fluted pauldrons and spiked gauntlets; fluted cuisses, flame-inlaid poleyns and keeled greaves; pointed sabatons with spurs.',
+      'Changed: the firesteel shawl is a crust mantle: rows of cooled-lava plates with flame-shaped crests over each shoulder, a forge-hot ring at the throat and a charcoal cloak burned into ember tongues at the hem.',
+      'Changed: enchanted firesteel lights its embers: the eyes and crown cracks, the heart, the mantle\'s foot and crests, the knee flames, the sabaton cuts and the hem\'s tips.',
+    ],
+  },
   // Pewter rebuilt piece by piece (tools/sculpt/garments/pewter.mjs).
   {
     n: 727,
