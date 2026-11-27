@@ -18,6 +18,9 @@ on:
       stairs_near:
         description: 'A tile as x,y: floors, stairs, walls, footprints, piers and heights within 4 tiles of it (blank skips it)'
         default: ''
+      wall_gone_at:
+        description: 'A tile as x,y: the walls on its four sides now and in each nightly backup, and the last day''s lines that removed or undid walls (blank skips it)'
+        default: ''
       workers_of:
         description: 'A player by name: their settlement workers idle on stairs, their work a storey up and the way to it (blank skips it)'
         default: ''
@@ -298,6 +301,85 @@ jobs:
            where e.$w and greatest(abs(p.x - $nx), abs(p.y - $ny)) <= 8
              and (e.text ilike '%stair%' or e.text ilike '%storey%' or e.text ilike '%step%' or e.text ilike '%climb%')
            order by e.n desc limit 30"
+
+      - name: When a wall went
+        # Asked about: the north wall of the house at (2610, 2986) in Meris Meadow, gone. A wall keeps no history: the
+        # wall table holds what stands. A wall goes by `remove_wall` (perform_building: by hand, a worker's job or a
+        # plan undone, each telling its owner "Removed: …" or "Undone: …" in `event`, kept a day, `event_keep`) or with
+        # its whole building on a Runestone's ground (`runestone_clear`, telling nobody). For the tile in the
+        # `wall_gone_at` input: its four sides now on every storey, its building and deed, every such line of the last
+        # day with who it was said to and where they stand now, and any undo still held that names the tile. Selects only.
+        if: inputs.wall_gone_at != ''
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          AT: ${{ inputs.wall_gone_at }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          ask() { echo "== $1"; supabase db query --linked "$2" || echo "::warning::could not read: $1"; }
+          if ! [[ "$AT" =~ ^[0-9]+,[0-9]+$ ]]; then echo "::warning::wall_gone_at is not x,y"; exit 0; fi
+          nx=${AT%,*}; ny=${AT#*,}
+          w="world_id::text like 'f3a88670%'"
+          ask "the four sides of $AT now, every storey" "select s.side, bd.dir, bd.x, bd.y, wl.level, wl.type, wl.material, wl.building,
+                 bill_done(wl.needed) as done, pl.name as planned_by
+            from unnest(array['n', 'e', 's', 'w']) s(side) cross join lateral border_of($nx, $ny, s.side) bd
+            left join wall wl on wl.$w and wl.dir = bd.dir and wl.x = bd.x and wl.y = bd.y
+            left join player pl on pl.world_id = wl.world_id and pl.uid = wl.planned_by
+           order by s.side, wl.level"
+          ask "the building on $AT and its walls now" "select b.id, b.name, b.levels, (select count(*) from building_tile t where t.world_id = b.world_id and t.building = b.id) as tiles,
+                 (select count(*) from wall wl where wl.world_id = b.world_id and wl.building = b.id) as walls
+            from building b where b.$w and b.id in (select building from building_tile where $w and x = $nx and y = $ny)"
+          ask "the deed $AT is on" "select d.name, d.x, d.y, d.radius, d.level, p.name as founded_by, to_char(d.founded_at, 'YYYY-MM-DD') as founded
+            from world wd cross join lateral deed_at(wd.id, $nx, $ny) d left join player p on p.world_id = d.world_id and p.uid = d.founded_by
+           where wd.id::text like 'f3a88670%'"
+          ask "every line of the last day that removed or undid a wall" "select to_char(e.at, 'MM-DD HH24:MI:SS') as at, p.name, left(e.text, 160) as text,
+                 round(p.x::numeric) as x_now, round(p.y::numeric) as y_now, greatest(abs(p.x - $nx), abs(p.y - $ny))::int as tiles_off_now
+            from event e left join player p on p.world_id = e.world_id and p.uid = e.uid
+           where e.$w and (e.text like 'Removed: %' or e.text like 'Undone: %')
+           order by e.n desc limit 200"
+          ask "undos still held that name $AT" "select p.name, to_char(u.at, 'MM-DD HH24:MI:SS') as at, left(u.pieces::text, 400) as pieces
+            from private.plan_undo u left join player p on p.world_id = u.world_id and p.uid = u.uid
+           where u.$w and u.pieces::text like '%$nx%' and u.pieces::text like '%$ny%' limit 20"
+          ask "who stands within 6 tiles of $AT" "select p.name, round(p.x::numeric, 1) as x, round(p.y::numeric, 1) as y, p.level, to_char(p.moved_at, 'MM-DD HH24:MI') as moved_at
+            from player p where p.$w and greatest(abs(p.x - $nx), abs(p.y - $ny)) <= 6 order by p.moved_at desc limit 20"
+
+      - name: When a wall went, by the nightly backups
+        # The same tile's four sides in each nightly copy kept on the `backups` branch (backup.yml), opened here with the
+        # database password and read straight out of the data dump: the first night without the wall dates its going to
+        # the day before. Reads; nothing is kept.
+        if: inputs.wall_gone_at != ''
+        continue-on-error: true
+        env:
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          AT: ${{ inputs.wall_gone_at }}
+        run: |
+          set -uo pipefail
+          if ! [[ "$AT" =~ ^[0-9]+,[0-9]+$ ]]; then exit 0; fi
+          nx=${AT%,*}; ny=${AT#*,}
+          b="$RUNNER_TEMP/backups"
+          git init -q "$b" && cd "$b"
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          if ! git fetch -q --depth=1 origin backups; then echo "::warning::no backups branch"; exit 0; fi
+          git checkout -q FETCH_HEAD
+          for day in $(ls -d 20[0-9][0-9]-[0-9][0-9]-[0-9][0-9] | sort); do
+            echo "== $day: the sides of $AT (n: h $nx,$ny; s: h $nx,$((ny + 1)); w: v $nx,$ny; e: v $((nx + 1)),$ny), and the building on it"
+            cat "$day"/island.tar.zst.gpg.* \
+              | gpg --batch --quiet --pinentry-mode loopback --passphrase-fd 3 -d 3<<<"$SUPABASE_DB_PASSWORD" \
+              | zstd -d -q | tar -xOf - data.sql \
+              | awk -v X="$nx" -v Y="$ny" '
+                  /^COPY public\.(wall|building_tile) \(/ {
+                    t = ($2 == "public.wall") ? "wall" : "tile"; s = $0; sub(/^[^(]*\(/, "", s); sub(/\).*/, "", s);
+                    n = split(s, cols, ", "); delete at; for (i = 1; i <= n; i++) at[cols[i]] = i; on = 1; print "  " t ": " s; next }
+                  on && /^\\\.$/ { on = 0; next }
+                  on {
+                    split($0, f, "\t"); if (f[at["world_id"]] !~ /^f3a88670/) next
+                    x = f[at["x"]] + 0; y = f[at["y"]] + 0
+                    if (t == "tile") { if (x == X && y == Y) print "  tile: " $0; next }
+                    d = f[at["dir"]]
+                    if ((d == "h" && x == X && (y == Y || y == Y + 1)) || (d == "v" && y == Y && (x == X || x == X + 1))) print "  wall: " $0 }'
+          done
 
       - name: A player's workers idle on stairs
         # Asked about: Bastiondrakes idle on "no stairs up to storey 4" after 20261120000114. For the player in the
