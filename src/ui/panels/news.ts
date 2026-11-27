@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Pewter rebuilt piece by piece (tools/sculpt/garments/pewter.mjs).
+  {
+    n: 727,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: pewter armour redrawn as a pilgrim\'s: a broad felt hat bound in pewter over a riveted pewter bowl, its turn-up set with a great scallop, an ampulla and crossed keys, over a wool hood; a russet brigandine jerkin with lapped pewter plates, a scrip with a scallop flap and an ampulla at the hip, pewter elbow cops and splinted vambraces; wool hose under studded cuisses, scallop knee cops, linen puttees; road boots with turned cuffs and pewter toe bands.',
+      'Changed: the pewter shawl is a pellegrina: a dark leather shoulder cape set with rows of cast pewter scallops, a great scallop on the back and a scallop brooch at the throat.',
+      'Changed: enchanted pewter lights the pearls and ampullae: the hat\'s pearl and ampulla, the hip ampulla, the brooch, the knee cops and the boot buckles.',
+    ],
+  },
   // Bronze rebuilt piece by piece (tools/sculpt/garments/kit/bronze.mjs).
   {
     n: 726,

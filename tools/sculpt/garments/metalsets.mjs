@@ -14,6 +14,7 @@ import * as TIN from './tin.mjs';
 import { MITHRIL_MATS, mithrilHelm, mithrilChest, mithrilMantle, mithrilLegs, mithrilBoots } from './mithril.mjs';
 import * as BRASS from './brass.mjs';
 import { chlamys, corinthianHelm, hopliteChest, hopliteLegs, krepides } from './kit/bronze.mjs';
+import { PEWTER_MATS, pewterHelm, pewterChest, pewterMantle, pewterLegs, pewterBoots } from './pewter.mjs';
 import {
   browTheta, chestFront, cloak, disc, feet, forearms, fromFront, gorget, helm, hips, shins, shoulderCaps, shoulders, torso, upperArms, waistOf as waistAt,
 } from './metalkit.mjs';
@@ -829,106 +830,7 @@ function furMantle(B) {
 
 /* ==== lead: the Wall (tools/sculpt/garments/lead.mjs, built with the plate kit) ================================== */
 
-/* ==== pewter: the pilgrim ========================================================================================== */
-const PEWTER_MATS = {
-  pw: { c: '#9b9b93', kind: 3 },
-  pwS: { c: '#65655f', kind: 3 },
-  rune: { c: '#7f8a80', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
-  felt: { c: '#4e3d2e', kind: 2 },
-  feltD: { c: '#33281e', kind: 2 },
-  wool: { c: '#6f6656', kind: 2 },
-  woolD: { c: '#4a4438', kind: 2 },
-  woolW: { c: '#6f6657', kind: 2 },
-  cloak: { c: '#3e3a35', kind: 2 },
-  cloakD: { c: '#27241f', kind: 2 },
-  leather: { c: '#5b3e29', kind: 2 },
-  leatherD: { c: '#38261b', kind: 2 },
-  sole: { c: '#261c15', kind: 2 },
-};
-/** A pewter badge's place: a scallop shell's disc at `c`, radius r (its ribs fanned from its foot). */
-const scallop = (p, c, r) => { const dx = p[0] - c[0], dy = y(p) - c[1], d = Math.hypot(dx, dy); if (d > r) return null; return d > r * 0.82 ? 'pwS' : frac((Math.atan2(dx, dy + r) + Math.PI) * 2.2) < 0.25 ? 'pwS' : 'pw'; };
-
-function pewterChest(B) {
-  const A = B.at, waist = waistOf(A);
-  // a wool tunic to the hips, a leather scrip strap over the left shoulder, a pewter scallop on the breast with a glowing
-  // ring round it, a rope girdle
-  const strap = (p) => Math.abs(p[0] - (0.25 - (y(p) - A.chest[1]) * 0.75)) < 0.12 && y(p) > waist - 0.1;
-  const badge = [-0.45, A.chest[1] + 0.25];
-  const coat = torso(B, {
-    from: waist - 0.6,
-    off: (p) => 0.12 + (strap(p) ? 0.04 : 0) + (p[2] > 0 && Math.hypot(p[0] - badge[0], y(p) - badge[1]) < 0.24 ? 0.05 : 0) + 0.06 * smooth(waist, waist - 0.55, y(p)),
-    mat: (p) => {
-      if (p[2] > 0) { const sc = scallop(p, badge, 0.22); if (sc) return sc; if (Math.hypot(p[0] - badge[0], y(p) - badge[1]) < 0.27) return 'rune'; }
-      if (strap(p)) return 'leather';
-      if (Math.abs(y(p) - waist) < 0.06) return 'leatherD';
-      return frac(p[0] * 3.5) < 0.06 ? 'woolD' : 'wool';
-    },
-    rim: 'woolD',
-    caps: { off: () => 0.13, mat: () => 'wool' },
-  });
-  const sleeves = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.09), mat: () => 'wool' });
-  const cuffs = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.09 + (f.t > 0.8 ? 0.03 : 0), mat: (f) => (f.t > 0.86 ? 'pw' : f.t > 0.8 ? 'woolD' : 'wool') });
-  return merge(coat, sleeves, cuffs);
-}
-
-function pewterLegs(B) {
-  const A = B.at, waist = waistOf(A);
-  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.75 : 0.5) ? 'woolW' : 'woolD'), rim: (m) => (m === 'woolW' ? 'woolW' : 'woolD') });
-  // the hose below the knee, cross-tied, a pewter boss at each knee with a glowing rim
-  const calves = shins(B, { from: -0.1, to: 0.9, round: 2.7, off: (g) => (g.t < 0.12 ? 0.13 + 0.05 * Math.cos(g.a) : 0.08), mat: (g, p) => { if (g.t < 0.12 && Math.abs(g.a) < 0.9) return g.t < -0.06 || g.t > 0.08 ? 'rune' : 'pw'; if (g.t < 0.2 && Math.abs(g.a) > 1.7) return null; return frac(g.t * 7 + g.a * 0.4) < 0.12 || frac(g.t * 7 - g.a * 0.4) < 0.12 ? 'leatherD' : 'woolD'; }, rim: 'woolD' });
-  return { P: merge(hose, calves), dropAt: (f) => f.mat === 'woolW' };
-}
-
-function pewterBoots(B) {
-  const A = B.at;
-  // pilgrim's boots to the ankle's top, a pewter buckle on the outside, a glowing band at the top
-  return feet(B, {
-    up: 0.7,
-    off: (p, n, top) => (y(p) > top - 0.15 ? 0.03 : 0),
-    mat: (p, n, top) => {
-      const s = p[0] >= 0 ? 'l' : 'r';
-      if (y(p) > top - 0.15) return y(p) > top - 0.06 ? 'leatherD' : 'rune';
-      if (Math.abs(y(p) - (A.ankle[s][1] + 0.1)) < 0.08) return (p[0] - A.ankle[s][0]) * (s === 'l' ? 1 : -1) > 0.2 ? 'pw' : 'leatherD';
-      return 'leather';
-    },
-    rim: 'leatherD',
-  });
-}
-
-function pewterHelm(B) {
-  const browTh = browTheta(B);
-  // the pilgrim's hat: a round felt crown and a broad brim turned up at the front, a pewter scallop on the turn-up
-  return helm(B, {
-    rim: 'feltD', down: browTh + 0.18,
-    margin: ({ th, ph }) => { const s = fromFront(ph); const brim = 0.75 * smooth(browTh - 0.2, browTh + 0.1, th); return 0.13 + brim * (s < 0.8 ? 0.55 + 0.45 * (s / 0.8) : 1) + (s < 0.8 && th > browTh - 0.2 ? -0.2 * smooth(browTh - 0.1, browTh + 0.18, th) * (1 - s / 0.8) : 0); },
-    mat: (d, { th, ph }) => {
-      const s = fromFront(ph);
-      if (th > browTh - 0.2 && s < 0.35 && th < browTh + 0.05) return Math.abs(s) < 0.2 && th > browTh - 0.15 ? 'pw' : 'rune';
-      if (Math.abs(th - (browTh - 0.26)) < 0.04) return 'leatherD';
-      return th > browTh - 0.2 ? 'feltD' : 'felt';
-    },
-  });
-}
-
-function pewterMantle(B) {
-  const A = B.at, sx = A.shoulder.l[0];
-  // the long pilgrim's cloak, dark wool, its hood lying down the back; a pewter clasp on the right shoulder
-  const cloth = cloak(B, {
-    start: (x) => lerp([2.2, 0, 0], [1.15, 0, 0], smooth(0.75, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.82 * sx, 0, 0], [0.68 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
-    over: [pewterChest(B)],
-    off: () => 0.18, thick: 0.05,
-    hang: lerp(A.spine1, A.pelvis, 0.95)[1], folds: 6, fold: 0.13,
-    mat: (p, u, s) => (s > 0.96 ? 'cloakD' : 'cloak'),
-    rim: 'cloakD',
-  });
-  const head = onBone(B, 'spine_03');
-  const back = cloth.V.reduce((b, p) => (Math.abs(p[0]) < 0.15 && p[2] < b[2] && y(p) > A.chest[1] ? p : b), [0, 0, 9]);
-  const hood = loft([ring(10, 0, 0.5, 0.2), ring(10, -0.3, 0.42, 0.18), ring(10, -0.62, 0.22, 0.12), ring(10, -0.75, 0.05, 0.05)], (c, i) => (i >= 2 ? 'cloakD' : 'cloak'), { o: add(back, [0, 0.05, -0.1]), X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] }, head);
-  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.25).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
-  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], [[0.18, 0, 'pwS'], [0.18, 0.05, 'pw'], [0.12, 0.06, 'rune'], [0.07, 0.08, 'pw']]);
-  return merge(cloth, hood, pin);
-}
+/* ==== pewter: the pilgrim (tools/sculpt/garments/pewter.mjs, built with the plate kit) =========================== */
 
 /* ==== brass: the mirror guard of the desert sultanate (tools/sculpt/garments/brass.mjs, built with the plate kit) == */
 
