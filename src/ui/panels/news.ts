@@ -449,6 +449,26 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Bronze rebuilt piece by piece (tools/sculpt/garments/kit/bronze.mjs).
+  {
+    n: 726,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: bronze armour redrawn as a Greek hoplite\'s: a Corinthian helm with almond eyes, a nasal, brow scrolls, a key band and a red crest; a muscle cuirass with raised shoulder flaps and studded leather pteruges at the hips and upper arms over linen sleeves; a linen chiton and a skirt of oxblood leather straps, bronze greaves laced behind; laced boots with bronze toe caps.',
+      'Changed: the bronze shawl is a chlamys in black-figure colours: near-black wool with a terracotta Greek-key border and a terracotta sun on the back, pinned by a bronze sun brooch.',
+      'Changed: enchanted bronze lights its helm\'s eyes, the cuirass\'s key band, the knee volutes, the brooch\'s rays and the toe bosses.',
+    ],
+  },
+  // Zinc rebuilt piece by piece (tools/sculpt/garments/zinc.mjs).
+  {
+    n: 725,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: zinc armour redrawn as a siege sapper\'s: a spangled zinc helm with a riveted comb, a peak, a three-lame neck guard and brass goggles on the brow; a leather work coat under lapped zinc lames, a bandolier with a maul, chisels and a coil of slow match, a tool belt with box pouches, zinc spaulders and flared gauntlets; bloused canvas breeches with leather patches, domed zinc knee pads and half-greaves; hobnailed mine boots with zinc toe caps.',
+      'Changed: the zinc shawl is a mantlet: a lamed zinc blast shield on an oilskin pad, two blast wings beside the neck, a shuttered sighting slot and a case of siege plans, strapped to a pick-and-shovel clasp.',
+      'Changed: enchanted zinc lights its goggle lenses, the slow match, the sighting slot, the knee-pad slits and the match ends at the boots.',
+    ],
+  },
   // Brass rebuilt piece by piece (tools/sculpt/garments/brass.mjs).
   {
     n: 724,
