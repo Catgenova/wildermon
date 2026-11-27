@@ -8,6 +8,7 @@ import { writeFileSync } from 'node:fs';
 import { STEEL_MATS, steelHelm, steelChest, steelMantle, steelLegs, steelBoots } from './steel.mjs';
 import * as CU from './kit/copper.mjs';
 import { GOLD_MATS, goldHelm, goldChest, goldMantle, goldLegs, goldBoots } from './gold.mjs';
+import { LEAD_MATS, leadHelm, leadChest, leadMantle, leadLegs, leadBoots } from './lead.mjs';
 import {
   browTheta, chestFront, cloak, disc, feet, forearms, fromFront, gorget, helm, hips, shins, shoulderCaps, shoulders, torso, upperArms, waistOf as waistAt,
 } from './metalkit.mjs';
@@ -1111,109 +1112,7 @@ function zincMantle(B) {
   return merge(cloth, pin);
 }
 
-/* ==== lead: the Wall (the shield-line's front rank) ================================================================ */
-const LEAD_MATS = {
-  pb: { c: '#666b73', kind: 3 },
-  pbS: { c: '#40444a', kind: 3 },
-  pbL: { c: '#8c929a', kind: 3 },
-  rune: { c: '#6b6f86', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
-  tabard: { c: '#5a1f1c', kind: 2 },
-  tabardD: { c: '#3a1412', kind: 2 },
-  tabardL: { c: '#b39a5a', kind: 2 },
-  gam: { c: '#4b4038', kind: 2 },
-  gamD: { c: '#302823', kind: 2 },
-  gamW: { c: '#4b4039', kind: 2 },
-  sole: { c: '#211915', kind: 2 },
-};
-
-function leadChest(B) {
-  const A = B.at, waist = waistOf(A);
-  // a slab of a cuirass, thick and square-fronted, three broad bands, a glowing line along each band's foot
-  const band = (yy) => (A.chest[1] + 0.6 - yy) / ((A.chest[1] + 0.6 - (waist - 0.55)) / 3);
-  const coat = torso(B, {
-    from: waist - 0.55,
-    // (thinner down the sides, where the arms pass)
-    off: (p, n) => (0.24 + 0.05 * frac(band(y(p))) + (p[2] > 0 ? 0.05 * Math.max(0, 1 - Math.abs(p[0]) / 0.9) : 0)) * (1 - 0.45 * smooth(0.5, 0.85, Math.abs(n[0])) * smooth(waist - 0.2, A.chest[1] - 0.3, y(p))),
-    mat: (p) => { const f = frac(band(y(p))); if (f > 0.93) return 'rune'; if (f > 0.85) return 'pbS'; return Math.abs(p[0]) < 0.05 && p[2] > 0 ? 'pbS' : 'pb'; },
-    rim: 'pbS',
-    caps: { off: () => 0.2, mat: () => 'pbS' },
-  });
-  // great round pauldrons, a raised rim
-  const pauldrons = shoulders(B, { from: -0.35, to: 0.36, off: (t) => 0.34 + 0.03 * smooth(-0.35, 0.1, t) - 0.06 * smooth(0.15, 0.36, t), mat: (t) => (t > 0.29 ? 'pbL' : t < -0.3 ? 'pbS' : 'pb') });
-  const arms = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.13), mat: (u, p, n) => (n[0] * Math.sign(p[0]) < -0.3 ? 'gamD' : frac(u.t * 4) < 0.1 ? 'pbS' : 'pb') });
-  const vamb = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.15 + (f.t < 0.12 ? 0.07 : 0), mat: (f) => (f.t > 0.86 ? 'rune' : f.t < 0.12 ? 'pbL' : frac(f.t * 4) < 0.1 ? 'pbS' : 'pb') });
-  // a gorget up the neck, over the cuirass's collar
-  const cut = A.neck[1] - 0.3;
-  const neck = gorget(B, { top: (p, n) => (n[2] < -0.2 ? 9 : cut + 0.3), off: (p, n) => 0.38 - 0.24 * smooth(cut - 0.05, cut + 0.55, y(p)) - 0.2 * smooth(0.2, 0.7, n[2]) * smooth(cut - 0.2, cut + 0.1, y(p)), mat: (p) => (y(p) > cut + 0.45 ? 'pbS' : 'pb'), rim: 'pbS' });
-  return merge(coat, pauldrons, arms, vamb, neck);
-}
-
-function leadLegs(B) {
-  const A = B.at, waist = waistOf(A);
-  const under = hips(B, { closed: true, top: waist + 0.25, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'gamW' : 'gam'), rim: 'gamD' });
-  // thick lead greaves closed round the shin, a heavy knee boss with a glowing ring
-  const greaves = shins(B, {
-    from: -0.2, to: 0.9, round: 3.2,
-    off: (g, p) => (g.t < 0.12 ? (-g.a * Math.sign(p[0]) < -0.6 ? 0.16 : 0.26 + 0.06 * Math.cos(g.a)) : 0.17),
-    mat: (g, p) => { if (g.t < 0.16 && -g.a * Math.sign(p[0]) < -0.8) return null; if (g.t < 0.12) return Math.abs(g.t) > 0.1 ? 'rune' : 'pbL'; if (g.t < 0.16) return 'pbS'; return frac(g.t * 3.5) < 0.08 ? 'pbS' : 'pb'; },
-    rim: 'pbS',
-  });
-  return { P: merge(under, greaves), dropAt: (f) => f.mat === 'gamW' };
-}
-
-function leadBoots(B) {
-  const A = B.at;
-  // broad sabatons, square-toed, a glowing band at the ankle
-  return feet(B, {
-    up: 0.55,
-    off: (p, n, top) => 0.06 + (n[1] < -0.3 ? 0 : 0.02),
-    mat: (p, n, top) => (y(p) > top - 0.12 ? 'pbS' : y(p) > top - 0.22 ? 'rune' : n[1] < -0.3 ? 'gamD' : frac(p[2] * 3) < 0.1 ? 'pbS' : 'pb'),
-    rim: 'pbS',
-  });
-}
-
-function leadHelm(B) {
-  const browTh = browTheta(B), c = headCentre(B), keep = headPts(B);
-  let H = 0, R = 0;
-  B.V.forEach((p, i) => { if (!keep(i)) return; const v = sub(p, c); H = Math.max(H, v[1]); R = Math.max(R, Math.hypot(v[0], v[2])); });
-  H += 0.2; R += 0.14;
-  // a great helm: flat-topped, its sides straight down to the shoulders, a cross slit before the eyes, breaths below
-  return helm(B, {
-    rim: 'pbS', down: 2.05,
-    // (out to a cylinder round the head, its crown flat: the head's own reach up and out, measured, and a hand more)
-    margin: ({ th, r }) => Math.max(0.12, Math.min(R / Math.max(0.05, Math.sin(th)), th < Math.PI / 2 ? H / Math.max(0.05, Math.cos(th)) : 9) - r),
-    mat: (d, { th, ph }) => {
-      const s = fromFront(ph);
-      if (Math.abs(th - (browTh + 0.12)) < 0.045 && s < 0.7) return null;
-      if (s < 0.04 && th > browTh && th < browTh + 0.45) return null;
-      // (the slits' lips, darker, and a raised strip down the face between the breaths)
-      if (Math.abs(th - (browTh + 0.12)) < 0.1 && s < 0.78) return 'pbS';
-      if (s < 0.1 && th > browTh - 0.05 && th < browTh + 0.5) return 'pbS';
-      if (s < 0.09 && th > browTh + 0.5) return 'pbL';
-      if (th > browTh + 0.5 && th < browTh + 0.8 && s < 0.5 && frac(s * 10) < 0.35 && frac(th * 12) < 0.4) return 'pbS';
-      if (Math.abs(th - (browTh - 0.12)) < 0.04) return 'rune';
-      if (th < 0.35) return 'pbS';
-      return s < 0.03 ? 'pbL' : 'pb';
-    },
-  });
-}
-
-function leadMantle(B) {
-  const A = B.at, sx = A.shoulder.l[0];
-  // a heavy tabard-cloak, dark red, a pale tower down its middle, to below the seat
-  const cloth = cloak(B, {
-    start: (x) => lerp([2.1, 0, 0], [1.15, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.84 * sx, 0, 0], [0.66 * sx, 0, 0], smooth(0.1, 0.5, s))[0],
-    over: [leadChest(B)],
-    off: () => 0.2, thick: 0.06,
-    hang: lerp(A.spine1, A.pelvis, 0.9)[1], folds: 3, fold: 0.06,
-    mat: (p, u, s) => (s > 0.95 || Math.abs(u) > 0.94 ? 'tabardD' : Math.abs(u) < 0.2 && s > 0.35 && s < 0.85 ? (s < 0.42 ? 'tabardL' : frac(s * 12) < 0.2 ? 'tabardD' : 'tabardL') : 'tabard'),
-    rim: 'tabardD',
-  });
-  const at = cloth.V.filter((p) => p[0] < -0.95 && p[0] > -1.3).reduce((b, p) => (p[2] > b[2] ? p : b), [0, 0, -9]);
-  const pin = disc(B, add(at, [0, 0.03, 0.02]), [0, 0.85, 0.5], [[0.24, 0, 'pbS'], [0.24, 0.06, 'pb'], [0.16, 0.07, 'rune'], [0.08, 0.1, 'pbL']]);
-  return merge(cloth, pin);
-}
+/* ==== lead: the Wall (tools/sculpt/garments/lead.mjs, built with the plate kit) ================================== */
 
 /* ==== pewter: the pilgrim ========================================================================================== */
 const PEWTER_MATS = {

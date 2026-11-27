@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Lead rebuilt piece by piece (tools/sculpt/garments/lead.mjs).
+  {
+    n: 721,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: lead armour redrawn as a walking castle: a round-tower great helm with battlements, a lead cone roof and a cross sight; a stepped cuirass with a plumb-bob seal over an oxblood gambeson, round-tower pauldrons with arrow loops; pillar greaves with battlemented capitals; box sabatons on lead plinths.',
+      'Changed: the lead shawl is a curtain wall: a battlemented wall across the back with a portcullis gate and swallow-tailed banners, and two oxblood banners in front hung from gate-tower clasps.',
+      'Changed: enchanted lead lights its cross sight, arrow loops, gates and boot seals.',
+    ],
+  },
   // Gold rebuilt piece by piece (tools/sculpt/garments/gold.mjs).
   {
     n: 720,
