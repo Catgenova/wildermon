@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Mithril rebuilt piece by piece (tools/sculpt/garments/mithril.mjs).
+  {
+    n: 723,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: mithril armour redrawn as an elven leaf warden\'s: a winged leaf helm with a moonstone; a sage tunic under silver leaf scales and a leaf-plated yoke, leaf pauldrons and bracers; sage hose under veined silver leaves on the thighs, knees and calves; slim dove-grey boots laced behind, with pointed toes and a cuff of standing silver leaves.',
+      'Changed: the mithril shawl is a leaf cloak: two rings of silver leaves round the neck, a crescent-moon brooch with a moonstone, and a grey-green cloak split into two leaf-cut tails.',
+      'Changed: enchanted mithril lights its crest and moonstone, the vine down the breastbone, the brooch, the cloak\'s midribs and the leaf midribs on the legs and boots.',
+    ],
+  },
   // Tin rebuilt piece by piece (tools/sculpt/garments/tin.mjs).
   {
     n: 722,

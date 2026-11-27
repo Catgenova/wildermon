@@ -10,6 +10,7 @@ import * as CU from './kit/copper.mjs';
 import { GOLD_MATS, goldHelm, goldChest, goldMantle, goldLegs, goldBoots } from './gold.mjs';
 import { LEAD_MATS, leadHelm, leadChest, leadMantle, leadLegs, leadBoots } from './lead.mjs';
 import * as TIN from './tin.mjs';
+import { MITHRIL_MATS, mithrilHelm, mithrilChest, mithrilMantle, mithrilLegs, mithrilBoots } from './mithril.mjs';
 import {
   browTheta, chestFront, cloak, disc, feet, forearms, fromFront, gorget, helm, hips, shins, shoulderCaps, shoulders, torso, upperArms, waistOf as waistAt,
 } from './metalkit.mjs';
@@ -1571,48 +1572,7 @@ const glimmersteelMantle = (B) => moonMantle(B, glimmersteelChest(B), {
   pin: [[0.18, 0, 'glS'], [0.18, 0.05, 'gl'], [0.11, 0.06, 'rune'], [0.06, 0.08, 'star']],
 });
 
-/* ==== mithril: the elven warden ===================================================================================== */
-const MITHRIL_MATS = {
-  mi: { c: '#a4b3c2', kind: 3 },
-  miS: { c: '#5d6b7a', kind: 3 },
-  miL: { c: '#dfe8ef', kind: 3 },
-  rune: { c: '#8ea6b8', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
-  leaf: { c: '#4f6a4a', kind: 2 },
-  leafD: { c: '#34482f', kind: 2 },
-  leafW: { c: '#4f6a4b', kind: 2 },
-  cloak: { c: '#5d6e5a', kind: 2 },
-  cloakD: { c: '#3d4a3b', kind: 2 },
-  sole: { c: '#22261e', kind: 2 },
-};
-/** Leaf scales: pointed leaves overlapping down the plate, each with its midrib. */
-const leafAt = (p, k = 3.6) => { const row = Math.floor(y(p) * k), u = frac(p[0] * k * 0.7 + (row % 2) * 0.5 + p[2]), v = frac(y(p) * k); if (Math.abs(u - 0.5) < 0.04 && v > 0.25) return 'miS'; return Math.abs(u - 0.5) > 0.5 * v + 0.05 ? 'miS' : 'mi'; };
-const miOpts = { metal: 'mi', dark: 'miS', light: 'miL', under: 'leaf', underD: 'leafD', underW: 'leafW',
-  chest: (p) => leafAt(p), skirt: (p) => leafAt(p, 4.5), thigh: (p) => leafAt(p, 4), shin: (g, p) => leafAt(p, 4), arm: (t, p) => (t > 1 ? 'mi' : leafAt(p, 4)),
-  shoulder: (t, p) => leafAt(p, 4.5) };
-const mithrilChest = (B) => moonChest(B, miOpts);
-const mithrilLegs = (B) => moonLegs(B, miOpts);
-const mithrilBoots = (B) => moonBoots(B, { ...miOpts, up: 0.7, point: true, foot: (p, s) => (y(p) > B.at.ankle[s][1] + 0.3 ? leafAt(p, 4.5) : 'mi') });
-function mithrilHelm(B) {
-  const browTh = browTheta(B);
-  // a tall helm drawn up to a leaf's point, open-faced, swept wings over the ears, a glowing vine round the brow
-  return helm(B, {
-    rim: 'miS', down: 2.05,
-    margin: ({ th, ph }) => { const s = fromFront(ph); const wing = Math.exp(-(((th - 1.35) / 0.25) ** 2) - (((s - 1.5) / 0.3) ** 2)); return 0.1 + 0.38 * Math.max(0, 1 - th / 0.85) ** 1.5 + 0.35 * wing; },
-    mat: (d, { th, ph }) => {
-      const s = fromFront(ph);
-      if (th > browTh + 0.05 && s < 1.0) return null;
-      if (Math.abs(th - (browTh - 0.05)) < 0.045 && s < 1.3) return 'rune';
-      const wing = Math.exp(-(((th - 1.35) / 0.25) ** 2) - (((s - 1.5) / 0.3) ** 2));
-      if (wing > 0.4) return frac(th * 9) < 0.2 ? 'miS' : 'miL';
-      return frac(ph / (Math.PI / 2) + 0.5) < 0.04 ? 'miS' : 'mi';
-    },
-  });
-}
-const mithrilMantle = (B) => moonMantle(B, mithrilChest(B), {
-  hang: lerp(B.at.spine1, B.at.pelvis, 1.0)[1], folds: 8, fold: 0.15,
-  mat: (p, u, s) => (s > 0.94 ? 'leafD' : frac(s * 6 + Math.abs(u) * 2) < 0.05 ? 'cloakD' : 'cloak'), rim: 'cloakD',
-  pin: [[0.2, 0, 'miS'], [0.2, 0.05, 'mi'], [0.13, 0.06, 'rune'], [0.07, 0.09, 'miL']],
-});
+/* ==== mithril: the elven warden (built with the plate kit: tools/sculpt/garments/mithril.mjs) ==================== */
 
 /* ==== seryll: the tide-warden (sea crystal) ========================================================================= */
 const SERYLL_MATS = {
