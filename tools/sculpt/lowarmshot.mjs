@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildLowArm, buildHandAlone, buildArmBody, WRIST } from './lowarm.mjs';
 import { rotation } from './lowcam.mjs';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -209,7 +210,7 @@ async function shoot(w, h, VIEWS, meshes, sheet, file) {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent(PAGE(w, h));
   await p.evaluate(([d, V, Ms, s, ww, hh]) => { window.DATA = d; window.VIEWS = V; window.MESHES = Ms; window.SHEET = s; window.SW = ww; window.SH = hh; }, [DATA, VIEWS, meshes, sheet, w, h]);
-  await p.addScriptTag({ content: RENDER });
+  await addScript(p, RENDER);
   await p.waitForFunction('window.READY');
   await p.locator('#sheet').screenshot({ path: file });
   console.log('wrote', file);

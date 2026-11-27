@@ -14,6 +14,7 @@ import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -55,7 +56,7 @@ const browser = await chromium.launch({ ...(existsSync(kept) ? { executablePath:
 const p = await browser.newPage({ viewport: { width: cw * 8, height: 5 * (ch + 23) }, deviceScaleFactor: 1 });
 p.on('pageerror', (e) => console.log('ERR', e.message));
 await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b;font:13px sans-serif;color:#eee}.row{display:flex}.h{height:19px;padding:2px 6px}canvas{display:block}</style></head><body><div id=root></div></body></html>');
-await p.addScriptTag({ content: b.outputFiles[0].text });
+await addScript(p, b.outputFiles[0].text);
 const [med, worst] = await p.evaluate(([z, a, c, gs]) => window.run(z, a, c, gs), [zoom, cw, ch, genders]);
 console.log(`a body's draw at zoom ${zoom}: median ${med.toFixed(1)} ms, worst ${worst.toFixed(1)} ms (software GL)`);
 // the rows read off their canvases into one picture as the page lays them out (a screenshot of a page this big times out)

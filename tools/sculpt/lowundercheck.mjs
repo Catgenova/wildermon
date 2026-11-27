@@ -11,6 +11,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -59,7 +60,7 @@ try {
   const p = await browser.newPage({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent('<!doctype html><html><body></body></html>');
-  await p.addScriptTag({ content: b.outputFiles[0].text });
+  await addScript(p, b.outputFiles[0].text);
   await p.evaluate(() => window.ready());
   const len = await p.evaluate(() => window.idleLength());
   // the frames: every facing, the walk's stride and the idle's loop, each body played on its own in real time

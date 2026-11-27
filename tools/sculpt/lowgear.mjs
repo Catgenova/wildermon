@@ -21,6 +21,7 @@ import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { add, sub, mul, dot, cross, unit, mm, mv, tr, posed, euler } from './lowrig.mjs';
+import { addScript } from '../pagescript.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 const REPO = resolve(DIR, '../..');
@@ -701,7 +702,7 @@ export async function shoot(w, h, cells, file, texts = []) {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent(PAGE(w, h));
   await p.evaluate(([d, C, ww, hh, tx]) => { window.DATA = d; window.CELLS = C; window.SW = ww; window.SHH = hh; window.TEXTS = tx; }, [{ SHM: LIGHT.male, SHF: LIGHT.female }, cells, w, h, texts]);
-  await p.addScriptTag({ content: RENDER });
+  await addScript(p, RENDER);
   await p.waitForFunction('window.READY', null, { timeout: 180000 });
   await p.locator('#sheet').screenshot({ path: file });
   console.log('wrote', file);

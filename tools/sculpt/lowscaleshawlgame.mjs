@@ -20,6 +20,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -101,7 +102,7 @@ try {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   p.on('console', (m) => { if (m.type() === 'error') console.log('console', m.text()); });
   await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b}#root{display:inline-block}.row{display:flex}canvas{display:block}</style></head><body><div id=root></div></body></html>');
-  await p.addScriptTag({ content: b.outputFiles[0].text });
+  await addScript(p, b.outputFiles[0].text);
   await p.evaluate(() => window.ready());
   await p.evaluate((rows) => window.show(rows), spec.rows);
   const r = await p.evaluate(() => { const b = document.getElementById('root').getBoundingClientRect(); return { x: b.x, y: b.y, width: Math.ceil(b.width), height: Math.ceil(b.height) }; });

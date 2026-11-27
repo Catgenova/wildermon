@@ -20,6 +20,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -151,7 +152,7 @@ try {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('console', m.text()); });
   await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b;color:#eee;font:13px sans-serif}#root{display:inline-block}.row{display:flex;gap:2px;margin-bottom:2px}.t{padding:4px}canvas{display:block}</style></head><body><div id=root></div></body></html>');
-  await p.addScriptTag({ content: b.outputFiles[0].text });
+  await addScript(p, b.outputFiles[0].text);
   await p.evaluate(() => window.ready());
   // twice: the first draw asks for what loads, the second has it
   await p.evaluate(() => window.show());

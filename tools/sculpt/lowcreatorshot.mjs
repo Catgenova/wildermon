@@ -8,6 +8,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
 const out = resolve(opt('out', 'tmp/lowcreator')), hair = opt('hair', 'bob');
@@ -33,7 +34,7 @@ try {
     const p = await browser.newPage({ viewport: { width: 1100, height: 900 }, deviceScaleFactor: 1 });
     p.on('pageerror', (e) => console.log('ERR', e.message));
     await p.setContent(`<!doctype html><html><head><style>${css}\nbody{display:block;margin:0;padding:16px;background:#1d1a1f;min-height:0}</style></head><body></body></html>`);
-    await p.addScriptTag({ content: b.outputFiles[0].text });
+    await addScript(p, b.outputFiles[0].text);
     // (the page clipped to the element: the mirror redraws every frame, so it is never "stable" for an element shot)
     const shot = async (sel, path) => { const r = await p.evaluate((q) => { const e = document.querySelector(q).getBoundingClientRect(); return { x: e.x, y: e.y, width: Math.ceil(e.width), height: Math.ceil(e.height) }; }, sel); await p.screenshot({ path, clip: r, timeout: 120000, animations: 'allow' }); };
     await p.evaluate((g) => window.make(g), gender);

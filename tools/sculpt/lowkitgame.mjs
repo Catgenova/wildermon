@@ -20,6 +20,7 @@ import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -75,7 +76,7 @@ try {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   p.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('console', m.text()); });
   await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b}#root{display:inline-flex;gap:0}canvas{display:block}</style></head><body><div id=root></div></body></html>');
-  await p.addScriptTag({ content: b.outputFiles[0].text });
+  await addScript(p, b.outputFiles[0].text);
   await p.evaluate(() => window.ready());
   const shot = async (sel, path) => {
     const r = await p.evaluate((q) => { const bb = document.querySelector(q).getBoundingClientRect(); return { x: bb.x, y: bb.y, width: Math.ceil(bb.width), height: Math.ceil(bb.height) }; }, sel);

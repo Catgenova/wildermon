@@ -13,6 +13,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const [,, out, plan = 'A'] = process.argv;
 const js = join(tmpdir(), 'orc-sheet.js');
@@ -83,7 +84,7 @@ p.on('console', (m) => { if (m.type() === 'error') console.log('console', m.text
 await p.setContent(`<html><body style="margin:0;background:#26282c;font:12px sans-serif;color:#ddd;display:inline-block;padding:6px">
 <style>.title{margin:10px 2px 4px;font-weight:bold}.row{white-space:nowrap}.cell{display:inline-block;margin:2px;text-align:center;font-size:10px;vertical-align:top}</style>
 <div id=root></div><script>window.SPEC=${JSON.stringify(spec)}</script></body></html>`);
-await p.addScriptTag({ content: readFileSync(js, 'utf8') });
+await addScript(p, readFileSync(js, 'utf8'));
 await p.waitForFunction('window.DONE', null, { timeout: 900000 });
 if (plan === 'bench') console.log(JSON.stringify(await p.evaluate('window.BENCH'), null, 1));
 else await p.locator('body').screenshot({ path: out });

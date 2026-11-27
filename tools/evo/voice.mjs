@@ -2,6 +2,7 @@
 import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { addScript } from '../pagescript.mjs';
 const [,, species, dir] = process.argv;
 mkdirSync(dir, { recursive: true });
 const js = '/tmp/evo-voice.js';
@@ -10,7 +11,7 @@ const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
 const p = await b.newPage();
 p.on('pageerror', (e) => console.log('ERR', e.message));
 await p.setContent(`<html><body><script>window.SPECIES=${JSON.stringify(species)}</script></body></html>`);
-await p.addScriptTag({ content: readFileSync(js, 'utf8') });
+await addScript(p, readFileSync(js, 'utf8'));
 await p.waitForFunction('window.OUT', null, { timeout: 120000 });
 const out = await p.evaluate('window.OUT');
 for (const [k, v] of Object.entries(out)) {

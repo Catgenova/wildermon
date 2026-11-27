@@ -29,6 +29,7 @@ import { chromium } from 'playwright-core';
 import { build } from 'esbuild';
 import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from './pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -77,7 +78,7 @@ const shoot = async (list, file) => {
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   const sheet = { kinds: list, views, zooms, dye, woods, mag, lit, only };
   await page.setContent(`<html><head><style>${css}</style></head><body><div id=root></div><script>window.SHEET=${JSON.stringify(sheet)}</script></body></html>`);
-  await page.addScriptTag({ content: code });
+  await addScript(page, code);
   await page.waitForFunction('window.DONE || window.FAILED', null, { timeout: 60000 }).catch(() => {});
   if (errors.length) console.error(errors.join('\n'));
   await page.screenshot({ path: file, fullPage: true });

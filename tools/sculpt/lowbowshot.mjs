@@ -9,6 +9,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -58,7 +59,7 @@ try {
   const p = await browser.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b;font:13px sans-serif;color:#eee}#root{display:inline-block;padding:4px}.row{display:flex;gap:6px;align-items:flex-end;margin-bottom:6px}.c{display:flex;flex-direction:column}.l{padding:2px}.h{padding:4px 2px;font-weight:600}canvas{display:block}</style></head><body><div id=root></div></body></html>');
-  await p.addScriptTag({ content: b.outputFiles[0].text });
+  await addScript(p, b.outputFiles[0].text);
   await p.evaluate(() => window.ready());
   await p.evaluate((z) => window.sheet(z), ZOOM);
   const r = await p.evaluate(() => { const bb = document.querySelector('#root').getBoundingClientRect(); return { x: 0, y: 0, width: Math.ceil(bb.width), height: Math.ceil(bb.height) }; });

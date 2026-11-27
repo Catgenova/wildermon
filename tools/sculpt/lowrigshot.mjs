@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildArmBody } from './lowarm.mjs';
 import { TUNE, buildRig, posed, skin, ground, sym, axisAngle, mm, mv, tr, sub, add, cross, dot, unit, fromGame, gameRig, armsOut, tuneOf } from './lowrig.mjs';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -312,7 +313,7 @@ export async function shoot(w, h, cells, file, texts = [], topo = TOPO) {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent(PAGE(w, h));
   await p.evaluate(([d, C, ww, hh, tx]) => { window.DATA = d; window.CELLS = C; window.SW = ww; window.SHH = hh; window.TEXTS = tx; }, [{ SH, T: topo }, cells, w, h, texts]);
-  await p.addScriptTag({ content: RENDER });
+  await addScript(p, RENDER);
   await p.waitForFunction('window.READY', null, { timeout: 120000 });
   await p.locator('#sheet').screenshot({ path: file });
   console.log('wrote', file);

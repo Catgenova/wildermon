@@ -7,6 +7,7 @@ import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const out = process.argv[2];
 if (!out) throw new Error('usage: node tools/dex/build.mjs <outdir>');
@@ -17,7 +18,7 @@ const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
 const p = await b.newPage();
 p.on('pageerror', (e) => console.log('ERR', e.message));
 await p.setContent('<html><body></body></html>');
-await p.addScriptTag({ content: readFileSync(js, 'utf8') });
+await addScript(p, readFileSync(js, 'utf8'));
 await p.waitForFunction('window.DONE', null, { timeout: 0 });
 const err = await p.evaluate('window.DEX_ERROR');
 if (err) throw new Error(err);

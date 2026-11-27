@@ -13,6 +13,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -49,7 +50,7 @@ const p = await b.newPage({ viewport: { width: 2000, height: 1000 }, deviceScale
 p.on('pageerror', (e) => console.log('ERR', e.message));
 p.on('console', (m) => { if (m.type() === 'error' || m.text().startsWith('ERR')) console.log('console', m.text()); });
 await p.setContent(`<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding:4px"></div><script>window.REF=${JSON.stringify(ref)};window.REF8=${JSON.stringify(ref8)};window.REF9=${JSON.stringify(ref9)};window.REF10=${JSON.stringify(ref10)};window.HAIR=${JSON.stringify(hair)};window.HAIRCOLOUR=${JSON.stringify(colour)};window.INK=${ink === '' ? 'undefined' : +ink};window.PITCH=${pitch === '' ? 'undefined' : +pitch}</script></body></html>`);
-await p.addScriptTag({ content: js });
+await addScript(p, js);
 await p.waitForFunction('window.READY');
 console.log('gl:', await p.evaluate(() => window.SCULPT.glInfo()));
 

@@ -16,6 +16,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2), opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
 const out = resolve(opt('out', 'tmp/lowchainshawlgame.png')), sheetArg = opt('sheet', 'sets:3');
@@ -57,7 +58,7 @@ try {
   const p = await browser.newPage({ viewport: { width: 1200, height: 800 }, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b;font:13px sans-serif;color:#eee}#root{display:inline-block;padding:4px}.row{display:flex;gap:4px;align-items:flex-start}.c{display:flex;flex-direction:column}.l{padding:2px 2px 6px;max-width:200px}.h{padding:4px 2px;font-weight:600;font-size:15px}.h2{padding:4px 2px;font-weight:600}canvas{display:block}</style></head><body><div id=root></div></body></html>');
-  await p.addScriptTag({ content: b.outputFiles[0].text });
+  await addScript(p, b.outputFiles[0].text);
   await p.evaluate(() => window.ready());
   await p.evaluate((S) => window.show(S), sheet);
   const r = await p.evaluate(() => { const q = document.getElementById('root').getBoundingClientRect(); return { x: q.x, y: q.y, width: Math.ceil(q.width), height: Math.ceil(q.height) }; });

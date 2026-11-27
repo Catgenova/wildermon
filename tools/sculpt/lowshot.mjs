@@ -22,6 +22,7 @@ import { join, resolve } from 'node:path';
 import { buildLowHead } from './lowhead.mjs';
 import { buildLowTorso } from './lowtorso.mjs';
 import { loadCams, rotation, PARTS } from './lowcam.mjs';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => { const i = args.indexOf(`--${name}`); return i < 0 ? fallback : args[i + 1]; };
@@ -420,7 +421,7 @@ p.on('pageerror', (e) => console.log('ERR', e.message));
 p.on('console', (m) => console.log('console', m.text()));
 await p.setContent(PAGE);
 await p.evaluate((d) => { window.DATA = d; }, DATA);
-await p.addScriptTag({ content: RENDER });
+await addScript(p, RENDER);
 await p.waitForFunction('window.READY');
 await p.evaluate(() => document.fonts.ready);
 if (normals) await p.evaluate(() => { document.getElementById('sheet').style.background = '#000'; document.getElementById('ui').style.display = 'none'; });

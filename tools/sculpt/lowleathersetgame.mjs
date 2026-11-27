@@ -20,6 +20,7 @@ import { chromium } from 'playwright-core';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -85,7 +86,7 @@ try {
   const p = await browser.newPage({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent('<!doctype html><html><body></body></html>');
-  await p.addScriptTag({ content: b.outputFiles[0].text });
+  await addScript(p, b.outputFiles[0].text);
   await p.evaluate(() => window.ready());
   const L = await p.evaluate(() => window.lengths());
   const tmp = join(out, `frames-${process.pid}`); mkdirSync(tmp, { recursive: true });

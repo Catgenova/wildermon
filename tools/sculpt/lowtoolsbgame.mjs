@@ -14,6 +14,7 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { buildRig } from './lowrig.mjs';
 import { reach, cols } from './lowgear.mjs';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -112,7 +113,7 @@ try {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   p.on('console', (m) => { if (m.type() === 'error') console.log('console', m.text()); });
   await p.setContent('<!doctype html><html><head><style>body{margin:0;background:#2f292b;font:12px sans-serif;color:#eee}#root{display:inline-block;padding:4px;width:max-content}.row{display:flex;gap:5px;align-items:flex-end}.c{display:flex;flex-direction:column;flex:none}.l{padding:2px 2px 6px}.m{width:90px;padding:4px;align-self:center}.h{padding:4px 2px;font-weight:600}canvas{display:block;align-self:center}</style></head><body><div id=root></div></body></html>');
-  await p.addScriptTag({ content: b.outputFiles[0].text });
+  await addScript(p, b.outputFiles[0].text);
   await p.evaluate(() => window.ready());
   const shot = async (path) => {
     const r = await p.evaluate(() => { const bb = document.querySelector('#root').getBoundingClientRect(); return { x: bb.x, y: bb.y, width: Math.ceil(bb.width), height: Math.ceil(bb.height) }; });

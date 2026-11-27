@@ -9,6 +9,7 @@ import { build } from 'esbuild';
 import { chromium } from 'playwright-core';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -36,7 +37,7 @@ async function page(scale) {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   p.on('console', (m) => { if (m.type() === 'error') console.log('console', m.text()); });
   await p.setContent('<html><body style="margin:0;background:#2a2622"><div id=root style="display:inline-block;padding-bottom:8px"></div></body></html>');
-  await p.addScriptTag({ content: js });
+  await addScript(p, js);
   await p.waitForFunction('window.READY');
   return p;
 }

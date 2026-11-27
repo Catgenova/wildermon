@@ -1,3 +1,4 @@
+import { addScript } from '../pagescript.mjs';
 // The renderer for the low-poly hair (tools/sculpt/lowhair.mjs) on the low-poly bodies, after
 // tools/sculpt/lowgarmentshot.mjs (sculpt-cloth): the bodies' own flat shading (one normal per polygon, the heads'
 // camera-fixed light tools/sculpt/lowlight-<who>.json, as tools/sculpt/lowrigshot.mjs draws them), each polygon in its
@@ -148,7 +149,7 @@ export async function shoot(w, h, cells, file, { texts = [], imgs = [] } = {}) {
     }
     document.getElementById('gl').style.pointerEvents = 'none';
   }, [data, w, h, texts, SHS, imgs, urls, RAMP]);
-  await p.addScriptTag({ content: RENDER });
+  await addScript(p, RENDER);
   await p.waitForFunction('window.READY', null, { timeout: 180000 });
   // the canvas is drawn only in the cells' boxes: everything else stays see-through, over the references
   await p.locator('#sheet').screenshot({ path: file });

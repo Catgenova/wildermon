@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -25,7 +26,7 @@ async function page(cfg, file, width) {
   p.on('pageerror', (e) => console.log('ERR', e.message));
   p.on('console', (m) => { if (m.text().startsWith('ERR')) console.log(m.text()); });
   await p.setContent(`<html><body style="margin:0;padding:6px;background:#26262b"><div id=root></div><script>window.CFG=${JSON.stringify(cfg)}</script></body></html>`);
-  await p.addScriptTag({ content: readFileSync(js, 'utf8') });
+  await addScript(p, readFileSync(js, 'utf8'));
   await p.waitForFunction('window.DONE', null, { timeout: 120000 });
   if (cfg.bench) console.log(await p.evaluate('window.BENCH'));
   else await p.screenshot({ path: file, fullPage: true });

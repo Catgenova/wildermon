@@ -12,6 +12,7 @@
 import { chromium } from 'playwright-core';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { addScript } from '../pagescript.mjs';
 
 const DIR = new URL('.', import.meta.url).pathname;
 export const ENCHANTED = process.argv.includes('--enchanted');
@@ -136,7 +137,7 @@ export async function shoot(w, h, cells, file, { texts = [], imgs = [] } = {}) {
     }
     document.getElementById('gl').style.pointerEvents = 'none';
   }, [data, w, h, texts, SHS, imgs, urls]);
-  await p.addScriptTag({ content: RENDER });
+  await addScript(p, RENDER);
   await p.waitForFunction('window.READY', null, { timeout: 180000 });
   // the canvas is drawn only in the cells' boxes: everything else stays see-through, over the references
   await p.locator('#sheet').screenshot({ path: file });

@@ -43,6 +43,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { addScript } from '../pagescript.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, f) => { const i = args.indexOf(`--${n}`); return i < 0 ? f : args[i + 1]; };
@@ -178,7 +179,7 @@ window.shot = (t, cells) => {
   const p = await browser.newPage({ viewport: { width: 400, height: 300 }, deviceScaleFactor: 1 });
   p.on('pageerror', (e) => console.log('ERR', e.message));
   await p.setContent('<!doctype html><html><body></body></html>');
-  await p.addScriptTag({ content: code });
+  await addScript(p, code);
   await p.evaluate(() => window.ready());
   const dir = join(out, '.frames');
   rmSync(dir, { recursive: true, force: true });
