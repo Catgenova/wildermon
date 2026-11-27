@@ -60,12 +60,13 @@ export function agedMob(r: IslandCreature, secs: number): IslandCreature {
       out.y = r.fromY + (r.toY - r.fromY) * t;
     }
   }
-  for (const k of ['windup', 'stunned', 'slowed', 'fedLeft', 'dueIn'] as const) {
+  for (const k of ['windup', 'stunned', 'slowed', 'fedLeft', 'dueIn', 'grownIn', 'coaxLeft'] as const) {
     if (k in r) out[k] = less(r[k], secs);
   }
   // And what goes with a slow and a meal, said only while they last.
   if (out.slowed === null) out.slowPace = null;
   if (out.fedLeft === null) out.fed = null;
+  if (out.coaxLeft === null) out.coaxed = 0;
   return out as unknown as IslandCreature;
 }
 

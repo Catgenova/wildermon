@@ -207,6 +207,18 @@ begin
            'specialty', coalesce(((select deed_trade_counts(p_world, me))->>coalesce(c.job, (select sd.gathers from species_def sd where sd.id = c.species)))::int, 0))
          else '{}'::jsonb end
       || case when c.boss then jsonb_build_object('boss', (select l.kind from lair l where l.world_id = c.world_id and l.id = c.lair)) else '{}'::jsonb end
+      /*
+       * How long a young one has left to grow, in seconds (`growsAt`), by the rule `age_of` keeps with its keeper's
+       * perks (`age_pace`): the hour it was born is never sent, so the browser cannot work it out. Null when not young.
+       */
+      || jsonb_build_object('grownIn', case when c.born is not null and age_pace(c) > 0
+             and extract(epoch from (now() - c.born)) * age_pace(c) < young_for()
+           then (young_for() - extract(epoch from (now() - c.born)) * age_pace(c)) / age_pace(c) end)
+      -- And a wild one's run of offerings (`coax_bonus`): how many, and the seconds before it lapses; none once it has.
+      || case when c.mode <> 'wild' then '{}'::jsonb
+              when c.coaxed > 0 and c.coaxed_at is not null and now() - c.coaxed_at <= make_interval(secs => coax_lapse())
+              then jsonb_build_object('coaxed', c.coaxed, 'coaxLeft', coax_lapse() - extract(epoch from (now() - c.coaxed_at)))
+              else jsonb_build_object('coaxed', 0) end
       as more) v
     -- Your own in crates, wherever the crates are; and everything within range.
     where (c.world_id = p_world and c.keeper = me and c.mode in ('stored', 'deed'))

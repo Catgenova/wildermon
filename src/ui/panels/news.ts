@@ -448,6 +448,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // rpc_creatures sends grownIn, coaxed and coaxLeft (creatureLines, growsAt).
+  {
+    n: 736,
+    day: '2026-11-27',
+    lines: () => [
+      'Fixed: on an island, a young creature\'s hover says how long until it is grown.',
+      'Fixed: on an island, a wild creature\'s hover says the offerings taken and the chance they add.',
+      'Fixed: the same two in the Unity client.',
+    ],
+  },
   // A new body comes ashore dressed (STARTER_WEAR, starter_kit).
   {
     n: 735,

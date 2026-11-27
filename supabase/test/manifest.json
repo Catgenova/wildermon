@@ -3665,5 +3665,14 @@
     "title": "The fur set, on both sides",
     "shard": 4,
     "why": "Asked for: \"a new armor type and models for Fur armor type\", fur between leather and chain, each piece with a glowing section for when it is enchanted. The five pieces, their class between leather and chain in soak, burden and swing weight, what each blow does to it, each recipe (fur on leather, an awl, leatherworking) and how it is improved the same on both sides; a fur vest refused without an awl and stitched on the island; each piece drawn on both bodies with a glow lit only when enchanted."
+  },
+  {
+    "file": "supabase/test/grownin.ts",
+    "title": "A creature's lines say \"grown in\" and \"Offerings taken\" on an island",
+    "shard": 6,
+    "external": [
+      "typescript"
+    ],
+    "why": "rpc_creatures sent a young one's age as a word and never when it was born, so \"grown in\" was worked out from a birth at nought; and never a wild one's run of offerings. The island sends grownIn, coaxed and coaxLeft, and the browser's lines say both off the row."
   }
 ]

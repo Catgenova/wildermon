@@ -5111,7 +5111,10 @@ export const ageOf = (c: Creature, now: number): Age => {
 };
 export const ageDef = (c: Creature, now: number): AgeDef => AGES[ageOf(c, now)];
 /** How long until it is grown, in seconds; zero once it is. */
-export const growsAt = (c: Creature, now: number): number => Math.max(0, c.born + YOUNG_FOR / keptOf(c, 'kept:age', 1) - now);
+export const growsAt = (c: Creature, now: number): number =>
+  // On an island, the island's own count down (`grownIn`): the hour it was born is never sent, so the sum would be wrong.
+  c.islandAge ? (c.islandGrown === undefined ? 0 : Math.max(0, c.islandGrown - now))
+    : Math.max(0, c.born + YOUNG_FOR / keptOf(c, 'kept:age', 1) - now);
 
 /**
  * Care. A wildermon that is brushed and looked over works better and learns
@@ -5465,6 +5468,12 @@ export interface IslandCreature {
   rare?: string | null;
   /** How old it is, as the island reckons it ('young', 'grown', 'old'). */
   age?: string;
+  /** Seconds until a young one is grown, by the island's clock and its keeper's perks (`growsAt`); null when not young. */
+  grownIn?: number | null;
+  /** A wild one's run of offerings (`coaxBonus`), 0 once it has lapsed; absent for a tamed one. */
+  coaxed?: number;
+  /** And the seconds before that run lapses, while it runs. */
+  coaxLeft?: number | null;
   /** What ancient pots have put into its base stats, by the stat: sent for your own only, and null for one that has had none. */
   boosts?: Partial<Record<BoostKey, number>> | null;
   /** The wildermon gear fitted on it, by the slot (`wildgear.ts`): sent for your own only, and null for one with none. */
@@ -5696,6 +5705,8 @@ export interface Creature {
   islandSeen?: boolean;
   /** How old the island says it is (`rpc_creatures`), which `ageOf` reads before its own sum; missing off an island. */
   islandAge?: Age;
+  /** When the island says a young one is grown, on this side's clock (`grownIn`), which `growsAt` reads; missing off an island. */
+  islandGrown?: number;
   /**
    * What is on it for a while and what it is worth (`markOn`): a root, dulled claws, a brittleness, a mark for
    * death, a stone skin, a keep-away, and when its own ability is ready again. The island's `class_mark`.
@@ -6436,6 +6447,13 @@ export class Creatures {
       c.rare = rarityStep(r.rare) ?? 0;
       // How old it is, by the island's clock and its keeper's perks, which is what `ageOf` reads here.
       c.islandAge = r.age === 'young' || r.age === 'grown' || r.age === 'old' ? r.age : undefined;
+      // And when a young one is grown, on this side's clock, which `growsAt` reads.
+      c.islandGrown = typeof r.grownIn === 'number' ? time + r.grownIn : undefined;
+      // A wild one's run of offerings, laid on this side's clock so it lapses when the island's does (`coaxBonus`).
+      if (r.coaxed !== undefined) {
+        c.coaxed = r.coaxed;
+        c.coaxedAt = r.coaxed > 0 && typeof r.coaxLeft === 'number' ? time + r.coaxLeft - COAX_LAPSE : -1e9;
+      }
       // What ancient pots have put into it, which comes for yours and for nobody else's.
       if (r.boosts !== undefined) c.boosts = r.boosts ?? undefined;
       // And the gear fitted on it, which comes for yours and for nobody else's (`wildgear.ts`).
