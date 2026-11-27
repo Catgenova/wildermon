@@ -8,9 +8,13 @@ CREATE OR REPLACE FUNCTION public.rpc_travel_speed(p_world uuid)
 AS $function$
 declare
   me uuid := auth.uid();
+  p player;
 begin
   perform private.pace(auth.uid(), 'look');
   if me is null then raise exception 'not signed in'; end if;
   if too_fast(me) then raise exception 'you are asking too quickly; slow down'; end if;
-  return travel_speed(p_world, me);
+  select * into p from player where world_id = p_world and uid = me;
+  return travel_speed(p_world, me)
+    * case when over_carry(p_world, me) > carry_stop() and not coalesce((p.blessings->'path_surge'->>'until')::timestamptz > now(), false)
+           then carry_crawl() else 1 end;
 end $function$
