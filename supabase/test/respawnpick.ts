@@ -51,7 +51,7 @@
  */
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import {
   DEED_AT, DEEDS_HEAD, fallenIn, RESPAWN_RING, RESPAWN_STAY, respawnChoices, STAY_SAID, STONES_HEAD, tilesBetween, tilesSaid, type Fallen,

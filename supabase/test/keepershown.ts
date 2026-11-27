@@ -21,7 +21,7 @@ import { CREATURE_ACTION_BY_ID } from '../../src/game/creatureActions';
 import { creatureLabel, ownerLine, ownerOf } from '../../src/game/owner';
 import { creatureLines } from '../../src/ui/creatureinfo';
 import { MobsHeld } from '../../src/net/mobsync';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';

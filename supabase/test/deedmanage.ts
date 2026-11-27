@@ -38,7 +38,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { lacksSaid, powerBit, RANK_POWERS } from '../../src/game/ranks';
 import { VISIT_KEEP_DAYS, VISIT_LIST_MAX, type DeedWatch } from '../../src/game/visitors';

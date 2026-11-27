@@ -15,7 +15,7 @@
  * Playwright's, or an installed Chrome. With none it says so and passes, unless `BODIES_STRICT` is set. `BODIES_JSON`
  * names a file the figures are written to as well; `BODIES_SHOTS` a folder for a picture of each scene, On and Off.
  */
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';

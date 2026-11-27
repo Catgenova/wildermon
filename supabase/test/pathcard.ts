@@ -33,7 +33,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import ts from 'typescript';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { Game } from '../../src/game/game';
 import { ACTION_BY_ID } from '../../src/game/actions';

@@ -11,7 +11,7 @@
  * Prints the frame times and the redraws a frame of each. Needs a Chromium: the one in `CHROME_PATH`, Playwright's, or an
  * installed Chrome. With none it says so and passes, unless `ANIMOFF_STRICT` is set.
  */
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';

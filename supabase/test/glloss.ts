@@ -12,7 +12,7 @@
  *
  * Needs a Chromium: the one in `CHROME_PATH`, Playwright's, or an installed Chrome; with none it says so and passes.
  */
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium } from 'playwright-core';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';

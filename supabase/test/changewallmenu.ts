@@ -21,7 +21,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { MATERIAL_BY_ID, SIDE_NAMES, WALL_TYPE_BY_ID, wallBill, type Side, type WallType } from '../../src/game/building';
 import { CHANGE_PLANNED, CHANGE_PLANNED_HINT, changeLine } from '../../src/game/gates';

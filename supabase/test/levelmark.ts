@@ -21,7 +21,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import type { Chip, LevelPage } from './levelmark-page';
 import { bad, check, finish } from './harness';

@@ -34,7 +34,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { ACTION_BY_ID } from '../../src/game/actions';
 import { gapText, type Side } from '../../src/game/building';

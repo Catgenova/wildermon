@@ -25,7 +25,7 @@
  * Chromium: the one in `CHROME_PATH`, Playwright's, or an installed Chrome.
  * With none it says so and passes, unless `CROWD_STRICT` is set, as it is in CI.
  */
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type BrowserContextOptions, type LaunchOptions } from 'playwright-core';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';

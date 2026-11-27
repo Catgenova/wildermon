@@ -49,7 +49,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { againstAverage, againstWords, answers, offersFor, type FindStall } from '../../src/game/marketfind';
 import { SALE_DAYS, SALES_SHOWN, saleLine, summarise, type SaleDay } from '../../src/game/prices';

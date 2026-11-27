@@ -24,7 +24,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { SCULPTED_MAX_ZOOM } from '../../src/engine/camera';
 import type { Still } from './bridgezoom-page';

@@ -28,7 +28,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { DEED_AT, fallenIn, RESPAWN_RING, respawnChoices, tilesSaid } from '../../src/game/respawn';
 import {

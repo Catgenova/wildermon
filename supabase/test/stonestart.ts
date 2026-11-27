@@ -40,7 +40,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import {
   RUNESTONES, START_GAP, START_RING, START_SPARE, STONE_HALF, STONE_LEAST, startChoices, stoneCentre,

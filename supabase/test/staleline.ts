@@ -20,7 +20,7 @@
  * `STALE_SHOTS=<dir>` keeps a picture of the page before the reload and after. Needs a Chromium: the one in
  * `CHROME_PATH`, Playwright's, or an installed Chrome. With none it says so and passes, unless `STALE_STRICT` is set.
  */
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';

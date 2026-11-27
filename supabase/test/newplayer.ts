@@ -31,7 +31,7 @@
  * half needs a Chromium; with none it says so and passes, unless
  * `NEWPLAYER_STRICT` is set. `NEWPLAYER_SHOTS=<dir>` keeps the pictures.
  */
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';

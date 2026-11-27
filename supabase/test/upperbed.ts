@@ -34,7 +34,7 @@
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { ACTION_BY_ID, type Target } from '../../src/game/actions';
 import { floorSaid, floorsSaid } from '../../src/game/building';

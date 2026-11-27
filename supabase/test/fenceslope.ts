@@ -11,7 +11,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions } from 'playwright-core';
 import { ok, bad, check } from './harness';
 import type { FenceSlope } from './fenceslope-page';

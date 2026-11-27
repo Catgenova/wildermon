@@ -22,7 +22,7 @@
  * installed Chrome); with none it says so and passes, unless `NAMEICONS_STRICT`
  * is set. `NAMEICONS_SHOTS=<dir>` keeps pictures of the windows and the world.
  */
-import { build } from 'esbuild';
+import { build } from './pagebuild';
 import { chromium, type LaunchOptions, type Page } from 'playwright-core';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
