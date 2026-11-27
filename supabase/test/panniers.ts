@@ -76,7 +76,7 @@ const beast: Creature = game.creatures.spawn('bura', px + 1.5, py + 0.5, 'active
 beast.name = NAME;
 beast.traits = [];
 // Its spawn rolls a rarity and a form, each a multiplier on what it carries (bloodMul): pinned, as the island side pins them.
-beast.rare = undefined;
+beast.rare = 0;
 beast.formSize = null;
 const act = (id: string): NonNullable<ReturnType<typeof ACTION_BY_ID.get>> => {
   const a = ACTION_BY_ID.get(id);
