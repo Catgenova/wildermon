@@ -9,6 +9,7 @@ import { STEEL_MATS, steelHelm, steelChest, steelMantle, steelLegs, steelBoots }
 import * as CU from './kit/copper.mjs';
 import { GOLD_MATS, goldHelm, goldChest, goldMantle, goldLegs, goldBoots } from './gold.mjs';
 import { LEAD_MATS, leadHelm, leadChest, leadMantle, leadLegs, leadBoots } from './lead.mjs';
+import * as TIN from './tin.mjs';
 import {
   browTheta, chestFront, cloak, disc, feet, forearms, fromFront, gorget, helm, hips, shins, shoulderCaps, shoulders, torso, upperArms, waistOf as waistAt,
 } from './metalkit.mjs';
@@ -900,108 +901,7 @@ function furMantle(B) {
   return merge(cloth, pin);
 }
 
-/* ==== tin: the town militia ======================================================================================== */
-const TIN_MATS = {
-  tn: { c: '#868c90', kind: 3 },
-  tnS: { c: '#52575b', kind: 3 },
-  rune: { c: '#7d8a8f', kind: 2, lit: { c: '#ffe7a6', kind: 1 } },
-  jack: { c: '#a8873c', kind: 2 },
-  jackD: { c: '#755d27', kind: 2 },
-  drab: { c: '#5d6650', kind: 2 },
-  drabD: { c: '#3f4636', kind: 2 },
-  hose: { c: '#6a4a3a', kind: 2 },
-  hoseD: { c: '#47312a', kind: 2 },
-  hoseW: { c: '#6a4a3b', kind: 2 },
-  leather: { c: '#5e3f2a', kind: 2 },
-  leatherD: { c: '#3a271c', kind: 2 },
-  sole: { c: '#2b1f18', kind: 2 },
-};
-/** The jack's quilting: a diamond lattice. */
-const quilt = (p, a = 'jack', b = 'jackD') => (frac((p[0] + y(p)) * 2.4) < 0.12 || frac((p[0] - y(p)) * 2.4) < 0.12 ? b : a);
-
-function tinChest(B) {
-  const A = B.at, waist = waistOf(A);
-  // the padded jack to the hips, quilted; a tin breastplate over its front, a glowing line round the breastplate's foot
-  const front = (p) => p[2] > 0.1 && y(p) > waist - 0.05 && y(p) < A.chest[1] + 0.55 && Math.abs(p[0]) < 0.95;
-  const coat = torso(B, {
-    from: waist - 0.5,
-    off: (p) => 0.13 + (front(p) ? 0.1 : 0) + 0.05 * smooth(waist, waist - 0.45, y(p)),
-    mat: (p) => {
-      if (front(p)) { if (y(p) < waist + 0.08) return 'rune'; if (Math.abs(p[0]) > 0.85 || y(p) > A.chest[1] + 0.47) return 'tnS'; return 'tn'; }
-      if (Math.abs(y(p) - waist) < 0.07) return 'leatherD';
-      return quilt(p);
-    },
-    rim: 'jackD',
-    caps: { off: () => 0.15, mat: (p) => quilt(p) },
-  });
-  const sleeves = upperArms(B, { from: -0.35, to: 1.05, pit: B.who === 'male', inner: -0.3, innerZ: 0.2, thick: 0.02, off: (t, p, n) => (t < 0.45 && n[0] * Math.sign(p[0]) < -0.3 ? 0.03 : 0.1), mat: (u, p) => quilt(p) });
-  const cuffs = forearms(B, { from: -0.15, to: 0.93, elbow: true, off: (f) => 0.1 + (f.t > 0.78 ? 0.03 : 0), mat: (f, p) => (f.t > 0.78 ? (f.t > 0.86 ? 'leatherD' : 'leather') : quilt(p)) });
-  return merge(coat, sleeves, cuffs);
-}
-
-function tinLegs(B) {
-  const A = B.at, waist = waistOf(A);
-  const hose = hips(B, { closed: true, top: waist + 0.05, foot: (s) => lerp(A.hip[s], A.knee[s], 1)[1], off: (p) => 0.11 + 0.08 * smooth(A.hip.l[1] - 0.4, A.knee.l[1], y(p)) + (p[2] > 0.1 && y(p) < Math.min(A.hip.l[1] + 0.3, waist - 0.75) ? 0.13 : 0), mat: (p) => (y(p) > waist - (B.who === 'female' ? 0.6 : 0.5) ? 'hoseW' : frac(y(p) * 1.4) < 0.08 ? 'hoseD' : 'hose'), rim: (m) => (m === 'hoseW' ? 'hoseW' : 'hoseD') });
-  const calves = shins(B, { from: 0.12, to: 0.9, round: 3.2, off: () => 0.07, mat: () => 'hose', rim: 'hoseD' });
-  // the knee cops: tin, a glowing rim round each
-  const cops = shins(B, {
-    from: -0.18, to: 0.16, round: 1.4,
-    off: (g) => 0.16 + 0.07 * Math.cos(g.a) * (1 - Math.abs(g.t) * 4),
-    mat: (g) => (g.t < -0.13 || g.t > 0.12 ? 'rune' : Math.abs(g.a) > 1.2 ? 'tnS' : 'tn'),
-    rim: 'tnS',
-  });
-  return { P: merge(hose, calves, cops), dropAt: (f) => f.mat === 'hoseW' };
-}
-
-function tinBoots(B) {
-  const A = B.at;
-  // ankle boots, a tin toe cap, a strap at the ankle over a glowing band
-  return feet(B, {
-    up: 0.6,
-    off: (p, n, top) => { const s = p[0] >= 0 ? 'l' : 'r'; return (p[2] > A.ball[s][2] + 0.15 ? 0.03 : 0) + (y(p) > top - 0.2 ? 0.02 : 0); },
-    mat: (p, n, top) => {
-      const s = p[0] >= 0 ? 'l' : 'r';
-      if (y(p) > top - 0.12) return 'leatherD';
-      if (y(p) > top - 0.22) return 'rune';
-      return p[2] > A.ball[s][2] + 0.15 ? 'tn' : 'leather';
-    },
-    rim: 'leatherD',
-  });
-}
-
-function tinHelm(B) {
-  const browTh = browTheta(B);
-  // the kettle hat: a round crown and a wide brim all round, a glowing band where they meet
-  return helm(B, {
-    rim: 'tnS', down: browTh + 0.25,
-    margin: ({ th }) => 0.12 + 0.05 * Math.max(0, 1 - th / 1.0) + (th > browTh - 0.12 ? 0.5 * smooth(browTh - 0.12, browTh + 0.15, th) : 0),
-    mat: (d, { th }) => {
-      if (th > browTh - 0.12) return th > browTh + 0.08 ? 'tnS' : 'tn';
-      if (th > browTh - 0.22) return 'rune';
-      return frac(th * 5) < 0.06 ? 'tnS' : 'tn';
-    },
-  });
-}
-
-function tinMantle(B) {
-  const A = B.at, sx = A.shoulder.l[0];
-  // a short hooded cape, drab wool, to the shoulder blades' foot, its hood lying at the back
-  const cloth = cloak(B, {
-    start: (x) => lerp([2.1, 0, 0], [1.0, 0, 0], smooth(0.7, 1.1, Math.abs(x)))[0],
-    wide: (s) => lerp([0.82 * sx, 0, 0], [0.62 * sx, 0, 0], smooth(0.15, 0.55, s))[0],
-    over: [tinChest(B)],
-    off: () => 0.18, thick: 0.04,
-    hang: A.spine2[1] - 0.2, rowsDown: 5, folds: 7, fold: 0.06,
-    mat: (p, u, s) => (s > 0.92 || Math.abs(u) > 0.94 ? 'drabD' : 'drab'),
-    rim: 'drabD',
-  });
-  // the hood down the back: a fold of the same wool, a glowing toggle at its point
-  const head = onBone(B, 'spine_03');
-  const back = cloth.V.reduce((b, p) => (Math.abs(p[0]) < 0.15 && p[2] < b[2] ? p : b), [0, 0, 9]);
-  const hood = loft([ring(10, 0, 0.55, 0.22), ring(10, -0.35, 0.45, 0.2), ring(10, -0.7, 0.25, 0.14), ring(10, -0.85, 0.06, 0.06)],
-    (c, i) => (i >= 2 ? 'rune' : 'drab'), { o: add(back, [0, 0.05, -0.12]), X: [1, 0, 0], Y: [0, 1, 0], Z: [0, 0, 1] }, head);
-  return merge(cloth, hood);
-}
+/* ==== tin: the town militia (tools/sculpt/garments/tin.mjs) ==================================================== */
 
 /* ==== zinc: the sapper (the siege engineer) ======================================================================= */
 const ZINC_MATS = {
@@ -1770,7 +1670,7 @@ const SETS = {
   pewter: { MATS: PEWTER_MATS, helm: pewterHelm, chest: pewterChest, mantle: pewterMantle, legs: pewterLegs, boots: pewterBoots },
   lead: { MATS: LEAD_MATS, helm: leadHelm, chest: leadChest, mantle: leadMantle, legs: leadLegs, boots: leadBoots },
   zinc: { MATS: ZINC_MATS, helm: zincHelm, chest: zincChest, mantle: zincMantle, legs: zincLegs, boots: zincBoots },
-  tin: { MATS: TIN_MATS, helm: tinHelm, chest: tinChest, mantle: tinMantle, legs: tinLegs, boots: tinBoots },
+  tin: { MATS: TIN.TIN_MATS, helm: TIN.tinHelm, chest: TIN.tinChest, mantle: TIN.tinMantle, legs: TIN.tinLegs, boots: TIN.tinBoots },
   fur: { MATS: FUR_MATS, helm: furHelm, chest: furChest, mantle: furMantle, legs: furLegs, boots: furBoots, file: 'lowfur' },
   steel: { MATS: STEEL_MATS, helm: steelHelm, chest: steelChest, mantle: steelMantle, legs: steelLegs, boots: steelBoots },
   bronze: { MATS: BRONZE_MATS, helm: bronzeHelm, chest: bronzeChest, mantle: bronzeMantle, legs: bronzeLegs, boots: bronzeBoots },

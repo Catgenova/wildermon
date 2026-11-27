@@ -449,6 +449,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Tin rebuilt piece by piece (tools/sculpt/garments/tin.mjs).
+  {
+    n: 722,
+    day: '2026-11-27',
+    lines: () => [
+      'Changed: tin armour redrawn as a town militia\'s in mustard-and-teal livery: a broad-brimmed riveted kettle hat with a town plaque and a cockade; a lamed breastplate with tinned rivet rows and a raised key over a quilted jack, particoloured padded sleeves under lamed spaulders, a quilted skirt; particoloured hose, studded leather cuisses, tin knee cops and demi-greaves; ankle boots with dagged livery cuffs and tin toe caps.',
+      'Changed: the tin shawl is a livery chaperon: a pleated teal cape with a dagged counterchanged hem, a fallen hood with a hanging liripipe, and a town badge with a watch bell at the throat.',
+      'Changed: enchanted tin lights its hatband, its breastplate key, its badge bell, its knee bosses and its boot buckles.',
+    ],
+  },
   // Lead rebuilt piece by piece (tools/sculpt/garments/lead.mjs).
   {
     n: 721,
