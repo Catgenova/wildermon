@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.green_on_tile(p_world uuid, p_uid uuid, p_x in
  LANGUAGE plpgsql
  STABLE
 AS $function$
-declare v_from timestamptz; v_days int := 0;
+declare v_from timestamptz; v_days int := 0; fl floor_tile;
 begin
   if not on_home_deed(p_world, p_uid, p_x, p_y) then return 0; end if;
   select w.green_from into v_from from world w where w.id = p_world;
@@ -16,6 +16,11 @@ begin
   if (slab_at(p_world, p_x, p_y)).id is not null then
     v_days := greatest(v_days, green_days(green_start((select g.since from green_since g where g.world_id = p_world
                 and g.thing = 'slab' and g.x = p_x and g.y = p_y and g.k = 0), v_from), now()));
+  end if;
+  fl := floor_greening(p_world, p_x, p_y);
+  if fl.world_id is not null then
+    v_days := greatest(v_days, green_days(green_start((select g.since from green_since g where g.world_id = p_world
+                and g.thing = 'floor' and g.x = p_x and g.y = p_y and g.k = fl.level), v_from), now()));
   end if;
   v_days := greatest(v_days, coalesce((select max(piece_green_days(pc.sub, green_start(greatest(pc.made_at, (select g.since from green_since g
                 where g.world_id = p_world and g.thing = 'piece' and g.x = pc.x and g.y = pc.y and g.k = pc.id)), v_from), now()))

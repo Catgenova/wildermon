@@ -10374,15 +10374,16 @@ export class Renderer {
    * What has grown on a floor out under the sky (growth.ts): a finished one of
    * stone, nothing laid over it, as paving grows -- in its joints, the more by
    * a wall on its south or east, at the floor's edge and by water, the less in
-   * the middle of an open terrace; from when greening came in. Null for any
-   * other floor.
+   * the middle of an open terrace; from when it was laid or last scrubbed
+   * (`greening.ts`), each tile round it by its own. Null for any other floor.
    */
   private floorGrowth(floor: FloorTile, x: number, y: number): { days: number; season: GrowthSeason; face: GrowthFace } | null {
     if (!isDone(floor) || (floor.kind && floor.kind !== 'floor') || MATERIAL_BY_ID.get(floor.material)?.kind !== 'stone') return null;
     const bld = this.game.buildings;
     const lv = floor.level;
     if (bld.floor(lv + 1, x, y)) return null;
-    const days = Math.max(0, Math.floor((this.greenAt - this.game.greenFrom) / GREEN_DAY));
+    const daysOf = (f: FloorTile): number => Math.max(0, Math.floor((this.greenAt - greenStart(f.greenSince, this.game.greenFrom)) / GREEN_DAY));
+    const days = daysOf(floor);
     const open = (px: number, py: number): boolean => { const o = bld.floor(lv, px, py); return !!o && (!o.kind || o.kind === 'floor') && !bld.floor(lv + 1, px, py); };
     const troddenAt = (tx: number, ty: number): number => {
       let edge = false;
@@ -10399,7 +10400,7 @@ export class Renderer {
       let sum = 0, weight = 4;
       for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) {
         const tx = cx + dx, ty = cy + dy;
-        if (open(tx, ty)) { sum += coverOf(days, troddenAt(tx, ty)); continue; }
+        if (open(tx, ty)) { sum += coverOf(daysOf(bld.floor(lv, tx, ty)!), troddenAt(tx, ty)); continue; }
         const walls = this.wallsCover(tx, ty, -1, lv);
         if (walls >= 0) { sum += 2 * walls; weight++; } else sum += 0.85 * ripeOf(days);
       }

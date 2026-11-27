@@ -1,11 +1,12 @@
 import type { ActionDef, Target } from './actions';
-import { borderOf, isDone, MATERIAL_BY_ID, SIDE_NAMES, type Side, type Wall } from './building';
+import { borderOf, isDone, MATERIAL_BY_ID, SIDE_NAMES, type FloorTile, type Side, type Wall } from './building';
 import { BRIDGES, bridgeDone, type Bridge } from './bridges';
 import { foundationDone, type Foundation } from './foundations';
 import { facingOf, furnitureDef, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
 import { itemDef } from './items';
 import { lacks } from './ranks';
+import { listed } from './words';
 import { PAVED } from '../world/tiles';
 import { greenNow } from './pace';
 import { BOULDER_MOSS_DAYS, MOSS_BOULDER } from './fittingdefs';
@@ -18,7 +19,7 @@ import { IVY_PANEL, IVY_PANEL_DAYS } from './adorndefs';
  * foot and hanging from the tops, moss in the joints of the paving and on the
  * tops of the stones -- stone that has stood a while and looks it. So every
  * wall and garden wall of stone or brick greens over with ivy, and paving,
- * statues, poured slabs and stone bridges with moss, from bare on the day they
+ * stone floors out under the sky, statues, poured slabs and stone bridges with moss, from bare on the day they
  * were built, laid or set down to as green as they get `GREEN_DAYS` days
  * later, a day at a time. **Clear the ivy** with a sickle and **Scrub the
  * moss** with a brush and it starts again from bare stone.
@@ -147,6 +148,21 @@ export function pavingGreen(g: Game, x: number, y: number, now: number): number 
 export function slabGreen(g: Game, f: Foundation, now: number): number | null {
   return foundationDone(f) ? greenDays(greenStart(f.greenSince, g.greenFrom), now) : null;
 }
+/**
+ * The floor on a tile that greens (`renderer.ts` floorGrowth): finished, of stone, a floor and not a stair, a ladder or
+ * a roof, with no floor over it; the highest such. The island's `floor_greening`.
+ */
+export function greeningFloor(g: Game, x: number, y: number): FloorTile | undefined {
+  let best: FloorTile | undefined;
+  for (const f of g.buildings.floors.values()) {
+    if (f.x !== x || f.y !== y || !isDone(f) || (f.kind && f.kind !== 'floor') || MATERIAL_BY_ID.get(f.material)?.kind !== 'stone') continue;
+    if (g.buildings.floor(f.level + 1, x, y)) continue;
+    if (!best || f.level > best.level) best = f;
+  }
+  return best;
+}
+/** The days a floor has been greening, from when it was laid or last scrubbed. */
+export const floorGreen = (g: Game, f: FloorTile, now: number): number => greenDays(greenStart(f.greenSince, g.greenFrom), now);
 /** The days a stone bridge has been greening, or null for a bridge that gathers no moss. */
 export function bridgeGreen(g: Game, b: Bridge, now: number): number | null {
   return mossyBridge(b) ? greenDays(greenStart(b.greenSince, g.greenFrom), now) : null;
@@ -166,13 +182,14 @@ export function ivyWalls(g: Game, x: number, y: number, side: Side): Wall[] {
   return out.sort((p, q) => p.level - q.level);
 }
 
-/** What Scrub the moss would take the moss off, for a target: the paving and the slab on a tile, a statue, a stone bridge. */
+/** What Scrub the moss would take the moss off, for a target: the paving, the slab and the stone floor on a tile, a statue, a stone bridge. */
 export interface Mossy {
   /** The tile the refusal and the reach are asked about. */
   x: number;
   y: number;
   paving: boolean;
   slab?: Foundation;
+  floor?: FloorTile;
   piece?: PlacedFurniture;
   bridge?: Bridge;
   /** The most any of it has grown, in days. */
@@ -184,8 +201,12 @@ export function mossOn(g: Game, t: Target, now: number): Mossy | null {
     const paving = pavingGreen(g, t.x, t.y, now);
     const slab = g.slabAt(t.x, t.y);
     const slabDays = slab ? slabGreen(g, slab, now) : null;
-    if (paving === null && slabDays === null) return null;
-    return { x: t.x, y: t.y, paving: paving !== null, slab: slabDays === null ? undefined : slab, days: Math.max(paving ?? 0, slabDays ?? 0) };
+    const floor = greeningFloor(g, t.x, t.y);
+    if (paving === null && slabDays === null && !floor) return null;
+    return {
+      x: t.x, y: t.y, paving: paving !== null, slab: slabDays === null ? undefined : slab, ...(floor ? { floor } : {}),
+      days: Math.max(paving ?? 0, slabDays ?? 0, floor ? floorGreen(g, floor, now) : 0),
+    };
   }
   if (t.kind === 'furniture') {
     const f = g.furniture.get(t.id);
@@ -204,7 +225,7 @@ export function mossOn(g: Game, t: Target, now: number): Mossy | null {
 export function mossWords(m: Mossy): string {
   if (m.piece) return `the ${furnitureDef(m.piece.kind).name.toLowerCase()}`;
   if (m.bridge) return m.bridge.kind === 'aqueduct' ? 'the aqueduct' : 'the bridge';
-  return m.paving && m.slab ? 'the paving and the foundation' : m.paving ? 'the paving' : 'the foundation';
+  return listed([m.paving ? 'the paving' : '', m.slab ? 'the foundation' : '', m.floor ? 'the floor' : ''].filter(Boolean));
 }
 
 /** The sentence both sides end a clearing with: what it starts again from, and how long it takes to come back. */
@@ -246,7 +267,7 @@ export function greenRefusal(g: Game, def: ActionDef, t: Target, now = greenNow(
     [x, y] = [t.x, t.y];
   } else {
     const m = mossOn(g, t, now);
-    if (!m) return t.kind === 'tile' ? 'No paving or poured foundation here.' : 'No moss grows on that.';
+    if (!m) return t.kind === 'tile' ? 'No paving, poured foundation or stone floor here.' : 'No moss grows on that.';
     days = m.days;
     [x, y] = [m.x, m.y];
   }
@@ -290,6 +311,7 @@ const SCRUB_MOSS: ActionDef = {
     if (!m || greenRefusal(g, SCRUB_MOSS, t, now)) return;
     if (m.paving) g.pavingSince.set(`${m.x},${m.y}`, now);
     if (m.slab) m.slab.greenSince = now;
+    if (m.floor) m.floor.greenSince = now;
     if (m.piece) m.piece.greenSince = now;
     if (m.bridge) m.bridge.greenSince = now;
     g.logMsg(`Moss scrubbed: ${mossWords(m)}. ${m.piece?.kind === MOSS_BOULDER ? BOULDER_AGAIN : GREEN_AGAIN}`, 'event');
@@ -302,17 +324,18 @@ export const GREEN_ACTIONS: ActionDef[] = [CLEAR_IVY, SCRUB_MOSS];
 /* ---- a scurra's round ------------------------------------------------------- */
 
 /**
- * What greens on one tile of yours, for a scurra: the paving and the slab on
- * it, a statue standing on it, and the stone walls along its north and its
+ * What greens on one tile of yours, for a scurra: the paving, the slab and the
+ * stone floor on it (`greeningFloor`), a statue standing on it, and the stone walls along its north and its
  * west edges (each wall is the north or the west edge of exactly one tile).
  * Nothing on a tile that is not on a settlement of yours.
  */
-function greenThings(g: Game, x: number, y: number): { paving: boolean; slab?: Foundation; pieces: PlacedFurniture[]; walls: Wall[] } | null {
+function greenThings(g: Game, x: number, y: number): { paving: boolean; slab?: Foundation; floor?: FloorTile; pieces: PlacedFurniture[]; walls: Wall[] } | null {
   if (!g.deedOfMineAt(x, y)) return null;
   const slab = g.slabAt(x, y);
   return {
     paving: PAVED.has(g.world.getTile(x, y)),
     slab: slab && foundationDone(slab) ? slab : undefined,
+    floor: greeningFloor(g, x, y),
     // Not a moss boulder its owner keeps mossy (`fitting.ts`).
     pieces: [...g.furniture.values()].filter((f) => f.x === x && f.y === y && mossyPiece(f) && !(f.kind === MOSS_BOULDER && f.fitting?.keep)),
     // Not a wall an ivy wall panel hangs on (`adorn.ts`).
@@ -326,6 +349,7 @@ export function greenOnTile(g: Game, x: number, y: number, now: number): number 
   if (!t) return 0;
   let days = t.paving ? (pavingGreen(g, x, y, now) ?? 0) : 0;
   if (t.slab) days = Math.max(days, slabGreen(g, t.slab, now) ?? 0);
+  if (t.floor) days = Math.max(days, floorGreen(g, t.floor, now));
   for (const f of t.pieces) days = Math.max(days, pieceGreen(g, f, now) ?? 0);
   for (const w of t.walls) days = Math.max(days, wallGreen(g, w, now) ?? 0);
   return days;
@@ -337,6 +361,7 @@ export function scrubTile(g: Game, x: number, y: number, now: number): void {
   if (!t) return;
   if (t.paving) g.pavingSince.set(`${x},${y}`, now);
   if (t.slab) t.slab.greenSince = now;
+  if (t.floor) t.floor.greenSince = now;
   for (const f of t.pieces) f.greenSince = now;
   for (const w of t.walls) w.greenSince = now;
   g.events.emit('world', x, y);

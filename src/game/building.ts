@@ -601,6 +601,8 @@ export interface FloorTile extends Bill {
   hand?: StairHand;
   /** The colour it has been painted, if it has. */
   dye?: string;
+  /** When the moss in a stone floor's joints began: laid or last scrubbed, the woods' clock (`greening.ts`). */
+  greenSince?: number;
 }
 
 export const floorKind = (f: FloorTile): FloorKind => f.kind ?? 'floor';

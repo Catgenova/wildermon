@@ -2,7 +2,7 @@
  * Stone that ages, the same on both sides.
  *
  * Asked for off a picture of a grey castle: ivy on the walls, moss on the
- * paving, the statues, the poured slabs and the stone bridges, bare the day
+ * paving, stone floors out under the sky, the statues, the poured slabs and the stone bridges, bare the day
  * they are built and as green as they get `GREEN_DAYS` days later; Clear the
  * ivy and Scrub the moss start it again. The browser draws it and asks about
  * it (`src/game/greening.ts`) and the island keeps the clock (`green_since`,
@@ -27,7 +27,7 @@ import type { Target } from '../../src/game/actions';
 import { ACTIONS } from '../../src/game/actions';
 import type { Wall } from '../../src/game/building';
 import {
-  bridgeGreen, greenDays, greenNow, greenStart, pavingGreen, pieceGreen, slabGreen, wallGreen,
+  bridgeGreen, floorGreen, greenDays, greeningFloor, greenNow, greenStart, pavingGreen, pieceGreen, slabGreen, wallGreen,
   GREEN_ACTIONS, GREEN_AGAIN, GREEN_DAY, GREEN_DAYS, NOTHING_YET,
 } from '../../src/game/greening';
 import { TileType } from '../../src/world/tiles';
@@ -191,6 +191,20 @@ begin
   delete from bridge where world_id = w and id = v_b;
   insert into said select 'PULLED', (select count(*)::text from green_since where world_id = w and thing = 'bridge');
 
+  -- A stone floor: bare from its last unit; one of planks, or a roof, never; one taken up forgets.
+  delete from floor_tile where world_id = w and x between 38 and 42 and y between 38 and 42;
+  insert into floor_tile (world_id, level, x, y, building, material, kind, needed, total) values
+    (w, 0, 40, 39, 0, 'cobblestone', 'floor', '{"cobblestone": 2}', '{"cobblestone": 8}'),
+    (w, 0, 41, 39, 0, 'plank', 'floor', '{"plank": 0}', '{"plank": 8}'),
+    (w, 0, 42, 39, 0, 'stone_brick', 'roof', '{"stone_brick": 0}', '{"stone_brick": 8}');
+  insert into said select 'FLOOR_LAYING', (select count(*)::text from green_since where world_id = w and thing = 'floor');
+  update floor_tile set needed = '{"cobblestone": 0}' where world_id = w and level = 0 and x = 40 and y = 39;
+  insert into said select 'FLOOR_LAID', coalesce((select (since = now())::text from green_since
+    where world_id = w and thing = 'floor' and x = 40 and y = 39 and k = 0), 'none')
+    || ',' || (select count(*)::text from green_since where world_id = w and thing = 'floor');
+  delete from floor_tile where world_id = w and level = 0 and x = 40 and y = 39;
+  insert into said select 'FLOOR_UP', (select count(*)::text from green_since where world_id = w and thing = 'floor');
+
   -- A statue's start is when it was set down; one scrubbed and then taken up forgets its scrubbing.
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, made_at)
     values (w, 'furniture', 'statue', 41, 38, 0, 0, 41.5, 38.5, now() - interval '2 days') returning id into v_p;
@@ -220,6 +234,9 @@ is('LIFTED', '0', 'and paving lifted forgets');
 is('POURED', 'true,none', 'a slab poured is bare from then, shuttering not yet');
 is('SET', 'true', 'and shuttering from its last barrowful');
 is('STRUCK', '1', 'a slab struck forgets');
+is('FLOOR_LAYING', '0', 'a floor going down has no start');
+is('FLOOR_LAID', 'true,1', 'a stone floor is bare from its last unit; one of planks, and a roof, never');
+is('FLOOR_UP', '0', 'a floor taken up forgets');
 is('HALF_DECKED', '0', 'an arch half decked has no start');
 is('DECKED', 'true', 'and is bare from the moment its last span is decked');
 is('ROPE', '1', 'a rope bridge never has one');
@@ -284,6 +301,13 @@ const SLABS: Array<{ key: string; id: number; x: number; y: number; done: boolea
   { key: 's1', id: 9102, x: 50, y: 48, done: true, ago: '11 days' },
   { key: 'swet', id: 9103, x: 52, y: 48, done: false, ago: null },
 ];
+/** Floors: a stone one out under the sky, a stone one with another laid over it (that one greens, the lower not), and planks. */
+const FLOORS: Array<{ key: string; level: number; x: number; y: number; material: string; ago: string | null; greens: boolean }> = [
+  { key: 'fl', level: 0, x: 44, y: 50, material: 'cobblestone', ago: '6 days 3 hours', greens: true },
+  { key: 'flcov', level: 0, x: 46, y: 50, material: 'slate', ago: '9 days', greens: false },
+  { key: 'flup', level: 1, x: 46, y: 50, material: 'marble', ago: '1 day 2 hours', greens: true },
+  { key: 'flwood', level: 0, x: 48, y: 50, material: 'plank', ago: null, greens: false },
+];
 /** Tiles that are not paved, set so on both sides. */
 const GRASS: Array<[number, number]> = [[50, 48], [52, 48], [54, 48]];
 const GREEN_FROM_AGO = '15 days 2 hours';
@@ -295,6 +319,7 @@ const TILES: Record<string, Target> = {
   w1: at(44, 44, 'n'), w1s: at(44, 43, 's'), noside: at(44, 44), wood: at(46, 44, 'w'), half: at(48, 44, 'w'),
   fresh: at(50, 44, 'n'), old: at(52, 44, 'n'), nowall: at(54, 44, 'n'), wild: at(58, 50, 'n'),
   p1: at(44, 48), pold: at(46, 48), pslab: at(48, 48), s1: at(50, 48), swet: at(52, 48), bare: at(54, 48),
+  fl: at(44, 50), flup: at(46, 50), flwood: at(48, 50),
 };
 const THINGS: Record<string, { kind: 'furniture' | 'bridge'; v: string }> = {
   statue: { kind: 'furniture', v: 'v_statue' }, chest: { kind: 'furniture', v: 'v_chest' },
@@ -309,7 +334,7 @@ const STAND: Record<string, [number, number]> = {
   w1: [44.5, 44.5], w1s: [44.5, 43.5], noside: [44.5, 44.5], wood: [46.5, 44.5], half: [48.5, 44.5], fresh: [50.5, 44.5],
   old: [52.5, 44.5], nowall: [54.5, 44.5], wild: [58.5, 50.5], p1: [44.5, 48.5], pold: [46.5, 48.5], pslab: [48.5, 48.5],
   s1: [50.5, 48.5], swet: [52.5, 48.5], bare: [54.5, 48.5], statue: [44.5, 52.5], chest: [46.5, 52.5], arch: [47.5, 52.5],
-  rope: [47.5, 55.5],
+  rope: [47.5, 55.5], fl: [44.5, 50.5], flup: [46.5, 50.5], flwood: [48.5, 50.5],
 };
 const ask = (key: string, who: Ask['who'], act: Ask['act'], t: string, extra: Partial<Ask> = {}): Ask => ({ key, who, act, t, at: STAND[t], ...extra });
 /** Asked before anybody has a tool. */
@@ -322,6 +347,7 @@ const ASKS: Ask[] = [
   ask('s1', 'ivy', 'scrub_moss', 's1'), ask('swet', 'ivy', 'scrub_moss', 'swet'), ask('bare', 'ivy', 'scrub_moss', 'bare'),
   ask('statue', 'ivy', 'scrub_moss', 'statue'), ask('chest', 'ivy', 'scrub_moss', 'chest'),
   ask('arch', 'ivy', 'scrub_moss', 'arch'), ask('rope', 'ivy', 'scrub_moss', 'rope'),
+  ask('fl', 'ivy', 'scrub_moss', 'fl'), ask('flup', 'ivy', 'scrub_moss', 'flup'), ask('flwood', 'ivy', 'scrub_moss', 'flwood'),
   ask('rook_w1', 'rook', 'clear_ivy', 'w1'), ask('rook_statue', 'rook', 'scrub_moss', 'statue'),
   ask('rook_arch', 'rook', 'scrub_moss', 'arch'), ask('rook_wild', 'rook', 'clear_ivy', 'wild'),
   ask('wren_w1', 'wren', 'clear_ivy', 'w1'), ask('wren_p1', 'wren', 'scrub_moss', 'p1'),
@@ -331,6 +357,7 @@ const ASKS: Ask[] = [
 const DOES: Ask[] = [
   ask('w1', 'ivy', 'clear_ivy', 'w1'), ask('p1', 'ivy', 'scrub_moss', 'p1'), ask('pslab', 'ivy', 'scrub_moss', 'pslab'),
   ask('s1', 'ivy', 'scrub_moss', 's1'), ask('statue', 'ivy', 'scrub_moss', 'statue'), ask('arch', 'ivy', 'scrub_moss', 'arch'),
+  ask('fl', 'ivy', 'scrub_moss', 'fl'),
 ];
 
 /** The island's days for each thing, as `green_refusal` works them out. */
@@ -344,6 +371,7 @@ const DAYS_SQL: Array<[string, string]> = [
   ['statue', `green_days(green_start(greatest((select made_at from placed where id = v_statue), ${since('piece', 44, 52, 'v_statue')}), v_from))::text`],
   ['chest', `'null'`],
   ['arch', `green_days(green_start(${since('bridge', 48, 52, 'v_arch')}, v_from))::text`],
+  ...FLOORS.map((f): [string, string] => [f.key, f.greens ? `green_days(green_start(${since('floor', f.x, f.y, String(f.level))}, v_from))::text` : `'null'`]),
   ['rope', `'null'`],
 ];
 const daysSql = (prefix: string): string => DAYS_SQL.map(([k, e]) => `insert into said values ('${prefix}_${k}', ${e});`).join('\n  ');
@@ -375,6 +403,7 @@ begin
   delete from foundation where world_id = w and x between 40 and 60 and y between 40 and 58;
   delete from placed where world_id = w and x between 40 and 60 and y between 40 and 58;
   delete from bridge where world_id = w and ax between 40 and 60 and ay between 40 and 58;
+  delete from floor_tile where world_id = w and x between 40 and 60 and y between 40 and 58;
   -- And no settlement over it but Ivy's: island.sql stakes Latecomer where a hoard was buried, which moves with the
   -- hour the suite ran, and over this corner the island and the browser each answered for a different one.
   delete from deed where world_id = w and x + radius >= 40 and x - radius <= 60 and y + radius >= 40 and y - radius <= 58;
@@ -399,6 +428,9 @@ begin
   -- The slabs.
   ${SLABS.map((s) => `insert into foundation (world_id, id, x, y, top, needed, total) values (w, ${s.id}, ${s.x}, ${s.y}, 10, '{"concrete": ${s.done ? 0 : 4}}', '{"concrete": 20}');
   ${s.done ? startSql('slab', s.x, s.y, '0', s.ago) : ''}`).join('\n  ')}
+  -- The floors, finished.
+  ${FLOORS.map((f) => `insert into floor_tile (world_id, level, x, y, building, material, kind, needed, total) values (w, ${f.level}, ${f.x}, ${f.y}, 0, '${f.material}', 'floor', '{"${f.material}": 0}', '{"${f.material}": 8}');
+  ${f.material !== 'plank' ? startSql('floor', f.x, f.y, String(f.level), f.ago) : ''}`).join('\n  ')}
   -- A statue set down eight days ago, and a chest beside it.
   insert into placed (world_id, kind, sub, x, y, sx, sy, cx, cy, ql, made_by, made_at)
     values (w, 'furniture', 'statue', 44, 52, 0, 0, 44.5, 52.5, 30, '${IVY}', now() - interval '8 days 4 hours') returning id into v_statue;
@@ -489,6 +521,10 @@ function browserDays(g: Game): Map<string, string> {
     const b = g.bridges.get(id);
     out.set(key, b ? show(bridgeGreen(g, b, now)) : 'missing');
   }
+  for (const fd of FLOORS) {
+    const f = g.buildings.floor(fd.level, fd.x, fd.y);
+    out.set(fd.key, f ? show(greeningFloor(g, fd.x, fd.y) === f ? floorGreen(g, f, now) : null) : 'missing');
+  }
   return out;
 }
 
@@ -501,11 +537,11 @@ const differ = keys.filter((k) => seen.get(k) !== scene.get(`DAYS_${k}`));
 check(`every thing's days, worked out in the browser from the ground read, are the island's: ${keys.length} things`,
   differ.length === 0, differ.map((k) => `${k} ${seen.get(k)} against ${scene.get(`DAYS_${k}`)}`).join('; '));
 check('which are the ages they were given: a storey at a time, from greening coming in when nothing is said, and no more than the last',
-  ['w1_0:4', 'w1_1:9', 'fresh:0', 'old:14', 'wild:2', 'p1:3', 'pold:14', 'pslab:2', 'pslab_s:12', 's1:11', 'statue:8', 'arch:14']
+  ['w1_0:4', 'w1_1:9', 'fresh:0', 'old:14', 'wild:2', 'p1:3', 'pold:14', 'pslab:2', 'pslab_s:12', 's1:11', 'statue:8', 'arch:14', 'fl:6', 'flup:1']
     .every((kv) => `${kv.split(':')[0]}:${seen.get(kv.split(':')[0])}` === kv),
   keys.map((k) => `${k}=${seen.get(k)}`).join(' '));
-check('and what does not green says so on both: timber, a wall going up, shuttering, a chest, a rope bridge',
-  ['wood', 'half', 'swet', 'chest', 'rope'].every((k) => seen.get(k) === 'null' && scene.get(`DAYS_${k}`) === 'null'));
+check('and what does not green says so on both: timber, a wall going up, shuttering, a chest, a rope bridge, a floor under another, planks',
+  ['wood', 'half', 'swet', 'chest', 'rope', 'flcov', 'flwood'].every((k) => seen.get(k) === 'null' && scene.get(`DAYS_${k}`) === 'null'));
 const fast = grounds('FAST_ivy');
 const statueRow = fast.placed?.find((r) => r.id === STATUE);
 const chestRow = fast.placed?.find((r) => r.id === CHEST);
@@ -552,8 +588,8 @@ for (const a of ASKS.filter((q) => !q.islandOnly)) {
   check(`${a.key}: ${a.who} is answered the same on both sides`, mine === scene.get(`R_${a.key}`), `"${mine}" against "${scene.get(`R_${a.key}`)}"`);
 }
 const said = (k: string): string => scene.get(`R_${k}`) ?? 'MISSING';
-check('whatever has grown, its settlement\'s builders may clear it', ['w1', 'w1s', 'old', 'p1', 'pold', 'pslab', 's1', 'statue', 'arch'].every((k) => said(k) === 'ALLOWED'),
-  ['w1', 'w1s', 'old', 'p1', 'pold', 'pslab', 's1', 'statue', 'arch'].map((k) => `${k}: ${said(k)}`).join(' / '));
+check('whatever has grown, its settlement\'s builders may clear it', ['w1', 'w1s', 'old', 'p1', 'pold', 'pslab', 's1', 'statue', 'arch', 'fl', 'flup'].every((k) => said(k) === 'ALLOWED'),
+  ['w1', 'w1s', 'old', 'p1', 'pold', 'pslab', 's1', 'statue', 'arch', 'fl', 'flup'].map((k) => `${k}: ${said(k)}`).join(' / '));
 check('and anybody may on land nobody holds', said('rook_wild') === 'ALLOWED', said('rook_wild'));
 // Since ranks are the founder's own (145), a citizen whose rank lacks Shape and build is told that instead.
 check('a stranger is told whose it is, and a guest what the rank lacks',
@@ -563,13 +599,15 @@ check('a stranger is told whose it is, and a guest what the rank lacks',
 check('a wall of timber, or one still going up, has no ivy to clear',
   said('wood') === 'No finished stone or brick wall there.' && said('half') === said('wood') && said('nowall') === said('wood'),
   `${said('wood')} / ${said('half')} / ${said('nowall')}`);
-check('a tile with neither paving nor a poured slab has no moss to scrub', said('swet') === 'No paving or poured foundation here.' && said('bare') === said('swet'), said('bare'));
+check('a tile with no paving, poured slab or stone floor has no moss to scrub',
+  said('swet') === 'No paving, poured foundation or stone floor here.' && said('bare') === said('swet') && said('flwood') === said('swet'),
+  `${said('bare')} / ${said('flwood')}`);
 check('nor has a chest or a rope bridge', said('chest') === 'No moss grows on that.' && said('rope') === said('chest'), said('rope'));
 check('a wall finished today has nothing on it yet', said('fresh') === NOTHING_YET, said('fresh'));
 check('and the island asks you to stand beside what you clear', said('far') === 'You are too far away from that.', said('far'));
 const menu = (t: Target): boolean => ivy.actionsFor(t).some((e) => e.def.id === 'scrub_moss');
-check('Scrub the moss is on the menu of paving, a slab, a statue and an arch, and not of a chest, a rope bridge or grass',
-  ['p1', 'pslab', 's1', 'statue', 'arch'].every((k) => menu(TARGETS[k])) && !['chest', 'rope', 'bare'].some((k) => menu(TARGETS[k])));
+check('Scrub the moss is on the menu of paving, a slab, a stone floor, a statue and an arch, and not of a chest, a rope bridge, grass or planks',
+  ['p1', 'pslab', 's1', 'fl', 'flup', 'statue', 'arch'].every((k) => menu(TARGETS[k])) && !['chest', 'rope', 'bare', 'flwood'].some((k) => menu(TARGETS[k])));
 
 // And done, on both sides.
 for (const a of DOES) {
@@ -584,13 +622,14 @@ for (const a of DOES) {
 check('the words name what was cleared', scene.get('DID_w1') === `Ivy cleared: north wall. ${GREEN_AGAIN}`
   && scene.get('DID_pslab') === `Moss scrubbed: the paving and the foundation. ${GREEN_AGAIN}`
   && scene.get('DID_statue') === `Moss scrubbed: the statue. ${GREEN_AGAIN}`
-  && scene.get('DID_arch') === `Moss scrubbed: the bridge. ${GREEN_AGAIN}`, scene.get('DID_pslab'));
+  && scene.get('DID_arch') === `Moss scrubbed: the bridge. ${GREEN_AGAIN}`
+  && scene.get('DID_fl') === `Moss scrubbed: the floor. ${GREEN_AGAIN}`, `${scene.get('DID_pslab')} / ${scene.get('DID_fl')}`);
 const ivyNow = browserDays(ivy);
-const cleared = ['w1_0', 'w1_1', 'p1', 'pslab', 'pslab_s', 's1', 'statue', 'arch'];
+const cleared = ['w1_0', 'w1_1', 'p1', 'pslab', 'pslab_s', 's1', 'statue', 'arch', 'fl'];
 check('every storey of that side, and everything scrubbed, is bare stone in the browser that did it',
   cleared.every((k) => ivyNow.get(k) === '0'), cleared.map((k) => `${k}=${ivyNow.get(k)}`).join(' '));
 check('and on the island', cleared.every((k) => scene.get(`LATER_${k}`) === '0'), cleared.map((k) => `${k}=${scene.get(`LATER_${k}`)}`).join(' '));
-check('while what was not cleared keeps what it had, on both', ['old', 'wild', 'pold', 'fresh'].every((k) =>
+check('while what was not cleared keeps what it had, on both', ['old', 'wild', 'pold', 'fresh', 'flup'].every((k) =>
   ivyNow.get(k) === seen.get(k) && scene.get(`LATER_${k}`) === scene.get(`DAYS_${k}`)));
 const later = browserDays(browserOf('ivy', 'GROUND_after'));
 const differLater = keys.filter((k) => later.get(k) !== scene.get(`LATER_${k}`));

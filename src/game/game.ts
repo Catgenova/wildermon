@@ -9571,6 +9571,13 @@ export class Game {
         w.greenSince = since !== undefined && had !== undefined && Math.abs(since - had) < SAME_SINCE ? had : since;
         delete w.greenAgo;
       }
+      // And when the moss in each stone floor began, the same way.
+      for (const f of ground.buildings.floors ?? []) {
+        const since = sinceAgo(f.greenAgo);
+        const had = this.buildings.floor(f.level, f.x, f.y)?.greenSince;
+        f.greenSince = since !== undefined && had !== undefined && Math.abs(since - had) < SAME_SINCE ? had : since;
+        delete f.greenAgo;
+      }
       this.buildings.sawIsland(ground.buildings);
     }
     /*

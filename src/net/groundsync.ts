@@ -36,6 +36,8 @@ export interface GroundAnswer {
 type Built = Record<string, unknown>;
 const wallKey = (w: Built): string => `${w.level},${w.dir},${w.x},${w.y}`;
 const floorKey = (f: Built): string => `${f.level},${f.x},${f.y}`;
+/** What a floor's moss is held under in `greenAt`, before its key, apart from the walls'. */
+const FLOOR_GREEN = 'f:';
 const builtOf = (v: unknown): Built[] | null =>
   Array.isArray(v) ? (v as unknown[]).filter((r): r is Built => !!r && typeof r === 'object') : null;
 const keysOf = (v: unknown): string[] | null => (Array.isArray(v) ? (v as unknown[]).map(String) : null);
@@ -51,7 +53,7 @@ export class GroundHeld {
   private crates: unknown[] | null = null;
   /** The cursor for the walls and floors (`bat`), from the last slow answer laid; null until there is one. */
   bat: string | null = null;
-  /** The walls and floors held, by key, and the moment each wall's ivy began (`greenAgo` on this machine's clock). */
+  /** The walls and floors held, by key, and the moment each wall's ivy and each floor's moss began (`greenAgo` on this machine's clock; a floor's under `FLOOR_GREEN` and its key). */
   private walls: Map<string, Built> | null = null;
   private floors: Map<string, Built> | null = null;
   private greenAt = new Map<string, number>();
@@ -144,14 +146,19 @@ export class GroundHeld {
       if (typeof w.greenAgo === 'number') this.greenAt.set(k, now - w.greenAgo);
       else this.greenAt.delete(k);
     }
-    for (const f of floors) heldFloors.set(floorKey(f), f);
+    for (const f of floors) {
+      const k = floorKey(f);
+      heldFloors.set(k, f);
+      if (typeof f.greenAgo === 'number') this.greenAt.set(FLOOR_GREEN + k, now - f.greenAgo);
+      else this.greenAt.delete(FLOOR_GREEN + k);
+    }
     for (const [held, keys, gone] of [[heldWalls, keysOf(said.wallKeys), true], [heldFloors, keysOf(said.floorKeys), false]] as const) {
       if (!delta || !keys) continue;
       const keep = new Set(keys);
       for (const k of keep) if (!held.has(k)) return false;
       for (const k of [...held.keys()]) if (!keep.has(k)) {
         held.delete(k);
-        if (gone) this.greenAt.delete(k);
+        this.greenAt.delete(gone ? k : FLOOR_GREEN + k);
       }
     }
     this.walls = heldWalls;
@@ -164,7 +171,10 @@ export class GroundHeld {
       const at = this.greenAt.get(k);
       return at === undefined ? w : { ...w, greenAgo: Math.max(0, now - at) };
     });
-    out.floors = [...heldFloors.values()];
+    out.floors = [...heldFloors.entries()].map(([k, f]) => {
+      const at = this.greenAt.get(FLOOR_GREEN + k);
+      return at === undefined ? f : { ...f, greenAgo: Math.max(0, now - at) };
+    });
     return out;
   }
 

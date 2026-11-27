@@ -448,6 +448,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // Stone floors' moss scrubbed (src/game/greening.ts greeningFloor; 20261127233000_floors_scrubbed.sql).
+  {
+    n: 738,
+    day: '2026-11-27',
+    lines: () => [
+      `Fixed: Scrub the moss on a stone floor with no floor or roof over it. Brush. Bare again, then greens over ${GREEN_DAYS} days.`,
+      'Changed: a stone floor\'s moss counts from when it was finished or last scrubbed, not from when greening came in.',
+      'Changed: a scurra\'s round scrubs stone floors too.',
+    ],
+  },
   // The armour stand split in two by body (`STANDS`, `STAND_BODY`; migration `_mannequins`).
   {
     n: 737,

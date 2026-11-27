@@ -4,7 +4,7 @@ CREATE OR REPLACE FUNCTION public.perform_green(p_world uuid, p_uid uuid, p_acti
  RETURNS void
  LANGUAGE plpgsql
 AS $function$
-declare tx int; ty int; v_side text; pc placed; br bridge; v_paved boolean; v_slab boolean;
+declare tx int; ty int; v_side text; pc placed; br bridge; v_paved boolean; v_slab boolean; fl floor_tile;
 begin
   if green_refusal(p_world, p_uid, p_action, p_target) is not null then return; end if;
   -- Its tool takes a go's wear (`wearTool`).
@@ -39,8 +39,9 @@ begin
     v_slab := (slab_at(p_world, tx, ty)).id is not null;
     if v_paved then perform green_mark(p_world, 'paving', tx, ty, 0); end if;
     if v_slab then perform green_mark(p_world, 'slab', tx, ty, 0); end if;
-    perform tell(p_world, p_uid, 'Moss scrubbed: '
-      || case when v_paved and v_slab then 'the paving and the foundation' when v_paved then 'the paving' else 'the foundation' end
+    fl := floor_greening(p_world, tx, ty);
+    if fl.world_id is not null then perform green_mark(p_world, 'floor', tx, ty, fl.level); end if;
+    perform tell(p_world, p_uid, 'Moss scrubbed: ' || moss_tile_words(v_paved, v_slab, fl.world_id is not null)
       || '. ' || green_again(), 'event');
   elsif p_target->>'kind' = 'furniture' then
     pc := target_placed(p_world, p_target);

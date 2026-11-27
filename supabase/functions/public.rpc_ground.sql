@@ -353,13 +353,21 @@ begin
     select coalesce(jsonb_agg(jsonb_build_object(
           'building', f.building, 'level', f.level, 'x', f.x, 'y', f.y,
           'material', f.material, 'kind', f.kind, 'facing', f.facing, 'hand', f.hand,
-          'needed', f.needed, 'total', f.total) order by f.level, f.x, f.y) filter (where (v_bsnap is null or private.since_new(f.xmin, v_bsnap)
+          'needed', f.needed, 'total', f.total,
+          -- And the seconds since the moss in a finished stone floor's joints began (`floorGrowth`, `greening.ts`).
+          'greenAgo', case when bill_done(f.needed) and coalesce(f.kind, 'floor') = 'floor' and m.kind = 'stone'
+                           then green_ago(gs.since, v_from) end) order by f.level, f.x, f.y)
+          filter (where (v_bsnap is null or private.since_new(f.xmin, v_bsnap)
+             or (gs.xmin is not null and private.since_new(gs.xmin, v_bsnap))
              or not (greatest(abs(f.x + 0.5 - v_bx), abs(f.y + 0.5 - v_by)) <= p_range))), '[]'::jsonb),
            count(*) filter (where (v_bsnap is null or private.since_new(f.xmin, v_bsnap)
+             or (gs.xmin is not null and private.since_new(gs.xmin, v_bsnap))
              or not (greatest(abs(f.x + 0.5 - v_bx), abs(f.y + 0.5 - v_by)) <= p_range))), count(*),
            coalesce(jsonb_agg(f.level || ',' || f.x || ',' || f.y order by f.level, f.x, f.y), '[]'::jsonb)
       into v_floors, v_fsent, v_nf, v_fkeys
         from floor_tile f
+        left join build_material_def m on m.id = f.material
+        left join green_since gs on gs.world_id = p_world and gs.thing = 'floor' and gs.x = f.x and gs.y = f.y and gs.k = f.level
         where f.world_id = p_world
           and f.x between floor(p.x - p_range)::int - 1 and floor(p.x + p_range)::int + 1
           and f.y between floor(p.y - p_range)::int - 1 and floor(p.y + p_range)::int + 1

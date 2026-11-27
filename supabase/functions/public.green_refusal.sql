@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.green_refusal(p_world uuid, p_uid uuid, p_acti
  STABLE
 AS $function$
 declare v_rank text; p player; d action_def; v_from timestamptz; tx int; ty int; v_days int := 0; v_found boolean := false;
-        v_side text; pc placed; br bridge; v_name text;
+        v_side text; pc placed; br bridge; v_name text; fl floor_tile;
 begin
   select * into p from player where world_id = p_world and uid = p_uid;
   select * into d from action_def where id = p_action;
@@ -36,7 +36,13 @@ begin
       v_days := greatest(v_days, green_days(green_start((select g.since from green_since g where g.world_id = p_world
                   and g.thing = 'slab' and g.x = tx and g.y = ty and g.k = 0), v_from)));
     end if;
-    if not v_found then return 'No paving or poured foundation here.'; end if;
+    fl := floor_greening(p_world, tx, ty);
+    if fl.world_id is not null then
+      v_found := true;
+      v_days := greatest(v_days, green_days(green_start((select g.since from green_since g where g.world_id = p_world
+                  and g.thing = 'floor' and g.x = tx and g.y = ty and g.k = fl.level), v_from)));
+    end if;
+    if not v_found then return 'No paving, poured foundation or stone floor here.'; end if;
   elsif p_target->>'kind' = 'furniture' then
     pc := target_placed(p_world, p_target);
     if pc.id is null or pc.kind is distinct from 'furniture'

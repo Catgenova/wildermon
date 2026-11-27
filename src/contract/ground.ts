@@ -2,7 +2,7 @@ import type { DeedRole } from '../game/ranks';
 import type { Enchant } from '../game/enchant';
 import type { Mark } from '../game/items';
 import type { IslandBauble } from '../game/baubles';
-import type { BuildingsJSON, Wall } from '../game/building';
+import type { BuildingsJSON, FloorTile, Wall } from '../game/building';
 import type { Bridge } from '../game/bridges';
 import type { Foundation } from '../game/foundations';
 import type { WaterPlantKind } from '../world/waterplants';
@@ -287,7 +287,7 @@ export interface IslandGround {
    * went up in Postgres, the rules answered about it, and no browser ever drew
    * a wall of it.
    */
-  buildings?: BuildingsJSON & { walls: Array<Wall & { greenAgo?: number | null }> };
+  buildings?: BuildingsJSON & { walls: Array<Wall & { greenAgo?: number | null }>; floors: Array<FloorTile & { greenAgo?: number | null }> };
   /**
    * And the slabs, which are not buildings: a foundation is ground somebody
    * poured, and it is laid beside the terrain rather than inside a house.
