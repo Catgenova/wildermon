@@ -10,7 +10,7 @@
  * clock starts at the same time, Math.random is seeded, and idle work waits for the driver to hand it a fixed budget
  * between rounds. SETTLE=<ms>: wait that long after load for the page's pictures before the first frame.
  */
-import { build } from 'esbuild';
+import { build } from '../../supabase/test/pagebuild';
 import { chromium } from 'playwright-core';
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';

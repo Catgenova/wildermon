@@ -8,7 +8,7 @@
  * Here each `./metal<id>` that lowpoly.ts asks for is a set of empty pieces instead (as a metal
  * set's piece is drawn before its set is in), so a page's script stays the size of what it tests.
  *
- * Imported by relative path (`./pagebuild`) in place of esbuild's own `build`; nothing here runs
+ * Imported in place of esbuild's own `build` by every test that bundles a page (and tools/perf/solara.ts); nothing here runs
  * on its own.
  */
 import { build as esbuild, type BuildOptions, type BuildResult, type Plugin } from 'esbuild';
