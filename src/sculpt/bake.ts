@@ -32,6 +32,8 @@ export interface Baked {
    * shape adds at weight one (`SculptDraw.shapes`).
    */
   shapes?: { from: number; count: number; shapes: number; data: Float32Array };
+  /** A low-poly body's occlusion (`./ao`), per vertex: what its light is multiplied by, the same at every corner of a polygon. */
+  ao?: Float32Array;
 }
 
 /** Floats per vertex. */

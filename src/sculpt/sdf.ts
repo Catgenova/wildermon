@@ -42,6 +42,8 @@ export interface Material {
   skin?: boolean;
   /** Metal: a sharper, brighter highlight. */
   metal?: boolean;
+  /** With `metal` on a low-poly body: how much its sheen and glint show, 1 dull, 2 plain, 3 bright (`./gl.ts` METAL_LUSTRE); left out, plain. */
+  lustre?: number;
   /** The eye's parts: drawn in the lid's colour (the first material's, a shade darker) while the lids are shut. */
   eye?: boolean;
   /** The face's planes: four tones rather than three, a half-shadow from a quarter turned from the light to three quarters, the shadow only past that, so a plane turned a little from the light steps down rather than falling to the dark. */

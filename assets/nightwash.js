@@ -1,1 +1,1 @@
-var e={colour:`12, 20, 44`,alpha:.68};export{e as t};
+var e={colour:`12, 20, 44`,alpha:.68},t={dark:0};export{t as n,e as t};
