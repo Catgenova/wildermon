@@ -75,6 +75,9 @@ for (const it of [...pack.items]) if (['log', CREATURE_CRATE].includes(it.id) ||
 const beast: Creature = game.creatures.spawn('bura', px + 1.5, py + 0.5, 'active', game.rand, game.time - 3600 * 24);
 beast.name = NAME;
 beast.traits = [];
+// Its spawn rolls a rarity and a form, each a multiplier on what it carries (bloodMul): pinned, as the island side pins them.
+beast.rare = null;
+beast.formSize = null;
 const act = (id: string): NonNullable<ReturnType<typeof ACTION_BY_ID.get>> => {
   const a = ACTION_BY_ID.get(id);
   if (!a) throw new Error(`no ${id}`);
