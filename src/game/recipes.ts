@@ -636,6 +636,8 @@ const KNAP_RECIPES: Recipe[] = Object.entries(KNAPPED).map(([id, k]) => ({
 }));
 RECIPES.push(...OBSIDIAN_ARMOUR_RECIPES, ...KNAP_RECIPES);
 
+/** A piece's name in lower case, a lone capital kept: Body A, Body B (`STAND_BODY`). */
+const pieceWord = (name: string): string => name.split(' ').map((w) => (/^[A-Z]$/.test(w) ? w : w.toLowerCase())).join(' ');
 /** The pieces of furniture, each nailed together by a fine carpenter; a grave is dug by dying, a lair is the island's and a trophy comes out of a lair's hoard: none built. */
 const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair && !f.lairChest && !f.trophy && !f.outcrop).map((f) => ({
   id: `make_${f.id}`,
@@ -652,8 +654,8 @@ const FURNITURE_RECIPES: Recipe[] = FURNITURE.filter((f) => !f.grave && !f.lair 
   ...(f.perk ? { perk: f.perk } : {}),
   // A woven rug at a loom (`decor.ts`).
   ...(f.station ? { station: f.station } : {}),
-  label: `Build ${f.name.toLowerCase()}`,
-  verb: `building ${/^[aeiou]/i.test(f.name) ? 'an' : 'a'} ${f.name.toLowerCase()}`,
+  label: `Build ${pieceWord(f.name)}`,
+  verb: `building ${/^[aeiou]/i.test(f.name) ? 'an' : 'a'} ${pieceWord(f.name)}`,
   baseTime: f.time,
   stamina: 0.05,
   difficulty: f.difficulty,

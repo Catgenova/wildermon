@@ -85,7 +85,7 @@ begin
     perform tell(p_world, p_uid, decor_done('swapped', array_to_string(v_moved, ', '), null, null, null)
       || case when cardinality(v_kept) > 0 then ' ' || decor_done('kept', array_to_string(v_kept, ', '), null, null, null) else '' end, 'event');
   end if;
-  if pl.sub = armour_stand_kind() then
+  if pl.sub = any (stand_kinds()) then
     g := (g - 'worn') || case when stand_worn(pl.id) <> '{}'::jsonb then jsonb_build_object('worn', stand_worn(pl.id)) else '{}'::jsonb end;
   end if;
   update placed set garden = nullif(g, '{}'::jsonb) where id = pl.id;

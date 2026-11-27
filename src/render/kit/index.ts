@@ -145,7 +145,8 @@ export const KIT_PIECES: Readonly<Record<string, KitPiece>> = {
   stone_lantern: STONE_LANTERN,
   woven_rug: WOVEN_RUG,
   curtains: CURTAINS,
-  armour_stand: ARMOUR_STAND,
+  mannequin_a: ARMOUR_STAND,
+  mannequin_b: ARMOUR_STAND,
   // The furnishings (`furnish.ts`).
   birdbath: BIRDBATH,
   stone_bench: STONE_BENCH,

@@ -24,7 +24,7 @@ import {
 } from './gardendefs';
 import type { GardenState } from './garden';
 import type { DecorState } from './decor';
-import { ARMOUR_STAND, COMPOST_BIN, CURTAINS, STONE_LANTERN, SUNDIAL, WOVEN_RUG } from './decordefs';
+import { COMPOST_BIN, CURTAINS, MANNEQUIN_A, MANNEQUIN_B, STONE_LANTERN, SUNDIAL, WOVEN_RUG } from './decordefs';
 import type { FurnishState } from './furnish';
 import {
   BENCH_SEATS, BIRDBATH, CAIRN, FIREPLACE, FISH_MOUNT, FOOTSTOOL, FOUR_POSTER, FOUR_POSTER_REST, GARDEN_SWING, GAZEBO, GAZEBO_SEATS, HAY, HAY_BALE, HAY_HOLDS, SIDE_TABLE, SIGNPOST,
@@ -633,7 +633,7 @@ export const FURNITURE: FurnitureDef[] = [
   piece(WIND_CHIME, 'Wind chime', 1, 1, [['plank', 2], ['shaft', 2], ['rope', 1], ['nail', 4]], 12, 6, '', undefined, { skill: 'fine_carpentry', mount: 'hang', chime: true }),
   /*
    * The home pieces (`decor.ts`; their numbers in `decordefs.ts`): a sundial,
-   * a compost bin, a stone lantern, a woven rug, curtains and an armour stand.
+   * a compost bin, a stone lantern, a woven rug, curtains and the two mannequins.
    */
   piece(SUNDIAL, 'Sundial', 1, 1, [['stone_slab', 1], ['stone_brick', 4], ['mortar', 2], ['brass_lump', 1]], 16, 14, '', undefined, { skill: 'masonry', tool: 'trowel' }),
   piece(COMPOST_BIN, 'Compost bin', 1, 1, [['plank', 12], ['nail', 16]], 8, 10, '', undefined, { skill: 'carpentry' }),
@@ -641,7 +641,8 @@ export const FURNITURE: FurnitureDef[] = [
     { skill: 'masonry', tool: 'trowel', mossy: true }),
   piece(WOVEN_RUG, 'Woven rug', 2, 2, [['yarn', 12]], 14, 16, '', undefined, { skill: 'tailoring', tool: 'needle', station: 'loom' }),
   piece(CURTAINS, 'Curtains', 2, 1, [['cloth', 4], ['shaft', 1], ['nail', 2]], 10, 10, '', undefined, { skill: 'tailoring', tool: 'needle', mount: 'pane' }),
-  piece(ARMOUR_STAND, 'Armour stand', 1, 1, [['plank', 10], ['timber', 1], ['nail', 12]], 12, 12, '', undefined, { skill: 'carpentry' }),
+  piece(MANNEQUIN_A, 'Body A mannequin', 1, 1, [['plank', 10], ['timber', 1], ['nail', 12]], 12, 12, '', undefined, { skill: 'carpentry' }),
+  piece(MANNEQUIN_B, 'Body B mannequin', 1, 1, [['plank', 10], ['timber', 1], ['nail', 12]], 12, 12, '', undefined, { skill: 'carpentry' }),
   /*
    * The furnishings (`furnish.ts`; their numbers in `furnishdefs.ts`): a
    * birdbath, a stone bench, a garden swing in its own frame, a gazebo, a hay

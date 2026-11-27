@@ -346,7 +346,7 @@ import {
   WATER_TROUGH, CAIRN_NAME_MAX,
 } from '../../game/furnishdefs';
 import {
-  ARMOUR_STAND, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN,
+  MANNEQUIN_A, MANNEQUIN_B, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN,
   STONE_LANTERN_REACH, SUNDIAL, WOVEN_RUG,
 } from '../../game/decordefs';
 import { CLIMBER_BARE, CLIMBER_BLOOMS, ROSE_SEASONS } from '../../game/roses';
@@ -448,6 +448,16 @@ const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
 
 export const NEWS: News[] = [
+  // The armour stand split in two by body (`STANDS`, `STAND_BODY`; migration `_mannequins`).
+  {
+    n: 737,
+    day: '2026-11-27',
+    lines: () => [
+      `New: ${itemDef(MANNEQUIN_A).name} and ${itemDef(MANNEQUIN_B).name} (${skillOf(`make_${MANNEQUIN_A}`)}; ${pieceBill(MANNEQUIN_A)} each): armour stands, mannequin in that body.`,
+      `Changed: Armour stand no longer made; every one set down or carried is now a ${itemDef(MANNEQUIN_A).name}, what it held kept.`,
+      'Changed: the same two stands in the Unity client.',
+    ],
+  },
   // rpc_creatures sends grownIn, coaxed and coaxLeft (creatureLines, growsAt).
   {
     n: 736,
@@ -1317,7 +1327,7 @@ export const NEWS: News[] = [
       const name = (id: string): string => itemDef(id).name;
       const job = (id: string): string => ACTION_BY_ID.get(id)?.label ?? id;
       return [
-        `Fixed: ${name(ARMOUR_STAND)} menu: ${job(STAND_PUT)} (any armour piece, carried or worn), Take off (per slot), ${job(STAND_SWAP)} (was: Pick up only).`,
+        `Fixed: Armour stand menu: ${job(STAND_PUT)} (any armour piece, carried or worn), Take off (per slot), ${job(STAND_SWAP)} (was: Pick up only).`,
         `Fixed: ${name(SUNDIAL)} menu: ${job(READ_SUNDIAL)}. ${name(COMPOST_BIN)} menu: ${job(FILL_COMPOST)}, ${job(EMPTY_COMPOST)}. ${name(CURTAINS)} menu: ${job(DRAW_CURTAINS)}. Planter menu: ${job(SPREAD_COMPOST)} (were: missing).`,
       ];
     },
@@ -5957,7 +5967,7 @@ export const NEWS: News[] = [
         `New: ${made(STONE_LANTERN)}: night light ${STONE_LANTERN_REACH} tiles, any QL; moss, scrubbed by a scurra.`,
         `New: ${made(WOVEN_RUG)}, at a loom: ${listedOr([...RUG_PATTERNS])}; up to ${RUG_COLOURS} dye colours. Lies flat.`,
         `New: ${made(CURTAINS)}: on a window, either face; open or close for everyone; dyeable.`,
-        `New: ${made(ARMOUR_STAND)}: ${STAND_SLOTS.length} armour slots, drawn on a mannequin; Swap with worn, every slot at once. Owner, or a rank that may use the settlement's crates.`,
+        `New: Armour stand (carpentry; ${pieceBill(MANNEQUIN_A)}): ${STAND_SLOTS.length} armour slots, drawn on a mannequin; Swap with worn, every slot at once. Owner, or a rank that may use the settlement's crates.`,
       ];
     },
   },

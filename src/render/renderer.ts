@@ -86,7 +86,7 @@ const BENCH_ROUND = 2;
 
 /** The job a body is drawn at: a practice swing or shot at a dummy or a target as a fight's, its clip and its weapon in hand (`fitting.ts`). */
 const poseJob = (id: string | null | undefined): string | undefined => (id === PRACTISE || id === SHOOT_TARGET ? 'attack_creature' : id ?? undefined);
-import { ARMOUR_STAND, WOVEN_RUG } from '../game/decordefs';
+import { isStand, WOVEN_RUG } from '../game/decordefs';
 import { drawShine, shines } from './shine';
 import { NIGHT_WASH } from './nightwash';
 import { type Masonry, adobe, brickwork, cobble, goldwork, logwork, glasswork, marblework, planking, sandstone, silverwork, slatework, stonework, timbercraft } from './masonry';
@@ -7540,7 +7540,7 @@ export class Renderer {
           // ring under the pointer: a ring round a bloom of light is a blot.
           // (an armour stand's mannequin by which stand it is: `decorlook.ts`)
           drawFurnitureLive(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness(),
-            clothInWind(piece.kind) || piece.kind === ARMOUR_STAND || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE || ADORN_LIVE.includes(piece.kind)
+            clothInWind(piece.kind) || isStand(piece.kind) || piece.kind === STONE_BUST || piece.kind === LANTERN_POLE || ADORN_LIVE.includes(piece.kind)
               || piece.kind === OBSIDIAN_BUST || OBSIDIAN_LIVE.includes(piece.kind) ? this.airOf(piece) : undefined);
           // A lantern burning on a post or a pillar blooms as the dark comes on (`lamps.ts`).
           if (lampBurning(piece)) drawLampBloom(ctx, ent.sx, ent.sy, zoom, piece.kind, view, this.game.darkness());

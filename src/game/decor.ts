@@ -1,6 +1,6 @@
 /**
- * The six home pieces (`decordefs.ts` holds their numbers): a sundial, a
- * compost bin, a stone lantern, a woven rug, curtains and an armour stand.
+ * The home pieces (`decordefs.ts` holds their numbers): a sundial, a
+ * compost bin, a stone lantern, a woven rug, curtains and the two mannequins (armour stands, `STANDS`).
  * The island does every job (`decor_refusal`, `perform_decor`); what is here
  * says the same refusals in the same order, names the menus, and reads what
  * the island keeps.
@@ -21,9 +21,9 @@
  */
 import type { ActionDef, Target } from './actions';
 import {
-  ARMOUR_STAND, COMPOST, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_EMPTY_TIME, COMPOST_FILL_TIME, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED,
+  COMPOST, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_EMPTY_TIME, COMPOST_FILL_TIME, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED,
   COMPOST_TAKES, CURTAINS, DRESS_TIME, RUG_COLOURS, RUG_PATTERNS, SPREAD_COST, SPREAD_SKILL, SPREAD_TIME, STONE_LANTERN, STONE_LANTERN_REACH, SUNDIAL, SWAP_TIME,
-  WOVEN_RUG, type RugPattern,
+  WOVEN_RUG, isStand, MANNEQUIN_A, MANNEQUIN_B, STANDS, type RugPattern,
 } from './decordefs';
 import { furnitureCentre, furnitureDef, type PlacedFurniture } from './furniture';
 import type { Game } from './game';
@@ -217,14 +217,14 @@ export function decorTail(f: PlacedFurniture, now = Date.now() / 1000): string {
     case STONE_LANTERN: return ` · lights ${STONE_LANTERN_REACH} tiles at night, burns nothing`;
     case WOVEN_RUG: return ` · ${d?.pattern ?? RUG_PATTERNS[0]}`;
     case CURTAINS: return d?.shut ? ' · closed' : ' · open';
-    case ARMOUR_STAND: {
+    case MANNEQUIN_A: case MANNEQUIN_B: {
       const on = STAND_SLOTS.filter((s) => d?.worn?.[s]).map((s) => wordOf(d?.worn?.[s]?.[0] ?? ''));
       return on.length ? ` · ${on.join(', ')}` : ' · empty';
     }
     default: return '';
   }
 }
-export const DECOR_PIECES: readonly string[] = [SUNDIAL, COMPOST_BIN, STONE_LANTERN, WOVEN_RUG, CURTAINS, ARMOUR_STAND];
+export const DECOR_PIECES: readonly string[] = [SUNDIAL, COMPOST_BIN, STONE_LANTERN, WOVEN_RUG, CURTAINS, ...STANDS];
 STATE_TAILS.push((f) => (DECOR_PIECES.includes(f.kind) ? decorTail(f) : ''));
 
 /* ---- the jobs ---------------------------------------------------------------------------- */
@@ -243,14 +243,16 @@ export const DECOR_JOBS: readonly string[] = [
 ];
 
 type PieceTarget = Extract<Target, { kind: 'furniture' }>;
+/** What `pieceOf` is asked for to have any stand of `STANDS`, whichever body. */
+const ANY_STAND = '*stand';
 const pieceOf = (g: Game, t: Target, kind: string): PlacedFurniture | undefined => {
   if (t.kind !== 'furniture') return undefined;
   const f = g.furniture.get((t as PieceTarget).id);
-  return f && f.kind === kind ? f : undefined;
+  return f && (kind === ANY_STAND ? isStand(f.kind) : f.kind === kind) ? f : undefined;
 };
 const KIND_OF: Record<string, string> = {
-  [READ_SUNDIAL]: SUNDIAL, [FILL_COMPOST]: COMPOST_BIN, [EMPTY_COMPOST]: COMPOST_BIN, [DRAW_CURTAINS]: CURTAINS, [STAND_PUT]: ARMOUR_STAND, [STAND_SWAP]: ARMOUR_STAND,
-  ...Object.fromEntries(STAND_SLOTS.map((s) => [STAND_TAKE(s), ARMOUR_STAND])),
+  [READ_SUNDIAL]: SUNDIAL, [FILL_COMPOST]: COMPOST_BIN, [EMPTY_COMPOST]: COMPOST_BIN, [DRAW_CURTAINS]: CURTAINS, [STAND_PUT]: ANY_STAND, [STAND_SWAP]: ANY_STAND,
+  ...Object.fromEntries(STAND_SLOTS.map((s) => [STAND_TAKE(s), ANY_STAND])),
 };
 /** The thing in the pack a bin's Add would put in: the one named, if the bin takes it, or the first it takes. */
 export function toCompost(g: Game, t: Target): Item | undefined {
@@ -287,7 +289,7 @@ export function decorRefusal(g: Game, id: string, t: Target): string | null {
     if (!d.heap) return DECOR_SAID.binEmpty;
     return heapReady(d.heap, now) ? null : DECOR_SAID.notReady;
   }
-  if (f.kind === ARMOUR_STAND) {
+  if (isStand(f.kind)) {
     const mine = standNotYours(g, f);
     if (mine) return mine;
     if (id === STAND_PUT) {
@@ -341,23 +343,23 @@ export const DECOR_ACTIONS: ActionDef[] = [
   job({
     id: STAND_PUT, label: 'Put on stand', verb: 'dressing the stand', baseTime: DRESS_TIME,
     labelFor: (t, g) => {
-      const f = pieceOf(g, t, ARMOUR_STAND);
+      const f = pieceOf(g, t, ANY_STAND);
       const it = f && toStand(g, f, t);
       return it ? `Put on stand: ${wordOf(it.id)}` : 'Put on stand';
     },
-    applies: (t, g) => !!pieceOf(g, t, ARMOUR_STAND),
+    applies: (t, g) => !!pieceOf(g, t, ANY_STAND),
   }),
   ...STAND_SLOTS.map((s) => job({
     id: STAND_TAKE(s), label: `Take off ${slotWord(s)}`, verb: 'taking it off the stand', baseTime: DRESS_TIME,
     labelFor: (t, g) => {
-      const on = pieceOf(g, t, ARMOUR_STAND)?.decor?.worn?.[s];
+      const on = pieceOf(g, t, ANY_STAND)?.decor?.worn?.[s];
       return on ? `Take off ${wordOf(on[0])}` : `Take off ${slotWord(s)}`;
     },
-    applies: (t, g) => !!pieceOf(g, t, ARMOUR_STAND)?.decor?.worn?.[s],
+    applies: (t, g) => !!pieceOf(g, t, ANY_STAND)?.decor?.worn?.[s],
   })),
   job({
     id: STAND_SWAP, label: 'Swap with worn', verb: 'changing armour', baseTime: SWAP_TIME, stamina: 0.03,
-    applies: (t, g) => !!pieceOf(g, t, ARMOUR_STAND),
+    applies: (t, g) => !!pieceOf(g, t, ANY_STAND),
   }),
 ];
 
@@ -369,5 +371,5 @@ describeFrom(COMPOST_BIN, {
 });
 describeFrom(STONE_LANTERN, { reach: STONE_LANTERN_REACH });
 describeFrom(WOVEN_RUG, { patterns: listedOr([...RUG_PATTERNS]), colours: RUG_COLOURS });
-describeFrom(ARMOUR_STAND, { slots: listed(STAND_SLOTS.map(slotWord)), n: STAND_SLOTS.length });
+for (const id of STANDS) describeFrom(id, { slots: listed(STAND_SLOTS.map(slotWord)), n: STAND_SLOTS.length });
 describeFrom(COMPOST, { boost: COMPOST_BOOST });

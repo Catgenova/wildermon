@@ -2,7 +2,7 @@ import { ACTION_BY_ID, type Target } from '../game/actions';
 import {
   compostTakes, DRAW_CURTAINS, EMPTY_COMPOST, FILL_COMPOST, READ_SUNDIAL, STAND_PUT, STAND_SLOTS, STAND_SWAP, STAND_TAKE,
 } from '../game/decor';
-import { ARMOUR_STAND, COMPOST_BIN, CURTAINS, SUNDIAL } from '../game/decordefs';
+import { COMPOST_BIN, CURTAINS, STANDS, SUNDIAL } from '../game/decordefs';
 import type { PlacedFurniture } from '../game/furniture';
 import type { Game } from '../game/game';
 import { isArmour, slotOf, SLOT_NAMES, type Slot } from '../game/gear';
@@ -15,7 +15,7 @@ const JOBS: Readonly<Record<string, readonly string[]>> = {
   [SUNDIAL]: [READ_SUNDIAL],
   [COMPOST_BIN]: [FILL_COMPOST, EMPTY_COMPOST],
   [CURTAINS]: [DRAW_CURTAINS],
-  [ARMOUR_STAND]: [STAND_PUT, ...STAND_SLOTS.map(STAND_TAKE), STAND_SWAP],
+  ...Object.fromEntries(STANDS.map((s) => [s, [STAND_PUT, ...STAND_SLOTS.map(STAND_TAKE), STAND_SWAP]])),
 };
 
 /** What a job that takes a thing from the pack is offered: a compost bin's Add, every stack it takes; a stand's Put on stand, every armour piece, carried and worn. */

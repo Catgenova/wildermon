@@ -41,7 +41,7 @@ import {
   STAND_PUT, STAND_SLOTS, STAND_SWAP, STAND_TAKE, stoneLanternLight, sundialSays, swapPlan, swapSaid, type DecorSaid,
 } from '../../src/game/decor';
 import {
-  ARMOUR_STAND, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN, STONE_LANTERN_REACH,
+  ARMOUR_STAND, MANNEQUIN_A, MANNEQUIN_B, STAND_BODY, STANDS, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, CURTAINS, RUG_COLOURS, RUG_PATTERNS, STONE_LANTERN, STONE_LANTERN_REACH,
   SUNDIAL, WOVEN_RUG,
 } from '../../src/game/decordefs';
 import { GARDEN_SAID, MOUNT_SAID } from '../../src/game/garden';
@@ -53,7 +53,7 @@ import { STROKE_BY_ID } from '../../src/audio/strokes';
 import { TileType } from '../../src/world/tiles';
 import { psql, ok, bad, check } from './harness';
 
-const PIECES = [SUNDIAL, COMPOST_BIN, STONE_LANTERN, WOVEN_RUG, CURTAINS, ARMOUR_STAND];
+const PIECES = [SUNDIAL, COMPOST_BIN, STONE_LANTERN, WOVEN_RUG, CURTAINS, MANNEQUIN_A, MANNEQUIN_B];
 const sq = (s: string): string => `'${s.replace(/'/g, "''")}'`;
 
 /* ---- 1. the pieces, their recipes, their items and their jobs, the same on both sides ---------------- */
@@ -76,7 +76,7 @@ for (const id of PIECES) {
 check('a sundial is masonry of stone and brass; a stone lantern masonry of stone; a compost bin and an armour stand carpentry, a stand with a post',
   RECIPE_BY_ID.get(`make_${SUNDIAL}`)?.skill === 'masonry' && ['stone_slab', 'brass_lump'].every((i) => !!RECIPE_BY_ID.get(`make_${SUNDIAL}`)?.inputs.some((x) => x.item === i))
   && RECIPE_BY_ID.get(`make_${STONE_LANTERN}`)?.skill === 'masonry' && RECIPE_BY_ID.get(`make_${COMPOST_BIN}`)?.skill === 'carpentry'
-  && RECIPE_BY_ID.get(`make_${ARMOUR_STAND}`)?.skill === 'carpentry' && !!RECIPE_BY_ID.get(`make_${ARMOUR_STAND}`)?.inputs.some((x) => x.item === 'timber'));
+  && STANDS.every((s) => RECIPE_BY_ID.get(`make_${s}`)?.skill === 'carpentry' && !!RECIPE_BY_ID.get(`make_${s}`)?.inputs.some((x) => x.item === 'timber')));
 check('a woven rug is tailoring from yarn at a loom; curtains tailoring from cloth',
   RECIPE_BY_ID.get(`make_${WOVEN_RUG}`)?.station === 'loom' && RECIPE_BY_ID.get(`make_${WOVEN_RUG}`)?.skill === 'tailoring'
   && !!RECIPE_BY_ID.get(`make_${WOVEN_RUG}`)?.inputs.some((x) => x.item === 'yarn')
@@ -86,6 +86,14 @@ check('a woven rug and curtains take a dye, on the island too', DYEABLE_ITEMS.ha
 check(`a stone lantern gathers moss, which is what a scurra scrubs`, psql(`select mossy::text from furniture_def where id = '${STONE_LANTERN}'`) === 'true');
 check('an armour stand has a slot for every place armour is worn', STAND_SLOTS.join(',') === ARMOUR_SLOTS.join(',')
   && psql(`select array_to_string(stand_slots(), ',')`) === ARMOUR_SLOTS.join(','));
+check('two armour stands, a mannequin of each body: Body A and Body B, the same stands on the island',
+  STANDS.join(',') === `${MANNEQUIN_A},${MANNEQUIN_B}` && STAND_BODY[MANNEQUIN_A] === 'man' && STAND_BODY[MANNEQUIN_B] === 'woman'
+  && ITEM_DEFS[MANNEQUIN_A]?.name === 'Body A mannequin' && ITEM_DEFS[MANNEQUIN_B]?.name === 'Body B mannequin'
+  && psql(`select array_to_string(stand_kinds(), ',')`) === STANDS.join(','), psql(`select array_to_string(stand_kinds(), ',')`));
+check('the old armour stand is made no more: no item, piece or recipe of it on either side',
+  !ITEM_DEFS[ARMOUR_STAND] && !FURNITURE_BY_ID.has(ARMOUR_STAND) && !RECIPE_BY_ID.has(`make_${ARMOUR_STAND}`)
+  && psql(`select (select count(*) from item_def where id = '${ARMOUR_STAND}') + (select count(*) from furniture_def where id = '${ARMOUR_STAND}')
+    + (select count(*) from recipe where id = 'make_${ARMOUR_STAND}')`) === '0');
 
 const jobsIsle = psql(`select string_agg(id || ':' || label || ':' || coalesce(skill, '-') || ':' || base_time, '|' order by id)
   from action_def where id = any (array[${DECOR_JOBS.map(sq).join(', ')}]::text[])`);
@@ -311,7 +319,7 @@ begin
 
   -- 7. An armour stand.
   ${at(14, 6)}
-  ${build(ARMOUR_STAND)}
+  ${build(MANNEQUIN_B)}
   ${place('STD', TILE('v_it', 14, 6, 's', 0, 0))}
   v_std := v_pl;
   delete from item where world_id = w and holder_uid = u;

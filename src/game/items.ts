@@ -710,8 +710,11 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   stone_lantern: { name: 'Stone lantern', category: 'misc', weight: 40, decay: 3, description: 'Night light for everyone: {reach} tiles, any QL. Burns nothing. Greens with moss; scrub with a brush.' },
   woven_rug: { name: 'Woven rug', category: 'misc', weight: 3, decay: 6, description: 'Pattern chosen at the loom: {patterns}. Dye up to {colours} times, a colour each. Lies flat.' },
   curtains: { name: 'Curtains', category: 'misc', weight: 2, decay: 6, description: '{where} Open or close, for everyone. Dyeable.' },
-  armour_stand: { name: 'Armour stand', category: 'misc', weight: 14, decay: 4,
-    description: 'Holds {n} pieces of armour, one a slot ({slots}). Swap with worn: every slot in one go. Changed by whoever set it down, or a rank that may use the crates on its settlement.' },
+  // The two armour stands, a mannequin of each body (`STANDS`, `STAND_BODY`).
+  mannequin_a: { name: 'Body A mannequin', category: 'misc', weight: 14, decay: 4,
+    description: 'Armour stand, Body A. Holds {n} pieces of armour, one a slot ({slots}). Swap with worn: every slot in one go. Changed by whoever set it down, or a rank that may use the crates on its settlement.' },
+  mannequin_b: { name: 'Body B mannequin', category: 'misc', weight: 14, decay: 4,
+    description: 'Armour stand, Body B. Holds {n} pieces of armour, one a slot ({slots}). Swap with worn: every slot in one go. Changed by whoever set it down, or a rank that may use the crates on its settlement.' },
   // The furnishings (`furnish.ts`, `furnishdefs.ts`).
   birdbath: { name: 'Birdbath', category: 'misc', weight: 30, decay: 3, description: 'Water: always full. Songbirds: by day, none in {away}.' },
   stone_bench: { name: 'Stone bench', category: 'misc', weight: 40, decay: 0, description: '{seat} Does not rot.' },

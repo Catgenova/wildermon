@@ -1,5 +1,5 @@
 /**
- * An armour stand dressed from its menu, through the island's door.
+ * An armour stand (a Body A mannequin) dressed from its menu, through the island's door.
  *
  * Reported: "unable to add armor to the armor stand". The stand's jobs (`decor.ts`) were on both sides and the island
  * did them, but the piece's menu never listed them: a click on a stand offered Pick up and nothing else, and the same
@@ -20,7 +20,7 @@ import { Game } from '../../src/game/game';
 import type { IslandGround } from '../../src/contract/ground';
 import { ACTION_BY_ID, type ActionDef, type Target } from '../../src/game/actions';
 import { DECOR_SAID, decorDone, decorSaid, STAND_PUT, STAND_TAKE } from '../../src/game/decor';
-import { ARMOUR_STAND } from '../../src/game/decordefs';
+import { MANNEQUIN_A } from '../../src/game/decordefs';
 import { ARMOUR_SLOTS, SLOT_NAMES, type Slot } from '../../src/game/gear';
 import { itemDef } from '../../src/game/items';
 import { lacksSaid } from '../../src/game/ranks';
@@ -132,10 +132,10 @@ begin
   insert into deed_member (world_id, founder, uid, role, rank_id)
     values (w, u, o, 'builder', (select id from deed_rank_def where world_id = w and founder = u and name = 'Builder'));
   -- The stand, set down by Mira.
-  v_it := give(w, u, ${sq(ARMOUR_STAND)}, 1, 40);
+  v_it := give(w, u, ${sq(MANNEQUIN_A)}, 1, 40);
   perform act_perform(w, u, 'place_furniture', jsonb_build_object('kind', 'tile', 'itemUid', v_it, 'x', ${AT[0]}, 'y', ${AT[1]}, 'sx', 0, 'sy', 0, 'facing', 's'));
 end $t$;
-select id from placed where world_id = ${W} and kind = 'furniture' and sub = ${sq(ARMOUR_STAND)};`).split('\n').pop());
+select id from placed where world_id = ${W} and kind = 'furniture' and sub = ${sq(MANNEQUIN_A)};`).split('\n').pop());
   check('the stand is set down', std > 0, String(std));
 
   const putRow = (rows: MenuItem[]): MenuItem | undefined => rows.find((r) => r.label.startsWith(ACTION_BY_ID.get(STAND_PUT)!.label));

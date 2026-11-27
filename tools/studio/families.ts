@@ -15,7 +15,8 @@ import '../../src/game/actions';
 import { SPECIES, type SpeciesDef } from '../../src/game/creatures';
 import { FURNITURE, furnitureDef } from '../../src/game/furniture';
 import '../../src/render/gardenlook';
-import { MANNEQUIN_KEPT, STAND_GEAR } from '../../src/render/decorlook';
+import { MANNEQUIN_KEPT, STAND_GEAR, STAND_LOOK } from '../../src/render/decorlook';
+import { isStand } from '../../src/game/decordefs';
 import { gearFrom } from '../../src/game/worn';
 import { dyeTint } from '../../src/game/dyestuffs';
 import { ENCHANTERS_PLINTH } from '../../src/game/enchant';
@@ -226,7 +227,7 @@ const furniture: Family = {
     const style: Style = kit || den || plinth ? 'kit' : 'old';
     const st: Variant[] = kit?.states ? kit.states.map((s) => ({ label: s.label, set: { state: s.trim } })) : plinth ? states(['bare', 'runed 1', 'runed 2']) : [];
     // An armour stand's mannequin bare and in a full set (`decorlook.ts`): drawn over its bake, by the state.
-    if (f.id === 'armour_stand') st.push({ label: 'empty', set: { state: STAND_EMPTY } }, { label: 'full set', set: { state: STAND_DRESSED } });
+    if (isStand(f.id)) st.push({ label: 'empty', set: { state: STAND_EMPTY } }, { label: 'full set', set: { state: STAND_DRESSED } });
     if (kit?.layers) for (let i = 0; i < kit.layers; i++) st.push({ label: `layer ${i}`, set: { layer: i } });
     // The dye and the woods only for a piece whose model takes them: a kit piece that says what it uses and leaves them out
     // (a lair, a trophy, a brazier) draws the same whatever it is given.
@@ -253,7 +254,7 @@ const furniture: Family = {
   prepare: async (a) => {
     if (a.kind === 'carved_figure' || a.kind === 'plush_wildermon') await loadAllWildermon();
     // An armour stand's mannequin is a sculpted body (`decorlook.ts`): the bodies on, and its bakes in, before it is drawn.
-    if (a.kind === 'armour_stand') await mannequinBaked();
+    if (isStand(a.kind)) await mannequinBaked();
   },
   draw: (ctx, sx, sy, zoom, a, o) => {
     const view = pieceView(o.side, o.turn);
@@ -268,7 +269,8 @@ const furniture: Family = {
     const trim = layered ? o.layer : wheels && o.motion === 'wheels' ? o.frame : o.state;
     kitBypass(false);
     const box = withClock(t, () => drawFurniture(ctx, sx, sy, zoom, a.kind, o.lit, o.tint ? dyeTint(o.tint) ?? undefined : undefined, trim, view, o.material));
-    if (a.kind === 'armour_stand' && o.motion !== 'live') withClock(t, () => drawFurnitureLive(ctx, sx, sy, zoom, a.kind, view, o.night, { x: 0, y: 0, force: 0, t, seed: o.state === STAND_DRESSED ? STAND_DRESSED : STAND_EMPTY }));
+    if (isStand(a.kind)) for (const seed of [STAND_EMPTY, STAND_DRESSED]) STAND_LOOK.set(seed, a.kind);
+    if (isStand(a.kind) && o.motion !== 'live') withClock(t, () => drawFurnitureLive(ctx, sx, sy, zoom, a.kind, view, o.night, { x: 0, y: 0, force: 0, t, seed: o.state === STAND_DRESSED ? STAND_DRESSED : STAND_EMPTY }));
     if (o.motion === 'live' || o.motion === 'wind') {
       const air = { x: Math.cos(t * 0.7), y: Math.sin(t * 0.7), force: 0.8, t };
       withClock(t, () => drawFurnitureLive(ctx, sx, sy, zoom, a.kind, view, o.night, air));
@@ -433,7 +435,7 @@ function kitFile(kind: string): string {
     lavender_arch: 'rosearch', rose_arch: 'rosearch', stone_lavender_arch: 'rosearch', stone_rose_arch: 'rosearch', bench: 'seating', stool: 'seating',
     bookshelf: 'shelving', crate_shelf: 'shelving', shelves: 'shelving', great_sign: 'signs', sign: 'signs', stall: 'stall', coat_rack: 'stands',
     lectern: 'stands', statue: 'statue', table: 'tables', long_table: 'tables', desk: 'tables', trash_crate: 'trash', trellis: 'trellis', well: 'turnery',
-    sundial: 'decor', compost_bin: 'decor', stone_lantern: 'decor', woven_rug: 'decor', curtains: 'decor', armour_stand: 'decor',
+    sundial: 'decor', compost_bin: 'decor', stone_lantern: 'decor', woven_rug: 'decor', curtains: 'decor', mannequin_a: 'decor', mannequin_b: 'decor',
     birdbath: 'furnish', stone_bench: 'furnish', garden_swing: 'furnish', gazebo: 'furnish', hay_bale: 'furnish', water_trough: 'furnish', signpost: 'furnish',
     cairn: 'furnish', fireplace: 'furnish', four_poster_bed: 'furnish', vase: 'furnish', side_table: 'furnish', footstool: 'furnish', fish_mount: 'furnish',
     lantern_pole: 'fittings', moss_boulder: 'fittings', tree_bench: 'fittings', spice_shelf: 'fittings', window_seat: 'fittings', training_dummy: 'fittings',

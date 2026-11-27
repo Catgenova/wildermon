@@ -1,7 +1,7 @@
 /**
- * The six home pieces' numbers and kinds (`decor.ts` holds their rules): a
- * sundial, a compost bin, a stone lantern, a woven rug, curtains and an
- * armour stand. A leaf of their own, so that the furniture table
+ * The home pieces' numbers and kinds (`decor.ts` holds their rules): a
+ * sundial, a compost bin, a stone lantern, a woven rug, curtains and two
+ * mannequins (Body A, Body B). A leaf of their own, so that the furniture table
  * (`furniture.ts`), the rules and the renderer can each read them. Every
  * number here reaches the island as a def (`scripts/dump-defs.ts`).
  */
@@ -13,6 +13,15 @@ export const COMPOST_BIN = 'compost_bin';
 export const STONE_LANTERN = 'stone_lantern';
 export const WOVEN_RUG = 'woven_rug';
 export const CURTAINS = 'curtains';
+/** The armour stands: a mannequin of each of the two bodies, Body A (`man`) and Body B (`woman`). */
+export const MANNEQUIN_A = 'mannequin_a';
+export const MANNEQUIN_B = 'mannequin_b';
+/** Every piece that holds armour: the island's `stand_kinds()`. */
+export const STANDS: readonly string[] = [MANNEQUIN_A, MANNEQUIN_B];
+/** The body a stand's mannequin is (the look's `gender`). */
+export const STAND_BODY: Readonly<Record<string, 'man' | 'woman'>> = { [MANNEQUIN_A]: 'man', [MANNEQUIN_B]: 'woman' };
+export const isStand = (kind: string | undefined): boolean => !!kind && STANDS.includes(kind);
+/** The one armour stand before the two: every one set down or carried is a Body A mannequin now (migration `_mannequins`). */
 export const ARMOUR_STAND = 'armour_stand';
 
 /* ---- a stone lantern -------------------------------------------------------------------- */

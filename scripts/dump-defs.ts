@@ -247,7 +247,7 @@ import {
   VASE_FLOWER, VASE_FRESH, VASE_HOLDS, WATER_TROUGH,
 } from '../src/game/furnishdefs';
 import {
-  ARMOUR_STAND, COMPOST, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, COMPOST_TAKES, CURTAINS, RUG_COLOURS, RUG_PATTERNS,
+  STANDS, COMPOST, COMPOST_BIN, COMPOST_BOOST, COMPOST_DAYS, COMPOST_HOLDS, COMPOST_PER, COMPOST_SPOILED, COMPOST_TAKES, CURTAINS, RUG_COLOURS, RUG_PATTERNS,
   SPREAD_COST, SPREAD_SKILL, STONE_LANTERN, SUNDIAL, WOVEN_RUG,
 } from '../src/game/decordefs';
 import {
@@ -3117,7 +3117,7 @@ out.push(`create or replace function figure_said(p_key text) returns text langua
 out.push(`create or replace function decor_action(p_action text) returns boolean language sql immutable as $fn$ select p_action = any (array[${DECOR_JOBS.map(q).join(', ')}]::text[]) $fn$;`);
 for (const [fn, v] of [
   ['sundial_kind', SUNDIAL], ['compost_bin_kind', COMPOST_BIN], ['stone_lantern_kind', STONE_LANTERN], ['woven_rug_kind', WOVEN_RUG],
-  ['curtains_kind', CURTAINS], ['armour_stand_kind', ARMOUR_STAND], ['compost_item', COMPOST], ['spread_skill', SPREAD_SKILL],
+  ['curtains_kind', CURTAINS], ['compost_item', COMPOST], ['spread_skill', SPREAD_SKILL],
 ] as Array<[string, string]>) out.push(`create or replace function ${fn}() returns text language sql immutable as $fn$ select ${q(v)} $fn$;`);
 for (const [fn, v] of [
   ['compost_spoiled', COMPOST_SPOILED], ['compost_holds', COMPOST_HOLDS], ['compost_per', COMPOST_PER], ['spread_cost', SPREAD_COST], ['rug_colours', RUG_COLOURS],
@@ -3128,6 +3128,7 @@ for (const [fn, v] of [
 out.push(`create or replace function compost_takes() returns text[] language sql immutable as $fn$ select array[${COMPOST_TAKES.map(q).join(', ')}]::text[] $fn$;`);
 out.push(`create or replace function rug_patterns() returns text[] language sql immutable as $fn$ select array[${RUG_PATTERNS.map(q).join(', ')}]::text[] $fn$;`);
 out.push(`create or replace function stand_slots() returns text[] language sql immutable as $fn$ select array[${STAND_SLOTS.map(q).join(', ')}]::text[] $fn$;`);
+out.push(`create or replace function stand_kinds() returns text[] language sql immutable as $fn$ select array[${STANDS.map(q).join(', ')}]::text[] $fn$;`);
 out.push(`create or replace function decor_said(p_key text, p_slot text) returns text language sql immutable as $fn$ select replace(case p_key ${
   (Object.keys(DECOR_SAID) as DecorSaid[]).map((k) => `when ${q(k)} then ${q(DECOR_SAID[k])} `).join('')}end, '{slot}', upper(left(coalesce(p_slot, ''), 1)) || substr(coalesce(p_slot, ''), 2)) $fn$;`);
 out.push(`create or replace function decor_done(p_key text, p_what text, p_n int, p_held int, p_of int) returns text language sql immutable as $fn$ select replace(replace(replace(replace(case p_key ${

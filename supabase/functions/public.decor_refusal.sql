@@ -23,8 +23,10 @@ begin
   end if;
   v_kind := case when p_action = 'read_sundial' then sundial_kind()
                  when p_action in ('fill_compost', 'empty_compost') then compost_bin_kind()
-                 when p_action = 'draw_curtains' then curtains_kind() else armour_stand_kind() end;
-  select * into pl from placed where world_id = p_world and id = nullif(p_target->>'id', '')::bigint and kind = 'furniture' and sub = v_kind;
+                 when p_action = 'draw_curtains' then curtains_kind() end;
+  -- A stand's jobs at either stand, whichever body (`stand_kinds`).
+  select * into pl from placed where world_id = p_world and id = nullif(p_target->>'id', '')::bigint and kind = 'furniture'
+     and (sub = v_kind or (v_kind is null and sub = any (stand_kinds())));
   if not found then return 'It is gone.'; end if;
   select * into d from furniture_def where id = pl.sub;
   if not placed_in_reach(p_world, p_uid, pl.id) then return lamp_too_far_said(lower(d.name)); end if;
@@ -38,7 +40,7 @@ begin
     if g->'heap' is null then return decor_said('binEmpty', null); end if;
     return case when heap_ready(g->'heap') then null else decor_said('notReady', null) end;
   end if;
-  if v_kind = armour_stand_kind() then
+  if pl.sub = any (stand_kinds()) then
     v_why := stand_refusal(p_world, p_uid, pl);
     if v_why is not null then return v_why; end if;
     if p_action = 'stand_put' then
