@@ -19,7 +19,7 @@ AS $function$
                     'rpc_friend', 'rpc_unfriend', 'rpc_invite', 'rpc_invite_answer', 'rpc_join_answer', 'rpc_join_ask',
                     'rpc_join_withdraw', 'rpc_leave_deed', 'rpc_letter', 'rpc_parcel', 'rpc_notice_post',
                     'rpc_notice_drop', 'rpc_order', 'rpc_order_cancel', 'rpc_order_fill', 'rpc_price', 'rpc_takings',
-                    'rpc_say', 'rpc_report_error') then 'deal'
+                    'rpc_say', 'rpc_report_error', 'rpc_perf_report') then 'deal'
     when p_door in ('rpc_put_land', 'rpc_ready') then 'land'
     else 'act' end
 $function$

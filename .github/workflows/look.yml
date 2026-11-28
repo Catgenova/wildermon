@@ -30,6 +30,9 @@ on:
       perf:
         description: 'Anything: the wild by birth and block, and each awake player''s reads timed, each rolled back (blank skips it)'
         default: ''
+      play_perf:
+        description: 'Days: the Unity client''s performance reports from play, as the perf-reports artifact for tools/perf/report.mjs (blank skips it)'
+        default: ''
 
 # Reads the repository and nothing else; the project is reached with the AI environment's secrets.
 permissions:
@@ -1679,3 +1682,30 @@ jobs:
           ask "smiths: where the island sends each next" "select c.id, c.species, s.* from creature c join player p on p.world_id = c.world_id and p.name = 'catgenova'
              cross join lateral errand_step(c.world_id, c.id) s
             where c.keeper = p.uid and c.mode = 'deed' and c.species in ('dowse', 'siffa', 'ulva') order by c.id"
+      - name: Performance reports from play
+        # Asked for: "we need that better way of receiving and breaking down performance reports from normal play". The
+        # Unity client's reports (`rpc_perf_report`, PerfOverlay.cs) of the last `play_perf` days, each with the player's
+        # name, as JSON through the Management API (the CLI prints tables), kept as the perf-reports artifact; the Unity
+        # repository's tools/perf/report.mjs downloads it and breaks it down. Reads only.
+        if: inputs.play_perf != ''
+        continue-on-error: true
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF || 'glebtboagnafcgwjjvfy' }}
+          DAYS: ${{ inputs.play_perf }}
+        run: |
+          days=$(printf '%s' "$DAYS" | tr -cd '0-9'); days=${days:-7}
+          q="select r.id, r.at, r.session, r.build, r.device, coalesce(p.name, left(r.uid::text, 8)) as who, r.minutes, r.spikes
+               from perf_report r left join player p on p.uid = r.uid and p.world_id = r.world_id
+              where r.at > now() - make_interval(days => $days) order by r.at"
+          curl -s -m 300 -X POST -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H 'Content-Type: application/json' \
+            "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" -d "$(jq -n --arg q "$q" '{query: $q}')" > perf-reports.json
+          jq -r 'if type == "array" then "\(length) reports, \(map(.session) | unique | length) sessions, \(map(.who) | unique | length) players" else tostring[0:600] end' perf-reports.json \
+            || head -c 600 perf-reports.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: inputs.play_perf != ''
+        continue-on-error: true
+        with:
+          name: perf-reports
+          path: perf-reports.json
+          if-no-files-found: ignore

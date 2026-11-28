@@ -451,6 +451,14 @@ const ANCIENT_FINDS = ['ancient_comb', 'ancient_file', 'ancient_lamp', 'ancient_
   'ancient_brace', 'ancient_whetstone', 'ancient_seed_jar', STAMP, 'bronze_mirror', TABLET];
 
 export const NEWS: News[] = [
+  // The Unity client's performance reports (PerfOverlay.cs; migration `_perf_reports`, `rpc_perf_report`).
+  {
+    n: 740,
+    day: '2026-11-27',
+    lines: () => [
+      'New: in the Unity client, frame times sent to the island every 10 minutes: each minute\'s fps, median, 1% worst, worst and costliest parts; the 40 worst spikes and their causes.',
+    ],
+  },
   // Ancient finds stack (`stackable`; migration `_ancient_finds_stack`, `press_stamp`, `pressStamp`).
   {
     n: 739,

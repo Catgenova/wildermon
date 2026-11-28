@@ -1842,6 +1842,12 @@
     "why": ""
   },
   {
+    "file": "supabase/test/perfreport.ts",
+    "title": "How the Unity client ran is written down on the island",
+    "shard": 4,
+    "why": "Asked for: \"we need that better way of receiving and breaking down performance reports from normal play\". rpc_perf_report writes a report down, cut to length, refuses one with no minutes or too much in it, twelve an hour from one account, and nobody reads the table back through the API."
+  },
+  {
     "file": "supabase/test/wanted.ts",
     "title": "Buy orders on the board",
     "shard": 4,

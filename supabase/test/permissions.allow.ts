@@ -197,6 +197,8 @@ export const TABLES: Record<string, Read> = {
   mote_swirl: 'none',
   // Every swirl collected, for attunement (`infusion.ts`): the island's own.
   mote_take: 'none',
+  // How the Unity client ran, as it reports it (`rpc_perf_report`): read by the Look workflow as the owner.
+  perf_report: 'none',
   planter_crop: 'none',
   sale: 'none',
   spring: 'none',
@@ -338,6 +340,7 @@ export const EXECUTE: Record<'anon' | 'authenticated', readonly string[]> = {
     "rpc_owner_unmute(uuid,uuid)",
     "rpc_parcel(uuid,uuid,text,bigint[])",
     "rpc_parcels(uuid)",
+    "rpc_perf_report(text,text,text,jsonb,jsonb,uuid)",
     "rpc_plan_area(uuid,jsonb)",
     "rpc_plan_hidden_wall(uuid,jsonb,integer)",
     "rpc_plan_undo(uuid)",
