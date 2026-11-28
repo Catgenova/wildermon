@@ -451,6 +451,14 @@ const ANCIENT_FINDS = ['ancient_comb', 'ancient_file', 'ancient_lamp', 'ancient_
   'ancient_brace', 'ancient_whetstone', 'ancient_seed_jar', STAMP, 'bronze_mirror', TABLET];
 
 export const NEWS: News[] = [
+  // New bodies a connection may make a day (private.ip_body_cap; migration `_body_cap_five`).
+  {
+    n: 741,
+    day: '2026-11-28',
+    lines: () => [
+      'Changed: new bodies from one connection in a day: 5 (was 3).',
+    ],
+  },
   // The Unity client's performance reports (PerfOverlay.cs; migration `_perf_reports`, `rpc_perf_report`).
   {
     n: 740,

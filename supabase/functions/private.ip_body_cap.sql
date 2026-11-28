@@ -4,4 +4,4 @@ CREATE OR REPLACE FUNCTION private.ip_body_cap()
  RETURNS integer
  LANGUAGE sql
  IMMUTABLE
-AS $function$ select 3 $function$
+AS $function$ select 5 $function$
