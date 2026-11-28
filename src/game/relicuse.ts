@@ -38,9 +38,14 @@ export const TABLET = 'rune_tablet';
 /** The goes a stamp has left: a fresh one carries none written on it, and is good for all of them. */
 export const stampGoes = (it: Pick<Item, 'charges'>): number => Math.max(0, it.charges ?? STAMP_GOES);
 
-/** The stamp a craft or a forging is pressed with: the first one carried with a go left in it. */
+/**
+ * The stamp a craft or a forging is pressed with: of those carried with a go left in it, the one with fewest left,
+ * then the lowest uid, so a started stamp is worn out before a fresh one off the pile is started. The island's
+ * `press_stamp`.
+ */
 export const stampCarried = (g: Game): Item | undefined =>
-  g.inventory.items.find((it) => it.id === STAMP && stampGoes(it) > 0);
+  g.inventory.items.filter((it) => it.id === STAMP && stampGoes(it) > 0)
+    .sort((a, b) => stampGoes(a) - stampGoes(b) || a.uid - b.uid)[0];
 
 /**
  * A craft or a forging with a stamp carried: the first step of rarity at
@@ -55,7 +60,11 @@ export function pressStamp(g: Game, first: number): number {
     g.inventory.remove(stamp.uid, 1);
     g.logMsg(`Ancient stamp: rare chance ×${STAMP_RARE}. Last go; stamp used up.`, 'event');
   } else {
-    stamp.charges = left;
+    // One off the pile, its goes on it alone, onto a pile with as many left or one of its own (`sameStack`).
+    const one = g.inventory.take(stamp.uid, 1);
+    if (!one) return first;
+    one.charges = left;
+    g.inventory.addItem(one);
     g.logMsg(`Ancient stamp: rare chance ×${STAMP_RARE}. ${left} of ${STAMP_GOES} goes left.`, 'event');
   }
   g.events.emit('inventory');

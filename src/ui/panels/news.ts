@@ -446,8 +446,21 @@ const glassGateCardWas = (): string => idleSays(GLASS_GATE_IDLE, null, null, und
 const firstScroll = (): Recipe => RECIPE_BY_ID.get(`make_${FIRST_FORMULA}_scroll`)!;
 /** Stonecutting's, milling's and glassblowing's first making, opened at a new body's level (697). */
 const FIRST_MAKINGS = ['make_stone_brick', 'make_flour', 'make_glass'];
+/** A relic's restored things, made stackable (739). */
+const ANCIENT_FINDS = ['ancient_comb', 'ancient_file', 'ancient_lamp', 'ancient_pot', 'ancient_collar', 'ancient_bridle',
+  'ancient_brace', 'ancient_whetstone', 'ancient_seed_jar', STAMP, 'bronze_mirror', TABLET];
 
 export const NEWS: News[] = [
+  // Ancient finds stack (`stackable`; migration `_ancient_finds_stack`, `press_stamp`, `pressStamp`).
+  {
+    n: 739,
+    day: '2026-11-27',
+    lines: () => [
+      `Changed: ${listed(ANCIENT_FINDS.map((id) => itemDef(id).name.toLowerCase()))} stack; QL the average.`,
+      'Changed: those already apart in packs, bags, stores, crates and panniers put into one pile each.',
+      `Changed: ${itemDef(STAMP).name.toLowerCase()} pressed off a pile: one taken off, its goes its own; a started one pressed first.`,
+    ],
+  },
   // Stone floors' moss scrubbed (src/game/greening.ts greeningFloor; 20261127233000_floors_scrubbed.sql).
   {
     n: 738,

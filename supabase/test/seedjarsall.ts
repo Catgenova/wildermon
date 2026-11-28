@@ -1,11 +1,12 @@
 /**
  * Ancient seed jars: Open, All (N).
  *
- * Asked for: "add an open all option on ancient jars". Seed jars do not stack, and the goes of one job are asked of
- * the job's own target, so Open opens the jar named while it is carried and else the next one in the pack, lowest
- * uid first. This asks, of both sides:
+ * Asked for: "add an open all option on ancient jars". The goes of one job are asked of the job's own target, so Open
+ * opens the jar named while it is carried and else the next one in the pack, lowest uid first. Seed jars stack now
+ * (`20261128010900_ancient_finds_stack.sql`), so five given at QL 11 to 15 are one pile at their average. This asks,
+ * of both sides:
  *
- *   * that Open All (5) on five jars opens all five, one a go, the named jar first, to 5 × `JAR_SEEDS` seeds;
+ *   * that Open All (5) on a pile of five opens all five, one a go, each at the pile's QL, to 5 × `JAR_SEEDS` seeds;
  *   * that with no jar left Open is refused, in the same words;
  *   * and of the browser's menu, that two or more jars offer One and All (N), N to `JOB_GOES_MOST`, and one a plain Open.
  *
@@ -21,8 +22,10 @@ import { psql, check, finish } from './harness';
 
 const U = '5eed0a11-0000-4000-8000-00000000a11a';
 const QLS = [11, 12, 13, 14, 15];
-const NAMED = 2; // the jar at QL 13
-const ORDER = [QLS[NAMED], ...QLS.filter((_, i) => i !== NAMED)].map((q) => q.toFixed(1)).join(',');
+const NAMED = 2; // the third given, which joined the pile
+/** Every jar opened at the pile's QL, the average of the five given. */
+const PILE_QL = QLS.reduce((a, b) => a + b, 0) / QLS.length;
+const ORDER = QLS.map(() => PILE_QL.toFixed(1)).join(',');
 
 /* ---- on the island ----------------------------------------------------------------- */
 
@@ -76,7 +79,7 @@ const at = (k: string): string => isle.get(k) ?? '(not said)';
 
 check(`Open All (${QLS.length}) on ${QLS.length} jars is taken on the island, and runs ${QLS.length} goes`,
   at('ASK') === 'taken' && at('GOES') === String(QLS.length), `${at('ASK')} ${at('GOES')}`);
-check('on the island, the named jar first, then the rest lowest id first', at('ORDER') === ORDER, `${at('ORDER')} | ${ORDER}`);
+check('on the island, each jar at the pile\'s QL',at('ORDER') === ORDER, `${at('ORDER')} | ${ORDER}`);
 check(`on the island, ${QLS.length} × ${JAR_SEEDS} seeds, no jar left`, at('SEEDS') === `${QLS.length * JAR_SEEDS}|0`, at('SEEDS'));
 check('on the island, no jar left: refused, "It is gone."; the run ended with no refusal said',
   at('NONE') === 'It is gone.' && at('STOPPED') === '-', `${at('NONE')} | ${at('STOPPED')}`);
@@ -107,7 +110,7 @@ for (let i = 0; i < QLS.length; i++) {
   open.perform(named, g);
 }
 const seeds = g.inventory.items.filter((it) => CROP_BY_SEED.has(it.id));
-check('in the browser, the named jar first, then the rest lowest uid first, as on the island',
+check('in the browser, each jar at the pile\'s QL, as on the island',
   opened.join(',') === ORDER && at('ORDER') === opened.join(','), opened.join(','));
 check(`in the browser, ${QLS.length} × ${JAR_SEEDS} seeds, no jar left`,
   seeds.reduce((n, it) => n + it.count, 0) === QLS.length * JAR_SEEDS && g.inventory.countAll(SEED_JAR) === 0,

@@ -4,19 +4,32 @@ CREATE OR REPLACE FUNCTION public.press_stamp(p_world uuid, p_uid uuid, p_first 
  RETURNS double precision
  LANGUAGE plpgsql
 AS $function$
-declare v_it item; v_left int;
+declare v_it item; v_left int; v_one item;
 begin
+  -- A started stamp before a fresh one (`stampCarried`).
   select * into v_it from item i
    where i.world_id = p_world and i.holder = 'player' and i.holder_uid = p_uid and i.def = 'ancient_stamp'
      and coalesce(i.charges, stamp_goes()::int) > 0
-   order by i.id limit 1;
+   order by coalesce(i.charges, stamp_goes()::int), i.id limit 1;
   if v_it.id is null then return p_first; end if;
   v_left := coalesce(v_it.charges, stamp_goes()::int) - 1;
   if v_left <= 0 then
     perform spend_stack(p_world, p_uid, v_it.id, 1);
     perform tell(p_world, p_uid, 'Ancient stamp: rare chance ×' || stamp_rare()::int || '. Last go; stamp used up.', 'event');
   else
-    update item set charges = v_left where id = v_it.id;
+    if v_it.count > 1 then
+      -- One off the pile, the whole row copied so a column added later comes too, its goes on it alone.
+      update item set count = count - 1 where id = v_it.id;
+      v_one := v_it;
+      v_one.id := nextval(pg_get_serial_sequence('public.item', 'id'));
+      v_one.count := 1; v_one.charges := v_left;
+      insert into item overriding system value values (v_one.*);
+    else
+      v_one := v_it;
+      update item set charges = v_left where id = v_it.id;
+    end if;
+    -- Onto a pile with as many goes left, where there is one.
+    perform pack_fold_one(v_one.id);
     perform tell(p_world, p_uid, 'Ancient stamp: rare chance ×' || stamp_rare()::int || '. ' || v_left || ' of '
       || stamp_goes()::int || ' goes left.', 'event');
   end if;

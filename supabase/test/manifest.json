@@ -1011,6 +1011,12 @@
     "why": "\"Old collar, old bridle, seed jar, old whetstone, makers stamp, rune tablet.\" Each restores into a thing of its own; the collar and bridle fitted once on a wildermon, the whetstone honing, the jar opening to seeds, the tablet read into a skill, the stamp pressed for its goes; refusals and lines word for word."
   },
   {
+    "file": "supabase/test/ancientstack.ts",
+    "title": "Ancient finds stack, the same on both sides",
+    "shard": 2,
+    "why": "\"Items like ancient comb, ancient seed pot, ancient file should stack.\" Every restored relic thing stacks, one pile at the average QL; a pile of stamps pressed one off at a time; the migration folds the piles already apart, a kept one left."
+  },
+  {
     "file": "supabase/test/bronzemirror.ts",
     "title": "A bronze mirror copies a parent's best trait to its young, the same on both sides",
     "shard": 2,

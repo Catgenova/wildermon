@@ -468,7 +468,7 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
   soul: { name: 'Soul', category: 'misc', weight: 0.01, stackable: true, description: 'Left by {sacrifice.soul:pct} of altar sacrifices, at the rarity of what was given. Absorb into (on the soul): an ordinary thing in your pack, or one of a stack, takes its rarity. Used up.' },
   bauble_ancient: { name: 'Ancient bauble', category: 'misc', weight: 0.1, description: 'Set in one of the {bauble.ancient.slots} ancient sockets of your settlement\'s altar. Citizens working there get its bonus added to every yield of that one action.' },
   // A relic's restored thing, used on a wildermon of yours (`creatureActions.ts`, `mirrored`).
-  bronze_mirror: { name: 'Bronze mirror', category: 'misc', weight: 0.8, decay: 3, description: 'Use on your wildermon (its menu): its next covering\'s young get its best trait (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Used up.' },
+  bronze_mirror: { name: 'Bronze mirror', category: 'misc', weight: 0.8, stackable: true, decay: 3, description: 'Use on your wildermon (its menu): its next covering\'s young get its best trait (highest rarity; first listed on a tie) at that rarity, in place of a draw. One mark at a time, used up at that covering. Used up.' },
   /*
    * What four relics are restored into, and good for on a wildermon of yours
    * (`creatureActions.ts`, `{artifact.*}`): a bone comb, an old file, an old
@@ -477,22 +477,22 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
    * The comb was `bone_comb` and the lamp `old_lamp` before; a save carries
    * them across (`RENAMED`), as the island did.
    */
-  ancient_comb: { name: 'Ancient comb', category: 'misc', weight: 0.15, decay: 3, description: 'Use on your wildermon (its menu): one age younger. Old → grown (as if just grown); grown → young (as if just born). Old: {artifact.oldSpeed:pct} speed, {artifact.oldPull:pct} pull. Grown: full. Young: cannot work, be ridden or pull. No effect on young. Used up.' },
-  ancient_file: { name: 'Ancient file', category: 'misc', weight: 0.8, decay: 3, description: 'Use on your wildermon (its menu): 1 in {artifact.fileOdds}, one rarity step up: ordinary → rare → supreme → fantastic. Every blood figure at rare, supreme, fantastic: {artifact.rareBlood} of an ordinary one; drawn bigger. Used up either way.' },
-  ancient_lamp: { name: 'Ancient lamp', category: 'misc', weight: 0.9, decay: 3, description: 'Use on your wildermon (its menu): rerolls its lowest-rarity trait (random among ties) to one it lacks, same rarity, or 1 in {artifact.lampOdds} one rarity up ({artifact.tierSteps}). Never lower. At {artifact.topTier}: always another {artifact.topTier} trait. Under {artifact.slots} traits: fills the empty slot, {artifact.lowTier}, or 1 in {artifact.lampOdds} {artifact.nextLowTier}. Used up.' },
-  ancient_pot: { name: 'Ancient pot', category: 'misc', weight: 1.2, decay: 3, description: 'Use on your wildermon (its menu): one point to a random base stat under {artifact.potMost}: {artifact.stats}. Each point: {artifact.potStep:pct} more of that stat over its kind and blood. Max {artifact.potMost} per stat. Used up.' },
+  ancient_comb: { name: 'Ancient comb', category: 'misc', weight: 0.15, stackable: true, decay: 3, description: 'Use on your wildermon (its menu): one age younger. Old → grown (as if just grown); grown → young (as if just born). Old: {artifact.oldSpeed:pct} speed, {artifact.oldPull:pct} pull. Grown: full. Young: cannot work, be ridden or pull. No effect on young. Used up.' },
+  ancient_file: { name: 'Ancient file', category: 'misc', weight: 0.8, stackable: true, decay: 3, description: 'Use on your wildermon (its menu): 1 in {artifact.fileOdds}, one rarity step up: ordinary → rare → supreme → fantastic. Every blood figure at rare, supreme, fantastic: {artifact.rareBlood} of an ordinary one; drawn bigger. Used up either way.' },
+  ancient_lamp: { name: 'Ancient lamp', category: 'misc', weight: 0.9, stackable: true, decay: 3, description: 'Use on your wildermon (its menu): rerolls its lowest-rarity trait (random among ties) to one it lacks, same rarity, or 1 in {artifact.lampOdds} one rarity up ({artifact.tierSteps}). Never lower. At {artifact.topTier}: always another {artifact.topTier} trait. Under {artifact.slots} traits: fills the empty slot, {artifact.lowTier}, or 1 in {artifact.lampOdds} {artifact.nextLowTier}. Used up.' },
+  ancient_pot: { name: 'Ancient pot', category: 'misc', weight: 1.2, stackable: true, decay: 3, description: 'Use on your wildermon (its menu): one point to a random base stat under {artifact.potMost}: {artifact.stats}. Each point: {artifact.potStep:pct} more of that stat over its kind and blood. Max {artifact.potMost} per stat. Used up.' },
   /*
    * Six more relics' restored things (`archaeology.ts`): a collar and a bridle
    * for a wildermon of yours (`creatureActions.ts`), and a whetstone, a seed
    * jar, a stamp and a tablet for you and your things (`relicuse.ts`).
    */
-  ancient_collar: { name: 'Ancient collar', category: 'misc', weight: 0.4, decay: 3, description: 'Use on your wildermon (its menu): upkeep (hunger rate) −{relicFit.collar:pct}, for good. Once per wildermon. Used up.' },
-  ancient_bridle: { name: 'Ancient bridle', category: 'misc', weight: 0.6, decay: 3, description: 'Use on your wildermon (its menu): speed ridden and in a team +{relicFit.bridle:pct}, past the speed cap, for good. Once per wildermon. Used up.' },
-  ancient_brace: { name: 'Ancient brace', category: 'misc', weight: 0.7, decay: 3, description: 'Use on your wildermon (its menu): action (task) speed +{relicFit.braceStep:pct} a use, up to {relicFit.braceMost} uses (+{relicFit.braceTop:pct}). Used up.' },
-  ancient_whetstone: { name: 'Ancient whetstone', category: 'misc', weight: 0.5, decay: 3, description: 'Hone with it (on a damaged tool or weapon in your pack): all damage off, QL kept. Used up.' },
-  ancient_seed_jar: { name: 'Ancient seed jar', category: 'misc', weight: 0.7, decay: 3, description: 'Open: {relicUse.jarSeeds} seeds of one of {relicUse.crops} crops at random, at the jar\'s QL. Used up.' },
-  ancient_stamp: { name: 'Ancient stamp', category: 'misc', weight: 0.3, decay: 3, description: 'Carried: rare chance ×{relicUse.stampRare} on your next {relicUse.stampGoes} crafts and forgings. One go each; used up after the last.' },
-  rune_tablet: { name: 'Rune tablet', category: 'misc', weight: 1.1, decay: 3, description: 'Read (Skills window, Rune tablet on a skill under {relicUse.tabletBelow}): that skill +{relicUse.tabletGain}. Used up.' },
+  ancient_collar: { name: 'Ancient collar', category: 'misc', weight: 0.4, stackable: true, decay: 3, description: 'Use on your wildermon (its menu): upkeep (hunger rate) −{relicFit.collar:pct}, for good. Once per wildermon. Used up.' },
+  ancient_bridle: { name: 'Ancient bridle', category: 'misc', weight: 0.6, stackable: true, decay: 3, description: 'Use on your wildermon (its menu): speed ridden and in a team +{relicFit.bridle:pct}, past the speed cap, for good. Once per wildermon. Used up.' },
+  ancient_brace: { name: 'Ancient brace', category: 'misc', weight: 0.7, stackable: true, decay: 3, description: 'Use on your wildermon (its menu): action (task) speed +{relicFit.braceStep:pct} a use, up to {relicFit.braceMost} uses (+{relicFit.braceTop:pct}). Used up.' },
+  ancient_whetstone: { name: 'Ancient whetstone', category: 'misc', weight: 0.5, stackable: true, decay: 3, description: 'Hone with it (on a damaged tool or weapon in your pack): all damage off, QL kept. Used up.' },
+  ancient_seed_jar: { name: 'Ancient seed jar', category: 'misc', weight: 0.7, stackable: true, decay: 3, description: 'Open: {relicUse.jarSeeds} seeds of one of {relicUse.crops} crops at random, at the jar\'s QL. Used up.' },
+  ancient_stamp: { name: 'Ancient stamp', category: 'misc', weight: 0.3, stackable: true, decay: 3, description: 'Carried: rare chance ×{relicUse.stampRare} on your next {relicUse.stampGoes} crafts and forgings. One go each; used up after the last.' },
+  rune_tablet: { name: 'Rune tablet', category: 'misc', weight: 1.1, stackable: true, decay: 3, description: 'Read (Skills window, Rune tablet on a skill under {relicUse.tabletBelow}): that skill +{relicUse.tabletGain}. Used up.' },
   /*
    * Two relics' restored gear (`archaeology.ts`): worn and wielded as a helm
    * and a short sword are (`gear.ts`), each with a benefit of its own, and
