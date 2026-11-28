@@ -176,4 +176,4 @@ export interface KeptReport {
 }
 
 /** New characters one connection may make across the project in 24 hours. The island's `private.ip_body_cap`. */
-export const NEW_BODIES_A_DAY = 3;
+export const NEW_BODIES_A_DAY = 5;

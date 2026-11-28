@@ -71,8 +71,8 @@ const anon = (text: string): Ran => sql(`set role anon;\n${text}\n`);
 
 const ROCK = 'ac000000-0000-4000-8000-0000000000a1';
 const FOUNDER = 'ac000000-0000-4000-8000-000000000001'; // Fenna, who founded Account Rock
-const PEOPLE = Array.from({ length: 9 }, (_, i) => `ac000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}`);
-const [ANNA, BERT, CARL, DORA, EMIL, FINN, GRETA, HUGO, IDA] = PEOPLE;
+const PEOPLE = Array.from({ length: 11 }, (_, i) => `ac000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}`);
+const [ANNA, BERT, CARL, DORA, EMIL, FINN, GRETA, HUGO, IDA, JUNO, KAI] = PEOPLE;
 const ALL = [FOUNDER, ...PEOPLE];
 const list = (xs: string[]): string => xs.map((x) => `'${x}'`).join(', ');
 
@@ -147,8 +147,8 @@ const CAP = Number(psql('select private.ip_body_cap();'));
 const HOURS = Number(psql('select extract(epoch from private.ip_body_window())::int / 3600;'));
 const CROWD = '198.51.100.9';
 check('the browser says the same cap as the island', CAP === NEW_BODIES_A_DAY, `island ${CAP}, browser ${NEW_BODIES_A_DAY}`);
-const makers = [DORA, EMIL, FINN];
-check('the cap is three in 24 h', CAP === 3 && HOURS === 24 && makers.length === CAP, `${CAP} in ${HOURS} h`);
+const makers = [DORA, EMIL, FINN, JUNO, KAI];
+check('the cap is five in 24 h', CAP === 5 && HOURS === 24 && makers.length === CAP, `${CAP} in ${HOURS} h`);
 const made = makers.map((u) => join(u, { headers: xff(CROWD) }));
 check(`${CAP} new bodies from one connection are made`, made.every((r) => r.out === 'true' && !r.err),
   made.map((r) => r.err || r.out).join(' | '));
