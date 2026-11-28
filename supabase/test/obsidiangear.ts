@@ -182,6 +182,7 @@ begin
   perform perform_craft(w, u, '${HATCHET.id}', jsonb_build_object('kind', 'item', 'uid', ${newest('obsidian')}));
   select i.id into v_h from item i where i.world_id = w and i.holder = 'player' and i.holder_uid = u and i.def = 'hatchet' order by i.id desc limit 1;
   insert into said values ('HATCHET', coalesce((select extra from item where id = v_h), 'none') || '|' || ${count('obsidian')});
+  update item set rare = 0 where id = v_h; -- a rolled rarity wears slower (rarity_keep): measure a plain one
   perform damage_item(v_h, 1);
   insert into said values ('WEAR', (select dmg from item where id = v_h)::text);
   update item set dmg = 0 where id = v_h;
