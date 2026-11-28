@@ -5,6 +5,8 @@
 -- moss offered on it (`green_refusal`, `perform_green`), a scurra's round takes it in (`green_on_tile`,
 -- `scrub_tile`), and the ground read sends each finished stone floor's `greenAgo`.
 
+set local lock_timeout = '3s';
+
 alter table green_since drop constraint if exists green_since_thing_check;
 alter table green_since add constraint green_since_thing_check
   check (thing in ('wall', 'paving', 'slab', 'bridge', 'piece', 'floor'));

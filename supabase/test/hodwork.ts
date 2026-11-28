@@ -199,9 +199,10 @@ const chestB = chest.items.filter((it) => it.count > 0).map((it) => `${it.id}:${
 check('and what went in came out of the chest, one for one, on both sides', chestB === (isle.get('CHEST') ?? '') && chestB === '', `${chestB} | ${isle.get('CHEST')}`);
 check('the last barrowful packs the foundation\'s top, on both sides', isle.get('PACKED') === 'true' && g.world.getTile(slab.x, slab.y) === TileType.PackedDirt,
   `${isle.get('PACKED')} | ${g.world.getTile(slab.x, slab.y)}`);
-check('and the finished stone wall, bridge, aqueduct and foundation have their moss or ivy started, on both sides',
-  (isle.get('GREEN') ?? '') === 'bridge,bridge,slab,wall'
-    && upper.greenSince !== undefined && bridge.greenSince !== undefined && aqueduct.greenSince !== undefined && slab.greenSince !== undefined,
+check('and the finished stone wall, floor, bridge, aqueduct and foundation have their moss or ivy started, on both sides',
+  (isle.get('GREEN') ?? '') === 'bridge,bridge,floor,slab,wall'
+    && upper.greenSince !== undefined && bridge.greenSince !== undefined && aqueduct.greenSince !== undefined && slab.greenSince !== undefined
+    && floors.some((f) => f.greenSince !== undefined),
   `${isle.get('GREEN')}`);
 
 /* ---- an hour of a Brickling at it, on both sides ------------------------- */

@@ -27,7 +27,7 @@ import { furnaceJobs, furnaceOutput } from '../net/rows/furnace';
 import { storedThing } from '../net/rows/stored';
 import { DROWN_RATE, DROWN_WARN, EXHAUSTED, HEAL_FED, HEAL_RATE, HUNGER_RATE, staminaBarAbove, SWIM_LEARN, SWIM_WIND, THIRST_RATE, WIND_PER_LEVEL, WIND_REST, WIND_STARVING, WIND_WALK } from './body';
 import { markName, MARK_CAP, MARK_COLOURS, type Marker } from './marks';
-import { acrossSide, borderOf, Buildings, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorName, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
+import { acrossSide, borderOf, Buildings, MATERIAL_BY_ID, OPPOSITE_SIDE, type FloorTile, CELLAR_DECAY, CELLAR_FLOOR, CELLAR_LEVEL, connectsDown, floorKind, floorName, floorOf, INDOORS_DECAY, isDone, isSpiral, keepJobLevel, SPIRAL_FOOT_SAID, progressOf, roofShapeDef, TOP_LEVELS, WALL_HEIGHT, walkableKind, workLevel, type BuildingsJSON, type Building, type Wall, type Side, type Bill, type Column } from './building';
 import { CELLAR_DAYLIGHT, cellarGate, cellarPieceOk, targetFloor } from './cellar';
 import { jettyBase } from './frame';
 import { UNDONE_PLANS, type PlanAnswer } from './planarea';
@@ -8793,7 +8793,7 @@ export class Game {
         const f = target.floor;
         if ((f.needed[item] ?? 0) <= 0) return;
         f.needed[item] -= 1;
-        this.floorFitted();
+        this.floorFitted(f);
         this.events.emit('world', f.x, f.y);
         return;
       }
@@ -8876,11 +8876,13 @@ export class Game {
 
   /**
    * What a piece fitted into a floor slot starts, a builder's or a hod
-   * carrier's: the last pane of a glass roof makes a glasshouse, and what
+   * carrier's: with the last of a stone floor its moss starts from bare stone
+   * (`greening.ts`), the last pane of a glass roof makes a glasshouse, and what
    * grows in it goes onto the glass clock (`glasshouse.ts`). On the island the
-   * floor's triggers.
+   * floor's triggers (`green_floor`).
    */
-  floorFitted(): void {
+  floorFitted(floor: FloorTile): void {
+    if (isDone(floor) && floorKind(floor) === 'floor' && MATERIAL_BY_ID.get(floor.material)?.kind === 'stone') floor.greenSince = greenNow();
     glassResync(this);
   }
 

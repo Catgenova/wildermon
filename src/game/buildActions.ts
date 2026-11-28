@@ -1234,7 +1234,7 @@ export const BUILD_ACTIONS: ActionDef[] = [
       const used = consumeUnit(g, floor, t);
       if (!used) return false;
       // What a piece of it starts, as a hod carrier's piece does (`Game.floorFitted`).
-      g.floorFitted();
+      g.floorFitted(floor);
       const kind = floorKind(floor);
       const mat = material(floor.material);
       // Floors are paving, but a garden bed, which is joinery; stairs, ladders and roofs are carpentry or masonry by material.
